@@ -1,7 +1,9 @@
 import { useState } from 'react';
-import { Link, useLocation, Outlet } from 'react-router-dom';
+import { Link, useLocation, Outlet, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
+import { useAuth } from '@/contexts/AuthContext';
+import { useToast } from '@/hooks/use-toast';
 import { 
   LayoutDashboard, 
   FolderOpen, 
@@ -25,7 +27,7 @@ const navItems = [
   { icon: Settings, label: 'Configurações', path: '/admin/settings' },
 ];
 
-function Sidebar({ collapsed, setCollapsed }: { collapsed: boolean; setCollapsed: (v: boolean) => void }) {
+function Sidebar({ collapsed, setCollapsed, onLogout }: { collapsed: boolean; setCollapsed: (v: boolean) => void; onLogout: () => void }) {
   const location = useLocation();
 
   return (
@@ -83,7 +85,10 @@ function Sidebar({ collapsed, setCollapsed }: { collapsed: boolean; setCollapsed
             <Store className="w-5 h-5 flex-shrink-0" />
             {!collapsed && <span className="font-medium">Ver Cardápio</span>}
           </Link>
-          <button className="flex items-center gap-3 px-3 py-3 rounded-xl text-sidebar-foreground hover:bg-sidebar-accent transition-colors w-full">
+          <button 
+            onClick={onLogout}
+            className="flex items-center gap-3 px-3 py-3 rounded-xl text-sidebar-foreground hover:bg-sidebar-accent transition-colors w-full"
+          >
             <LogOut className="w-5 h-5 flex-shrink-0" />
             {!collapsed && <span className="font-medium">Sair</span>}
           </button>
@@ -93,7 +98,7 @@ function Sidebar({ collapsed, setCollapsed }: { collapsed: boolean; setCollapsed
   );
 }
 
-function MobileNav({ isOpen, setIsOpen }: { isOpen: boolean; setIsOpen: (v: boolean) => void }) {
+function MobileNav({ isOpen, setIsOpen, onLogout }: { isOpen: boolean; setIsOpen: (v: boolean) => void; onLogout: () => void }) {
   const location = useLocation();
 
   return (
@@ -150,6 +155,16 @@ function MobileNav({ isOpen, setIsOpen }: { isOpen: boolean; setIsOpen: (v: bool
                   );
                 })}
               </nav>
+
+              <div className="space-y-2 pt-4 border-t border-sidebar-border">
+                <button 
+                  onClick={() => { setIsOpen(false); onLogout(); }}
+                  className="flex items-center gap-3 px-3 py-3 rounded-xl text-sidebar-foreground hover:bg-sidebar-accent transition-colors w-full"
+                >
+                  <LogOut className="w-5 h-5" />
+                  <span className="font-medium">Sair</span>
+                </button>
+              </div>
             </div>
           </motion.aside>
         </>
@@ -161,16 +176,28 @@ function MobileNav({ isOpen, setIsOpen }: { isOpen: boolean; setIsOpen: (v: bool
 export default function AdminLayout() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const { signOut } = useAuth();
+  const { toast } = useToast();
+  const navigate = useNavigate();
+
+  const handleLogout = async () => {
+    await signOut();
+    toast({
+      title: 'Até logo!',
+      description: 'Você saiu da sua conta.',
+    });
+    navigate('/');
+  };
 
   return (
     <div className="min-h-screen bg-background">
       {/* Desktop Sidebar */}
       <div className="hidden lg:block">
-        <Sidebar collapsed={sidebarCollapsed} setCollapsed={setSidebarCollapsed} />
+        <Sidebar collapsed={sidebarCollapsed} setCollapsed={setSidebarCollapsed} onLogout={handleLogout} />
       </div>
 
       {/* Mobile Nav */}
-      <MobileNav isOpen={mobileNavOpen} setIsOpen={setMobileNavOpen} />
+      <MobileNav isOpen={mobileNavOpen} setIsOpen={setMobileNavOpen} onLogout={handleLogout} />
 
       {/* Main Content */}
       <div className={`transition-all duration-300 ${sidebarCollapsed ? 'lg:ml-20' : 'lg:ml-64'}`}>
