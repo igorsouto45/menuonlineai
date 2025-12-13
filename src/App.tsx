@@ -15,6 +15,9 @@ import Dashboard from "./pages/admin/Dashboard";
 import CategoriesPage from "./pages/admin/CategoriesPage";
 import ProductsPage from "./pages/admin/ProductsPage";
 import OrdersPage from "./pages/admin/OrdersPage";
+import SettingsPage from "./pages/admin/SettingsPage";
+import AppearancePage from "./pages/admin/AppearancePage";
+import SystemAdminPage from "./pages/admin/SystemAdminPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -43,6 +46,16 @@ const App = () => (
                 }
               />
               
+              {/* System Admin - Protected */}
+              <Route
+                path="/system-admin"
+                element={
+                  <ProtectedRoute requireRestaurant={false}>
+                    <SystemAdminPage />
+                  </ProtectedRoute>
+                }
+              />
+              
               {/* Admin Routes - Protected */}
               <Route
                 path="/admin"
@@ -56,6 +69,8 @@ const App = () => (
                 <Route path="categories" element={<CategoriesPage />} />
                 <Route path="products" element={<ProductsPage />} />
                 <Route path="orders" element={<OrdersPage />} />
+                <Route path="settings" element={<SettingsPage />} />
+                <Route path="appearance" element={<AppearancePage />} />
               </Route>
               
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
