@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import type { Database } from '@/integrations/supabase/types';
@@ -10,26 +10,27 @@ export function useRestaurant() {
   const [loading, setLoading] = useState(true);
   const { user } = useAuth();
 
-  useEffect(() => {
+  const fetchRestaurant = useCallback(async () => {
     if (!user) {
       setRestaurant(null);
       setLoading(false);
       return;
     }
 
-    const fetchRestaurant = async () => {
-      const { data } = await supabase
-        .from('restaurants')
-        .select('*')
-        .eq('owner_id', user.id)
-        .maybeSingle();
+    setLoading(true);
+    const { data } = await supabase
+      .from('restaurants')
+      .select('*')
+      .eq('owner_id', user.id)
+      .maybeSingle();
 
-      setRestaurant(data);
-      setLoading(false);
-    };
-
-    fetchRestaurant();
+    setRestaurant(data);
+    setLoading(false);
   }, [user]);
 
-  return { restaurant, loading, hasRestaurant: !!restaurant };
+  useEffect(() => {
+    fetchRestaurant();
+  }, [fetchRestaurant]);
+
+  return { restaurant, loading, hasRestaurant: !!restaurant, refetch: fetchRestaurant };
 }

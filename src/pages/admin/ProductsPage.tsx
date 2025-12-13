@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -12,32 +12,141 @@ import {
   ToggleLeft, 
   ToggleRight,
   Package,
-  Filter
+  Loader2
 } from 'lucide-react';
-import { mockProducts, mockCategories } from '@/lib/mockData';
+import { supabase } from '@/integrations/supabase/client';
+import { useRestaurant } from '@/hooks/useRestaurant';
+import { useToast } from '@/hooks/use-toast';
+import ProductFormDialog from '@/components/admin/ProductFormDialog';
+import type { Tables } from '@/integrations/supabase/types';
+
+type Product = Tables<'products'>;
+type Category = Tables<'categories'>;
 
 export default function ProductsPage() {
-  const [products, setProducts] = useState(mockProducts);
+  const { restaurant, loading: loadingRestaurant } = useRestaurant();
+  const { toast } = useToast();
+  const [products, setProducts] = useState<Product[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
 
-  const toggleProduct = (id: string) => {
-    setProducts(prev =>
-      prev.map(prod =>
-        prod.id === id ? { ...prod, isActive: !prod.isActive } : prod
-      )
-    );
+  useEffect(() => {
+    if (restaurant) {
+      loadData();
+    }
+  }, [restaurant]);
+
+  const loadData = async () => {
+    if (!restaurant) return;
+
+    setLoading(true);
+    try {
+      const [productsRes, categoriesRes] = await Promise.all([
+        supabase
+          .from('products')
+          .select('*')
+          .eq('restaurant_id', restaurant.id)
+          .order('name'),
+        supabase
+          .from('categories')
+          .select('*')
+          .eq('restaurant_id', restaurant.id)
+          .order('display_order'),
+      ]);
+
+      if (productsRes.error) throw productsRes.error;
+      if (categoriesRes.error) throw categoriesRes.error;
+
+      setProducts(productsRes.data || []);
+      setCategories(categoriesRes.data || []);
+    } catch (error) {
+      console.error('Error loading products:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const toggleProduct = async (product: Product) => {
+    try {
+      const { error } = await supabase
+        .from('products')
+        .update({ is_active: !product.is_active })
+        .eq('id', product.id);
+
+      if (error) throw error;
+
+      setProducts(prev =>
+        prev.map(p =>
+          p.id === product.id ? { ...p, is_active: !p.is_active } : p
+        )
+      );
+    } catch (error) {
+      console.error('Error toggling product:', error);
+      toast({
+        title: 'Erro',
+        description: 'Não foi possível atualizar o produto.',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const deleteProduct = async (product: Product) => {
+    if (!confirm('Tem certeza que deseja excluir este produto?')) return;
+
+    try {
+      const { error } = await supabase
+        .from('products')
+        .delete()
+        .eq('id', product.id);
+
+      if (error) throw error;
+
+      setProducts(prev => prev.filter(p => p.id !== product.id));
+      toast({
+        title: 'Produto excluído',
+        description: 'O produto foi removido do cardápio.',
+      });
+    } catch (error) {
+      console.error('Error deleting product:', error);
+      toast({
+        title: 'Erro',
+        description: 'Não foi possível excluir o produto.',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const openEditDialog = (product: Product) => {
+    setEditingProduct(product);
+    setDialogOpen(true);
+  };
+
+  const openNewDialog = () => {
+    setEditingProduct(null);
+    setDialogOpen(true);
   };
 
   const filteredProducts = products.filter(product => {
     const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesCategory = !selectedCategory || product.categoryId === selectedCategory;
+    const matchesCategory = !selectedCategory || product.category_id === selectedCategory;
     return matchesSearch && matchesCategory;
   });
 
   const getCategoryName = (categoryId: string) => {
-    return mockCategories.find(c => c.id === categoryId)?.name || 'Sem categoria';
+    return categories.find(c => c.id === categoryId)?.name || 'Sem categoria';
   };
+
+  if (loadingRestaurant || loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8">
@@ -47,7 +156,7 @@ export default function ProductsPage() {
           <h1 className="text-3xl font-bold text-foreground">Produtos</h1>
           <p className="text-muted-foreground mt-1">Gerencie os itens do seu cardápio</p>
         </div>
-        <Button variant="hero">
+        <Button variant="hero" onClick={openNewDialog}>
           <Plus className="w-4 h-4" />
           Novo Produto
         </Button>
@@ -72,7 +181,7 @@ export default function ProductsPage() {
           >
             Todos
           </Button>
-          {mockCategories.map(cat => (
+          {categories.map(cat => (
             <Button
               key={cat.id}
               variant={selectedCategory === cat.id ? 'default' : 'secondary'}
@@ -97,8 +206,8 @@ export default function ProductsPage() {
             <Card className="border-border hover:border-primary/20 transition-colors overflow-hidden">
               {/* Image */}
               <div className="aspect-video bg-muted flex items-center justify-center">
-                {product.image ? (
-                  <img src={product.image} alt={product.name} className="w-full h-full object-cover" />
+                {product.image_url ? (
+                  <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
                 ) : (
                   <span className="text-6xl">🍕</span>
                 )}
@@ -111,12 +220,12 @@ export default function ProductsPage() {
                     <h3 className="font-semibold text-foreground">{product.name}</h3>
                     <Badge 
                       variant="secondary"
-                      className={product.isActive 
+                      className={product.is_active 
                         ? 'bg-success/20 text-success border-0' 
                         : 'bg-muted text-muted-foreground border-0'
                       }
                     >
-                      {product.isActive ? 'Ativo' : 'Inativo'}
+                      {product.is_active ? 'Ativo' : 'Inativo'}
                     </Badge>
                   </div>
                   <p className="text-sm text-muted-foreground line-clamp-2">
@@ -127,10 +236,10 @@ export default function ProductsPage() {
                 {/* Category & Price */}
                 <div className="flex items-center justify-between mb-4">
                   <Badge variant="secondary" className="bg-primary/10 text-primary border-0">
-                    {getCategoryName(product.categoryId)}
+                    {getCategoryName(product.category_id)}
                   </Badge>
                   <span className="font-bold text-primary text-lg">
-                    R$ {product.price.toFixed(2)}
+                    R$ {Number(product.price).toFixed(2)}
                   </span>
                 </div>
 
@@ -140,9 +249,9 @@ export default function ProductsPage() {
                     variant="ghost" 
                     size="sm"
                     className="flex-1"
-                    onClick={() => toggleProduct(product.id)}
+                    onClick={() => toggleProduct(product)}
                   >
-                    {product.isActive ? (
+                    {product.is_active ? (
                       <>
                         <ToggleRight className="w-4 h-4 text-success mr-1" />
                         Ativo
@@ -154,10 +263,10 @@ export default function ProductsPage() {
                       </>
                     )}
                   </Button>
-                  <Button variant="ghost" size="icon">
+                  <Button variant="ghost" size="icon" onClick={() => openEditDialog(product)}>
                     <Edit2 className="w-4 h-4 text-muted-foreground" />
                   </Button>
-                  <Button variant="ghost" size="icon">
+                  <Button variant="ghost" size="icon" onClick={() => deleteProduct(product)}>
                     <Trash2 className="w-4 h-4 text-destructive" />
                   </Button>
                 </div>
@@ -168,7 +277,7 @@ export default function ProductsPage() {
       </div>
 
       {/* Empty State */}
-      {filteredProducts.length === 0 && (
+      {filteredProducts.length === 0 && !loading && (
         <Card className="border-dashed border-2 border-border">
           <CardContent className="p-12 text-center">
             <Package className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
@@ -180,7 +289,7 @@ export default function ProductsPage() {
               }
             </p>
             {!searchQuery && !selectedCategory && (
-              <Button variant="hero">
+              <Button variant="hero" onClick={openNewDialog}>
                 <Plus className="w-4 h-4" />
                 Criar Produto
               </Button>
@@ -188,6 +297,14 @@ export default function ProductsPage() {
           </CardContent>
         </Card>
       )}
+
+      {/* Product Form Dialog */}
+      <ProductFormDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        product={editingProduct}
+        onSuccess={loadData}
+      />
     </div>
   );
 }
