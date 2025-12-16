@@ -12,8 +12,9 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Switch } from '@/components/ui/switch';
-import { Loader2, Save, Store, Clock, MapPin, Phone, MessageSquare } from 'lucide-react';
+import { Loader2, Save, Store, Clock, MapPin, Phone, MessageSquare, Bot, Copy, Check } from 'lucide-react';
 import ImageUpload from '@/components/admin/ImageUpload';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 const settingsSchema = z.object({
   name: z.string().min(2, 'Nome deve ter pelo menos 2 caracteres'),
@@ -34,6 +35,19 @@ export default function SettingsPage() {
   const { toast } = useToast();
   const [saving, setSaving] = useState(false);
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+
+  const webhookUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/whatsapp-webhook`;
+
+  const copyWebhookUrl = async () => {
+    await navigator.clipboard.writeText(webhookUrl);
+    setCopied(true);
+    toast({
+      title: 'URL copiada!',
+      description: 'Cole no campo de webhook da Evolution API.',
+    });
+    setTimeout(() => setCopied(false), 2000);
+  };
 
   const form = useForm<SettingsFormData>({
     resolver: zodResolver(settingsSchema),
@@ -371,6 +385,34 @@ export default function SettingsPage() {
                     </FormItem>
                   )}
                 />
+
+                {/* Webhook URL for AI Agent */}
+                <Alert className="bg-muted/50 border-primary/20">
+                  <Bot className="w-4 h-4 text-primary" />
+                  <AlertTitle className="text-primary">Agente de IA (Chatbot)</AlertTitle>
+                  <AlertDescription className="space-y-3 mt-2">
+                    <p className="text-sm text-muted-foreground">
+                      Para ativar o atendente virtual com IA, configure este webhook na sua Evolution API:
+                    </p>
+                    <div className="flex items-center gap-2">
+                      <code className="flex-1 px-3 py-2 bg-background rounded-md text-xs break-all border">
+                        {webhookUrl}
+                      </code>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon"
+                        onClick={copyWebhookUrl}
+                        className="shrink-0"
+                      >
+                        {copied ? <Check className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
+                      </Button>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Configure como webhook de mensagens recebidas (messages.upsert) na Evolution API.
+                    </p>
+                  </AlertDescription>
+                </Alert>
               </CardContent>
             </Card>
           </motion.div>
