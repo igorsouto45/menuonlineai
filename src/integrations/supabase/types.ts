@@ -58,6 +58,44 @@ export type Database = {
           },
         ]
       }
+      delivery_areas: {
+        Row: {
+          created_at: string
+          display_order: number | null
+          fee: number
+          id: string
+          is_active: boolean | null
+          name: string
+          restaurant_id: string
+        }
+        Insert: {
+          created_at?: string
+          display_order?: number | null
+          fee?: number
+          id?: string
+          is_active?: boolean | null
+          name: string
+          restaurant_id: string
+        }
+        Update: {
+          created_at?: string
+          display_order?: number | null
+          fee?: number
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          restaurant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "delivery_areas_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       orders: {
         Row: {
           created_at: string
@@ -399,6 +437,7 @@ export type Database = {
           name: string
           opening_hours: string | null
           owner_id: string
+          pickup_enabled: boolean | null
           primary_color: string | null
           secondary_color: string | null
           slug: string
@@ -422,6 +461,7 @@ export type Database = {
           name: string
           opening_hours?: string | null
           owner_id: string
+          pickup_enabled?: boolean | null
           primary_color?: string | null
           secondary_color?: string | null
           slug: string
@@ -445,6 +485,7 @@ export type Database = {
           name?: string
           opening_hours?: string | null
           owner_id?: string
+          pickup_enabled?: boolean | null
           primary_color?: string | null
           secondary_color?: string | null
           slug?: string
