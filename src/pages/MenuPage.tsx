@@ -82,34 +82,33 @@ function ProductCard({ product, onAddToCart }: { product: Product; onAddToCart: 
   return (
     <motion.div
       layout
-      whileHover={{ scale: 1.01, y: -2 }}
-      whileTap={{ scale: 0.99 }}
-      className="group flex gap-4 p-4 bg-card rounded-2xl border border-border hover:border-primary/30 hover:shadow-xl hover:shadow-primary/5 transition-all duration-300 cursor-pointer"
+      whileTap={{ scale: 0.98 }}
+      className="group flex gap-3 p-3 sm:p-4 bg-card rounded-xl sm:rounded-2xl border border-border active:border-primary/30 hover:border-primary/30 hover:shadow-xl hover:shadow-primary/5 transition-all duration-300 cursor-pointer"
       onClick={() => onAddToCart(product)}
     >
-      <div className="flex-1 min-w-0 flex flex-col justify-between">
+      <div className="flex-1 min-w-0 flex flex-col justify-between py-1">
         <div>
-          <h3 className="font-bold text-foreground text-lg mb-1 group-hover:text-primary transition-colors">
+          <h3 className="font-bold text-foreground text-base sm:text-lg mb-1 group-hover:text-primary transition-colors line-clamp-2">
             {product.name}
           </h3>
-          <p className="text-muted-foreground text-sm line-clamp-2">{product.description}</p>
+          <p className="text-muted-foreground text-xs sm:text-sm line-clamp-2">{product.description}</p>
         </div>
-        <div className="flex items-center gap-2 mt-3">
+        <div className="flex items-center gap-2 mt-2 sm:mt-3">
           {product.variations && product.variations.length > 0 ? (
-            <span className="text-sm text-muted-foreground">
+            <span className="text-xs sm:text-sm text-muted-foreground">
               a partir de{' '}
-              <span className="text-xl font-bold text-primary">
+              <span className="text-lg sm:text-xl font-bold text-primary">
                 R$ {Math.min(...product.variations.map(v => v.price)).toFixed(2)}
               </span>
             </span>
           ) : (
-            <span className="text-xl font-bold text-primary">
+            <span className="text-lg sm:text-xl font-bold text-primary">
               R$ {product.price.toFixed(2)}
             </span>
           )}
         </div>
       </div>
-      <div className="relative w-28 h-28 rounded-xl bg-gradient-to-br from-muted to-muted/50 flex items-center justify-center overflow-hidden flex-shrink-0 shadow-inner">
+      <div className="relative w-20 h-20 sm:w-28 sm:h-28 rounded-lg sm:rounded-xl bg-gradient-to-br from-muted to-muted/50 flex items-center justify-center overflow-hidden flex-shrink-0 shadow-inner">
         {product.image_url ? (
           <img 
             src={product.image_url} 
@@ -117,15 +116,11 @@ function ProductCard({ product, onAddToCart }: { product: Product; onAddToCart: 
             className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" 
           />
         ) : (
-          <span className="text-4xl">🍕</span>
+          <span className="text-3xl sm:text-4xl">🍕</span>
         )}
-        <motion.div 
-          initial={{ scale: 0.8, opacity: 0.8 }}
-          whileHover={{ scale: 1.1, opacity: 1 }}
-          className="absolute bottom-2 right-2 w-9 h-9 rounded-full gradient-primary flex items-center justify-center shadow-lg shadow-primary/40"
-        >
-          <Plus className="w-5 h-5 text-primary-foreground" />
-        </motion.div>
+        <div className="absolute bottom-1 right-1 sm:bottom-2 sm:right-2 w-7 h-7 sm:w-9 sm:h-9 rounded-full gradient-primary flex items-center justify-center shadow-lg shadow-primary/40">
+          <Plus className="w-4 h-4 sm:w-5 sm:h-5 text-primary-foreground" />
+        </div>
       </div>
     </motion.div>
   );
@@ -796,7 +791,7 @@ function MenuPageContent() {
   }
 
   return (
-    <div className="min-h-screen bg-background pb-24">
+    <div className="min-h-screen bg-background pb-28 sm:pb-24">
       {/* Header */}
       <div 
         className="gradient-primary"
@@ -806,40 +801,40 @@ function MenuPageContent() {
             : undefined
         }}
       >
-        <div className="container py-8">
-          <div className="flex items-center gap-4">
-            <div className="w-20 h-20 rounded-2xl bg-background/20 flex items-center justify-center text-4xl backdrop-blur-sm overflow-hidden">
+        <div className="container px-4 py-6 sm:py-8">
+          <div className="flex items-start sm:items-center gap-3 sm:gap-4">
+            <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-xl sm:rounded-2xl bg-background/20 flex items-center justify-center text-3xl sm:text-4xl backdrop-blur-sm overflow-hidden flex-shrink-0">
               {restaurant.logo_url ? (
                 <img src={restaurant.logo_url} alt={restaurant.name} className="w-full h-full object-cover" />
               ) : (
                 '🍕'
               )}
             </div>
-            <div>
-              <h1 className="text-2xl font-bold text-primary-foreground">{restaurant.name}</h1>
-              <p className="text-primary-foreground/80 text-sm mt-1">{restaurant.description}</p>
-              <div className="flex items-center gap-4 mt-2 text-sm text-primary-foreground/70">
+            <div className="flex-1 min-w-0">
+              <h1 className="text-xl sm:text-2xl font-bold text-primary-foreground truncate">{restaurant.name}</h1>
+              <p className="text-primary-foreground/80 text-xs sm:text-sm mt-1 line-clamp-2">{restaurant.description}</p>
+              <div className="flex flex-wrap items-center gap-2 sm:gap-4 mt-2 text-xs sm:text-sm text-primary-foreground/70">
                 {restaurant.opening_hours && (
                   <span className="flex items-center gap-1">
-                    <Clock className="w-4 h-4" />
+                    <Clock className="w-3 h-3 sm:w-4 sm:h-4" />
                     {restaurant.opening_hours}
                   </span>
                 )}
                 {restaurant.address && (
-                  <span className="flex items-center gap-1">
-                    <MapPin className="w-4 h-4" />
-                    {restaurant.address.split('-')[0]}
+                  <span className="flex items-center gap-1 truncate max-w-[150px] sm:max-w-none">
+                    <MapPin className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
+                    <span className="truncate">{restaurant.address.split('-')[0]}</span>
                   </span>
                 )}
               </div>
             </div>
           </div>
           {restaurant.is_open ? (
-            <Badge variant="secondary" className="mt-4 bg-success/20 text-success border-success/30">
+            <Badge variant="secondary" className="mt-3 sm:mt-4 bg-success/20 text-success border-success/30 text-xs">
               ● Aberto agora
             </Badge>
           ) : (
-            <Badge variant="secondary" className="mt-4 bg-destructive/20 text-destructive border-destructive/30">
+            <Badge variant="secondary" className="mt-3 sm:mt-4 bg-destructive/20 text-destructive border-destructive/30 text-xs">
               ● Fechado
             </Badge>
           )}
@@ -847,36 +842,35 @@ function MenuPageContent() {
       </div>
 
       {/* Search Bar */}
-      <div className="container py-4 -mt-2">
+      <div className="container px-4 py-3 sm:py-4 -mt-2">
         <ProductSearch 
           onSearch={setSearchQuery} 
-          placeholder="Buscar produtos por nome..."
+          placeholder="Buscar produtos..."
         />
       </div>
 
       {/* Categories */}
       {categories.length > 0 && (
         <div className="sticky top-0 z-40 bg-background/95 backdrop-blur-md border-b border-border shadow-sm">
-          <div className="container">
-            <div className="flex gap-2 overflow-x-auto py-3 scrollbar-hide">
+          <div className="px-4 sm:container">
+            <div className="flex gap-2 overflow-x-auto py-2.5 sm:py-3 scrollbar-hide -mx-1 px-1">
               {categories.map((cat) => (
                 <motion.button
                   key={cat.id}
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
+                  whileTap={{ scale: 0.95 }}
                   onClick={() => {
                     setActiveCategory(cat.id);
                     const element = document.getElementById(`category-${cat.id}`);
                     if (element) {
-                      const yOffset = -80;
+                      const yOffset = -60;
                       const y = element.getBoundingClientRect().top + window.pageYOffset + yOffset;
                       window.scrollTo({ top: y, behavior: 'smooth' });
                     }
                   }}
-                  className={`px-5 py-2.5 rounded-full whitespace-nowrap font-semibold transition-all duration-200 ${
+                  className={`px-4 sm:px-5 py-2 sm:py-2.5 rounded-full whitespace-nowrap text-sm sm:text-base font-semibold transition-all duration-200 ${
                     activeCategory === cat.id
                       ? 'gradient-primary text-primary-foreground shadow-lg shadow-primary/30'
-                      : 'bg-muted text-foreground hover:bg-primary/10 hover:text-primary border border-border'
+                      : 'bg-muted text-foreground active:bg-primary/10 hover:bg-primary/10 active:text-primary hover:text-primary border border-border'
                   }`}
                 >
                   {cat.name}
@@ -888,13 +882,13 @@ function MenuPageContent() {
       )}
 
       {/* Products */}
-      <div className="container py-6">
+      <div className="container px-4 py-4 sm:py-6">
         {categories.length === 0 ? (
           <div className="text-center py-12">
             <p className="text-muted-foreground">Nenhum produto disponível no momento.</p>
           </div>
         ) : (
-          <div className="space-y-10">
+          <div className="space-y-8 sm:space-y-10">
             {categories.map((cat) => (
               <motion.section 
                 key={cat.id} 
@@ -904,19 +898,19 @@ function MenuPageContent() {
                 viewport={{ once: true, margin: "-50px" }}
                 transition={{ duration: 0.4 }}
               >
-                <div className="flex items-center gap-3 mb-5">
-                  <h2 className="text-2xl font-bold text-foreground">{cat.name}</h2>
+                <div className="flex items-center gap-2 sm:gap-3 mb-4 sm:mb-5">
+                  <h2 className="text-lg sm:text-2xl font-bold text-foreground">{cat.name}</h2>
                   <div className="flex-1 h-px bg-gradient-to-r from-border to-transparent" />
                 </div>
                 {productsByCategory[cat.id]?.length > 0 ? (
-                  <div className="grid gap-4 md:grid-cols-2">
+                  <div className="grid gap-3 sm:gap-4 md:grid-cols-2">
                     {productsByCategory[cat.id].map((product, index) => (
                       <motion.div
                         key={product.id}
                         initial={{ opacity: 0, y: 15 }}
                         whileInView={{ opacity: 1, y: 0 }}
                         viewport={{ once: true }}
-                        transition={{ duration: 0.3, delay: index * 0.05 }}
+                        transition={{ duration: 0.3, delay: index * 0.03 }}
                       >
                         <ProductCard
                           product={product}
@@ -941,16 +935,16 @@ function MenuPageContent() {
         <motion.div
           initial={{ y: 100, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
-          className="fixed bottom-6 left-4 right-4 z-40"
+          className="fixed bottom-4 sm:bottom-6 left-3 right-3 sm:left-4 sm:right-4 z-40"
         >
           <Button
             variant="hero"
-            size="xl"
-            className="w-full shadow-2xl"
+            size="lg"
+            className="w-full shadow-2xl h-14 sm:h-auto text-base"
             onClick={() => setCartOpen(true)}
           >
             <ShoppingCart className="w-5 h-5" />
-            <span className="flex-1">Ver carrinho ({itemCount} itens)</span>
+            <span className="flex-1 text-left">Ver carrinho ({itemCount})</span>
             <span className="font-bold">R$ {total.toFixed(2)}</span>
           </Button>
         </motion.div>
