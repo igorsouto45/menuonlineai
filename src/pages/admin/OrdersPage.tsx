@@ -257,6 +257,16 @@ export default function OrdersPage() {
   const sendWhatsAppNotification = async (order: Order, newStatus: OrderStatus) => {
     if (!order.customer_phone) return;
 
+    // Get Evolution API credentials from restaurant
+    const evolutionApiUrl = (restaurant as any)?.evolution_api_url;
+    const evolutionApiKey = (restaurant as any)?.evolution_api_key;
+    const evolutionInstanceName = (restaurant as any)?.evolution_instance_name;
+
+    if (!evolutionApiUrl || !evolutionApiKey || !evolutionInstanceName) {
+      console.log('Evolution API not configured for this restaurant');
+      return;
+    }
+
     try {
       await supabase.functions.invoke('send-whatsapp-notification', {
         body: {
@@ -266,6 +276,9 @@ export default function OrdersPage() {
           status: newStatus,
           restaurantName: restaurant?.name,
           orderTotal: order.total,
+          evolutionApiUrl,
+          evolutionApiKey,
+          evolutionInstanceName,
         },
       });
       console.log('WhatsApp notification sent');

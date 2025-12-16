@@ -12,6 +12,10 @@ interface OrderNotification {
   status: string;
   restaurantName?: string;
   orderTotal?: number;
+  // Evolution API credentials from restaurant settings
+  evolutionApiUrl?: string;
+  evolutionApiKey?: string;
+  evolutionInstanceName?: string;
 }
 
 const statusMessages: Record<string, string> = {
@@ -30,19 +34,30 @@ serve(async (req) => {
   }
 
   try {
-    const EVOLUTION_API_URL = Deno.env.get('EVOLUTION_API_URL');
-    const EVOLUTION_API_KEY = Deno.env.get('EVOLUTION_API_KEY');
-    const EVOLUTION_INSTANCE_NAME = Deno.env.get('EVOLUTION_INSTANCE_NAME');
+    const { 
+      orderId, 
+      customerPhone, 
+      customerName, 
+      status, 
+      restaurantName, 
+      orderTotal,
+      evolutionApiUrl,
+      evolutionApiKey,
+      evolutionInstanceName
+    }: OrderNotification = await req.json();
+
+    // Use credentials from request or fall back to environment variables
+    const EVOLUTION_API_URL = evolutionApiUrl || Deno.env.get('EVOLUTION_API_URL');
+    const EVOLUTION_API_KEY = evolutionApiKey || Deno.env.get('EVOLUTION_API_KEY');
+    const EVOLUTION_INSTANCE_NAME = evolutionInstanceName || Deno.env.get('EVOLUTION_INSTANCE_NAME');
 
     if (!EVOLUTION_API_URL || !EVOLUTION_API_KEY || !EVOLUTION_INSTANCE_NAME) {
       console.error('Evolution API credentials not configured');
       return new Response(
-        JSON.stringify({ error: 'Evolution API not configured' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ error: 'Evolution API not configured. Configure nas configurações do restaurante.' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
-
-    const { orderId, customerPhone, customerName, status, restaurantName, orderTotal }: OrderNotification = await req.json();
 
     if (!customerPhone || !status) {
       return new Response(

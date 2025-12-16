@@ -387,6 +387,9 @@ export type Database = {
           cover_url: string | null
           created_at: string
           description: string | null
+          evolution_api_key: string | null
+          evolution_api_url: string | null
+          evolution_instance_name: string | null
           font_family: string | null
           id: string
           is_open: boolean | null
@@ -405,6 +408,9 @@ export type Database = {
           cover_url?: string | null
           created_at?: string
           description?: string | null
+          evolution_api_key?: string | null
+          evolution_api_url?: string | null
+          evolution_instance_name?: string | null
           font_family?: string | null
           id?: string
           is_open?: boolean | null
@@ -423,6 +429,9 @@ export type Database = {
           cover_url?: string | null
           created_at?: string
           description?: string | null
+          evolution_api_key?: string | null
+          evolution_api_url?: string | null
+          evolution_instance_name?: string | null
           font_family?: string | null
           id?: string
           is_open?: boolean | null

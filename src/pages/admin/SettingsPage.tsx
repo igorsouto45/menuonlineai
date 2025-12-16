@@ -12,7 +12,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Switch } from '@/components/ui/switch';
-import { Loader2, Save, Store, Clock, MapPin, Phone } from 'lucide-react';
+import { Loader2, Save, Store, Clock, MapPin, Phone, MessageSquare } from 'lucide-react';
 import ImageUpload from '@/components/admin/ImageUpload';
 
 const settingsSchema = z.object({
@@ -22,6 +22,9 @@ const settingsSchema = z.object({
   address: z.string().optional(),
   opening_hours: z.string().optional(),
   is_open: z.boolean(),
+  evolution_api_url: z.string().optional(),
+  evolution_api_key: z.string().optional(),
+  evolution_instance_name: z.string().optional(),
 });
 
 type SettingsFormData = z.infer<typeof settingsSchema>;
@@ -41,6 +44,9 @@ export default function SettingsPage() {
       address: '',
       opening_hours: '',
       is_open: true,
+      evolution_api_url: '',
+      evolution_api_key: '',
+      evolution_instance_name: '',
     },
   });
 
@@ -53,6 +59,9 @@ export default function SettingsPage() {
         address: restaurant.address || '',
         opening_hours: restaurant.opening_hours || '',
         is_open: restaurant.is_open ?? true,
+        evolution_api_url: (restaurant as any).evolution_api_url || '',
+        evolution_api_key: (restaurant as any).evolution_api_key || '',
+        evolution_instance_name: (restaurant as any).evolution_instance_name || '',
       });
       setLogoUrl(restaurant.logo_url);
     }
@@ -293,6 +302,71 @@ export default function SettingsPage() {
                         />
                       </FormControl>
                       <FormDescription>Aparece no cardápio público</FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </CardContent>
+            </Card>
+          </motion.div>
+
+          {/* Evolution API */}
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, delay: 0.4 }}
+          >
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <MessageSquare className="w-5 h-5 text-primary" />
+                  Evolution API (WhatsApp)
+                </CardTitle>
+                <CardDescription>
+                  Configure a API para notificações automáticas de pedidos via WhatsApp
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <FormField
+                  control={form.control}
+                  name="evolution_api_url"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>URL da API</FormLabel>
+                      <FormControl>
+                        <Input placeholder="https://sua-api.com" {...field} />
+                      </FormControl>
+                      <FormDescription>Endereço da sua instância Evolution API</FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="evolution_api_key"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>API Key</FormLabel>
+                      <FormControl>
+                        <Input type="password" placeholder="Sua chave de API" {...field} />
+                      </FormControl>
+                      <FormDescription>Chave de autenticação da Evolution API</FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="evolution_instance_name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Nome da Instância</FormLabel>
+                      <FormControl>
+                        <Input placeholder="minha-instancia" {...field} />
+                      </FormControl>
+                      <FormDescription>Nome da instância conectada ao WhatsApp</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
