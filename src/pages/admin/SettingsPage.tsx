@@ -12,18 +12,20 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Switch } from '@/components/ui/switch';
-import { Loader2, Save, Store, Clock, MapPin, Phone, MessageSquare, Bot, Copy, Check, Wifi, WifiOff, Truck } from 'lucide-react';
+import { Loader2, Save, Store, Clock, MapPin, Phone, MessageSquare, Bot, Copy, Check, Wifi, WifiOff, Truck, Link, ExternalLink } from 'lucide-react';
 import ImageUpload from '@/components/admin/ImageUpload';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 const settingsSchema = z.object({
   name: z.string().min(2, 'Nome deve ter pelo menos 2 caracteres'),
+  slug: z.string().min(2, 'Link deve ter pelo menos 2 caracteres').regex(/^[a-z0-9-]+$/, 'Apenas letras minúsculas, números e hífens'),
   description: z.string().optional(),
   whatsapp: z.string().min(10, 'WhatsApp inválido').max(15, 'WhatsApp inválido'),
   address: z.string().optional(),
   opening_hours: z.string().optional(),
   is_open: z.boolean(),
   delivery_fee: z.coerce.number().min(0, 'Taxa não pode ser negativa').optional(),
+  free_delivery_minimum: z.coerce.number().min(0, 'Valor não pode ser negativo').nullable().optional(),
   evolution_api_url: z.string().optional(),
   evolution_api_key: z.string().optional(),
   evolution_instance_name: z.string().optional(),
@@ -37,6 +39,7 @@ export default function SettingsPage() {
   const [saving, setSaving] = useState(false);
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [slugCopied, setSlugCopied] = useState(false);
   const [testingConnection, setTestingConnection] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState<'idle' | 'success' | 'error'>('idle');
 
@@ -110,12 +113,14 @@ export default function SettingsPage() {
     resolver: zodResolver(settingsSchema),
     defaultValues: {
       name: '',
+      slug: '',
       description: '',
       whatsapp: '',
       address: '',
       opening_hours: '',
       is_open: true,
       delivery_fee: 0,
+      free_delivery_minimum: null,
       evolution_api_url: '',
       evolution_api_key: '',
       evolution_instance_name: '',
@@ -126,12 +131,14 @@ export default function SettingsPage() {
     if (restaurant) {
       form.reset({
         name: restaurant.name,
+        slug: restaurant.slug,
         description: restaurant.description || '',
         whatsapp: restaurant.whatsapp,
         address: restaurant.address || '',
         opening_hours: restaurant.opening_hours || '',
         is_open: restaurant.is_open ?? true,
         delivery_fee: (restaurant as any).delivery_fee || 0,
+        free_delivery_minimum: (restaurant as any).free_delivery_minimum || null,
         evolution_api_url: (restaurant as any).evolution_api_url || '',
         evolution_api_key: (restaurant as any).evolution_api_key || '',
         evolution_instance_name: (restaurant as any).evolution_instance_name || '',
@@ -139,6 +146,18 @@ export default function SettingsPage() {
       setLogoUrl(restaurant.logo_url);
     }
   }, [restaurant, form]);
+
+  const menuUrl = restaurant ? `${window.location.origin}/${restaurant.slug}` : '';
+
+  const copyMenuUrl = async () => {
+    await navigator.clipboard.writeText(menuUrl);
+    setSlugCopied(true);
+    toast({
+      title: 'Link copiado!',
+      description: 'Compartilhe o link do seu cardápio.',
+    });
+    setTimeout(() => setSlugCopied(false), 2000);
+  };
 
   const onSubmit = async (data: SettingsFormData) => {
     if (!restaurant) return;
@@ -395,9 +414,9 @@ export default function SettingsPage() {
                   <Truck className="w-5 h-5 text-primary" />
                   Entrega
                 </CardTitle>
-                <CardDescription>Configure a taxa de entrega</CardDescription>
+                <CardDescription>Configure a taxa de entrega e frete grátis</CardDescription>
               </CardHeader>
-              <CardContent>
+              <CardContent className="space-y-4">
                 <FormField
                   control={form.control}
                   name="delivery_fee"
@@ -420,6 +439,95 @@ export default function SettingsPage() {
                     </FormItem>
                   )}
                 />
+
+                <FormField
+                  control={form.control}
+                  name="free_delivery_minimum"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Frete Grátis acima de (R$)</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          placeholder="Deixe vazio para desativar"
+                          value={field.value ?? ''}
+                          onChange={(e) => field.onChange(e.target.value === '' ? null : Number(e.target.value))}
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        Pedidos acima deste valor terão frete grátis. Deixe vazio para desativar.
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </CardContent>
+            </Card>
+          </motion.div>
+
+          {/* Menu Link */}
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, delay: 0.38 }}
+          >
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Link className="w-5 h-5 text-primary" />
+                  Link do Cardápio
+                </CardTitle>
+                <CardDescription>Configure e compartilhe o link do seu cardápio</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <FormField
+                  control={form.control}
+                  name="slug"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Identificador (slug)</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="meu-restaurante"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        Apenas letras minúsculas, números e hífens. Ex: pizzaria-do-joao
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                {restaurant && (
+                  <div className="p-4 bg-muted/50 rounded-lg border border-border">
+                    <p className="text-sm text-muted-foreground mb-2">Link do seu cardápio:</p>
+                    <div className="flex items-center gap-2">
+                      <code className="flex-1 p-2 bg-background rounded text-sm text-foreground truncate">
+                        {menuUrl}
+                      </code>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon"
+                        onClick={copyMenuUrl}
+                      >
+                        {slugCopied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon"
+                        onClick={() => window.open(menuUrl, '_blank')}
+                      >
+                        <ExternalLink className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </motion.div>
