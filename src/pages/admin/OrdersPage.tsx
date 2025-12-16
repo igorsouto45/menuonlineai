@@ -46,7 +46,8 @@ const statusConfig: Record<OrderStatus, { label: string; icon: React.ElementType
   confirmed: { label: 'Confirmado', icon: CheckCircle2, color: 'bg-primary/20 text-primary' },
   preparing: { label: 'Preparando', icon: ChefHat, color: 'bg-accent/20 text-accent' },
   ready: { label: 'Pronto', icon: CheckCircle2, color: 'bg-success/20 text-success' },
-  delivered: { label: 'Entregue', icon: Truck, color: 'bg-success/20 text-success' },
+  out_for_delivery: { label: 'Saiu p/ Entrega', icon: Truck, color: 'bg-info/20 text-info' },
+  delivered: { label: 'Entregue', icon: CheckCircle2, color: 'bg-success/20 text-success' },
   cancelled: { label: 'Cancelado', icon: XCircle, color: 'bg-destructive/20 text-destructive' },
 };
 
@@ -55,6 +56,7 @@ const kanbanColumns: { id: OrderStatus; title: string; color: string }[] = [
   { id: 'confirmed', title: 'Confirmados', color: 'border-primary/50 bg-primary/5' },
   { id: 'preparing', title: 'Preparando', color: 'border-accent/50 bg-accent/5' },
   { id: 'ready', title: 'Prontos', color: 'border-success/50 bg-success/5' },
+  { id: 'out_for_delivery', title: 'Saiu p/ Entrega', color: 'border-info/50 bg-info/5' },
   { id: 'delivered', title: 'Entregues', color: 'border-success/50 bg-success/5' },
 ];
 
@@ -64,6 +66,7 @@ const filterOptions: { value: string; label: string }[] = [
   { value: 'confirmed', label: 'Confirmados' },
   { value: 'preparing', label: 'Preparando' },
   { value: 'ready', label: 'Prontos' },
+  { value: 'out_for_delivery', label: 'Saiu p/ Entrega' },
   { value: 'delivered', label: 'Entregues' },
   { value: 'cancelled', label: 'Cancelados' },
 ];
@@ -320,7 +323,7 @@ export default function OrdersPage() {
   };
 
   const getNextStatus = (currentStatus: OrderStatus | null): OrderStatus | null => {
-    const statusFlow: OrderStatus[] = ['pending', 'confirmed', 'preparing', 'ready', 'delivered'];
+    const statusFlow: OrderStatus[] = ['pending', 'confirmed', 'preparing', 'ready', 'out_for_delivery', 'delivered'];
     if (!currentStatus) return 'confirmed';
     const currentIndex = statusFlow.indexOf(currentStatus);
     if (currentIndex === -1 || currentIndex >= statusFlow.length - 1) return null;
@@ -352,6 +355,7 @@ export default function OrdersPage() {
     confirmed: orders.filter(o => o.status === 'confirmed').length,
     preparing: orders.filter(o => o.status === 'preparing').length,
     ready: orders.filter(o => o.status === 'ready').length,
+    out_for_delivery: orders.filter(o => o.status === 'out_for_delivery').length,
     delivered: orders.filter(o => o.status === 'delivered').length,
     cancelled: orders.filter(o => o.status === 'cancelled').length,
   };
