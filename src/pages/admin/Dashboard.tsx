@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { useRestaurant } from '@/hooks/useRestaurant';
 import { useNotificationSound } from '@/hooks/useNotificationSound';
 import { supabase } from '@/integrations/supabase/client';
@@ -13,7 +14,9 @@ import {
   Clock,
   Package,
   Loader2,
-  AlertTriangle
+  AlertTriangle,
+  FileSpreadsheet,
+  FileText
 } from 'lucide-react';
 import {
   BarChart,
@@ -26,6 +29,9 @@ import {
   LineChart,
   Line,
 } from 'recharts';
+import * as XLSX from 'xlsx';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 interface OrderItem {
   name: string;
@@ -241,6 +247,106 @@ export default function Dashboard() {
     };
   }, [restaurant?.id, playNotification, toast]);
 
+  const exportToExcel = () => {
+    const salesData = weeklyData.map(d => ({
+      'Dia': d.day,
+      'Pedidos': d.orders,
+      'Faturamento (R$)': d.revenue.toFixed(2)
+    }));
+
+    const stockData = lowStockProducts.map(p => ({
+      'Produto': p.name,
+      'Estoque Atual': p.current_stock,
+      'Estoque Mínimo': p.min_stock,
+      'Status': 'Baixo'
+    }));
+
+    const topProductsData = topProducts.map(p => ({
+      'Produto': p.name,
+      'Pedidos': p.orders,
+      'Faturamento (R$)': p.revenue.toFixed(2)
+    }));
+
+    const wb = XLSX.utils.book_new();
+    
+    const ws1 = XLSX.utils.json_to_sheet(salesData);
+    XLSX.utils.book_append_sheet(wb, ws1, 'Vendas Semanais');
+    
+    const ws2 = XLSX.utils.json_to_sheet(topProductsData);
+    XLSX.utils.book_append_sheet(wb, ws2, 'Produtos Mais Vendidos');
+    
+    if (stockData.length > 0) {
+      const ws3 = XLSX.utils.json_to_sheet(stockData);
+      XLSX.utils.book_append_sheet(wb, ws3, 'Estoque Baixo');
+    }
+
+    XLSX.writeFile(wb, `relatorio-${restaurant?.name || 'restaurante'}-${new Date().toLocaleDateString('pt-BR').replace(/\//g, '-')}.xlsx`);
+    
+    toast({
+      title: 'Relatório exportado!',
+      description: 'O arquivo Excel foi baixado com sucesso.',
+    });
+  };
+
+  const exportToPDF = () => {
+    const doc = new jsPDF();
+    
+    doc.setFontSize(18);
+    doc.text(`Relatório - ${restaurant?.name || 'Restaurante'}`, 14, 22);
+    doc.setFontSize(10);
+    doc.text(`Gerado em: ${new Date().toLocaleDateString('pt-BR')}`, 14, 30);
+
+    // Stats summary
+    doc.setFontSize(14);
+    doc.text('Resumo do Dia', 14, 45);
+    doc.setFontSize(10);
+    doc.text(`Pedidos Hoje: ${stats.ordersToday}`, 14, 55);
+    doc.text(`Faturamento Hoje: R$ ${stats.revenueToday.toFixed(2)}`, 14, 62);
+    doc.text(`Ticket Médio: R$ ${stats.avgTicket.toFixed(2)}`, 14, 69);
+    doc.text(`Total de Pedidos: ${stats.totalOrders}`, 14, 76);
+
+    // Weekly sales table
+    doc.setFontSize(14);
+    doc.text('Vendas Semanais', 14, 92);
+    
+    autoTable(doc, {
+      startY: 98,
+      head: [['Dia', 'Pedidos', 'Faturamento (R$)']],
+      body: weeklyData.map(d => [d.day, d.orders, `R$ ${d.revenue.toFixed(2)}`]),
+    });
+
+    // Top products table
+    const finalY = (doc as any).lastAutoTable.finalY || 150;
+    doc.setFontSize(14);
+    doc.text('Produtos Mais Vendidos', 14, finalY + 15);
+    
+    autoTable(doc, {
+      startY: finalY + 21,
+      head: [['Produto', 'Pedidos', 'Faturamento (R$)']],
+      body: topProducts.map(p => [p.name, p.orders, `R$ ${p.revenue.toFixed(2)}`]),
+    });
+
+    // Low stock alert if any
+    if (lowStockProducts.length > 0) {
+      const finalY2 = (doc as any).lastAutoTable.finalY || 200;
+      doc.setFontSize(14);
+      doc.text('Alerta de Estoque Baixo', 14, finalY2 + 15);
+      
+      autoTable(doc, {
+        startY: finalY2 + 21,
+        head: [['Produto', 'Estoque Atual', 'Estoque Mínimo']],
+        body: lowStockProducts.map(p => [p.name, p.current_stock, p.min_stock]),
+      });
+    }
+
+    doc.save(`relatorio-${restaurant?.name || 'restaurante'}-${new Date().toLocaleDateString('pt-BR').replace(/\//g, '-')}.pdf`);
+    
+    toast({
+      title: 'Relatório exportado!',
+      description: 'O arquivo PDF foi baixado com sucesso.',
+    });
+  };
+
   const getTimeAgo = (dateStr: string) => {
     const diff = Date.now() - new Date(dateStr).getTime();
     const minutes = Math.floor(diff / 60000);
@@ -309,9 +415,21 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-8">
-      <div>
-        <h1 className="text-3xl font-bold text-foreground">Dashboard</h1>
-        <p className="text-muted-foreground mt-1">Visão geral do seu restaurante</p>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold text-foreground">Dashboard</h1>
+          <p className="text-muted-foreground mt-1">Visão geral do seu restaurante</p>
+        </div>
+        <div className="flex gap-2">
+          <Button variant="outline" size="sm" onClick={exportToExcel}>
+            <FileSpreadsheet className="w-4 h-4 mr-2" />
+            Excel
+          </Button>
+          <Button variant="outline" size="sm" onClick={exportToPDF}>
+            <FileText className="w-4 h-4 mr-2" />
+            PDF
+          </Button>
+        </div>
       </div>
 
       {/* Low Stock Alert */}
