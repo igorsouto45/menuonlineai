@@ -36,6 +36,7 @@ const App = () => (
               <Route path="/auth" element={<AuthPage />} />
               <Route path="/demo" element={<MenuPage />} />
               <Route path="/r/:slug" element={<MenuPage />} />
+              <Route path="/:slug" element={<MenuPage />} />
               
               {/* Onboarding - Protected but doesn't require restaurant */}
               <Route
