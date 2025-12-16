@@ -8,6 +8,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { ProductSearch } from '@/components/menu/ProductSearch';
 import { ProductImageCarousel } from '@/components/menu/ProductImageCarousel';
 import { ProductReviews } from '@/components/menu/ProductReviews';
+import { MenuSkeleton } from '@/components/menu/MenuSkeleton';
 import { 
   ShoppingCart, 
   Plus, 
@@ -16,7 +17,6 @@ import {
   Clock, 
   MapPin, 
   MessageCircle,
-  Loader2,
   Package,
   Truck
 } from 'lucide-react';
@@ -774,11 +774,7 @@ function MenuPageContent() {
   };
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
-      </div>
-    );
+    return <MenuSkeleton />;
   }
 
   if (error || !restaurant) {
