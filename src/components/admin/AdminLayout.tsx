@@ -15,7 +15,8 @@ import {
   X,
   ChevronLeft,
   LogOut,
-  Store
+  Store,
+  Star
 } from 'lucide-react';
 
 const navItems = [
@@ -23,6 +24,7 @@ const navItems = [
   { icon: FolderOpen, label: 'Categorias', path: '/admin/categories' },
   { icon: ShoppingBag, label: 'Produtos', path: '/admin/products' },
   { icon: ClipboardList, label: 'Pedidos', path: '/admin/orders' },
+  { icon: Star, label: 'Avaliações', path: '/admin/reviews' },
   { icon: Palette, label: 'Aparência', path: '/admin/appearance' },
   { icon: Settings, label: 'Configurações', path: '/admin/settings' },
 ];
