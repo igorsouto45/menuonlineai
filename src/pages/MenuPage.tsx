@@ -115,6 +115,7 @@ function ProductModal({
   );
   const [selectedAdditionals, setSelectedAdditionals] = useState<ProductAdditional[]>([]);
   const [observation, setObservation] = useState('');
+  const [imageZoomed, setImageZoomed] = useState(false);
 
   const toggleAdditional = (add: ProductAdditional) => {
     setSelectedAdditionals((prev) =>
@@ -133,93 +134,182 @@ function ProductModal({
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 z-50 flex items-end md:items-center justify-center bg-foreground/50 backdrop-blur-sm p-4"
+      className="fixed inset-0 z-50 flex items-end md:items-center justify-center bg-foreground/60 backdrop-blur-md p-0 md:p-4"
       onClick={onClose}
     >
       <motion.div
-        initial={{ y: 100, opacity: 0 }}
+        initial={{ y: '100%', opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
-        exit={{ y: 100, opacity: 0 }}
-        className="w-full max-w-lg max-h-[90vh] overflow-y-auto bg-card rounded-t-3xl md:rounded-3xl shadow-2xl"
+        exit={{ y: '100%', opacity: 0 }}
+        transition={{ type: 'spring', damping: 30, stiffness: 300 }}
+        className="w-full max-w-lg max-h-[95vh] overflow-hidden bg-card rounded-t-3xl md:rounded-3xl shadow-2xl flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="relative h-48 bg-muted flex items-center justify-center">
+        {/* Enhanced Image Section */}
+        <div 
+          className={`relative bg-gradient-to-b from-muted to-muted/50 flex items-center justify-center overflow-hidden cursor-pointer transition-all duration-500 ${
+            imageZoomed ? 'h-80 md:h-96' : 'h-56 md:h-64'
+          }`}
+          onClick={() => product.image_url && setImageZoomed(!imageZoomed)}
+        >
           {product.image_url ? (
-            <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
+            <motion.img 
+              src={product.image_url} 
+              alt={product.name} 
+              className={`w-full h-full transition-transform duration-500 ${
+                imageZoomed ? 'object-contain scale-110' : 'object-cover'
+              }`}
+              layoutId={`product-image-${product.id}`}
+            />
           ) : (
-            <span className="text-8xl">🍕</span>
+            <div className="flex flex-col items-center gap-2 text-muted-foreground">
+              <span className="text-8xl">🍕</span>
+              <span className="text-sm">Sem imagem</span>
+            </div>
           )}
+          
+          {/* Gradient overlay */}
+          <div className="absolute inset-0 bg-gradient-to-t from-card/80 via-transparent to-transparent pointer-events-none" />
+          
+          {/* Close button */}
           <button
-            onClick={onClose}
-            className="absolute top-4 right-4 w-10 h-10 rounded-full bg-foreground/20 backdrop-blur-sm flex items-center justify-center text-background hover:bg-foreground/30 transition-colors"
+            onClick={(e) => {
+              e.stopPropagation();
+              onClose();
+            }}
+            className="absolute top-4 right-4 w-10 h-10 rounded-full bg-background/80 backdrop-blur-sm flex items-center justify-center text-foreground hover:bg-background transition-colors shadow-lg"
           >
             <X className="w-5 h-5" />
           </button>
+          
+          {/* Zoom hint */}
+          {product.image_url && (
+            <div className="absolute bottom-4 left-4 text-xs text-background/80 bg-foreground/30 backdrop-blur-sm px-2 py-1 rounded-full">
+              {imageZoomed ? 'Clique para reduzir' : 'Clique para ampliar'}
+            </div>
+          )}
+          
+          {/* Price badge */}
+          <div className="absolute bottom-4 right-4 bg-primary text-primary-foreground px-4 py-2 rounded-full font-bold shadow-lg">
+            R$ {product.price.toFixed(2)}
+          </div>
         </div>
 
-        <div className="p-6 space-y-6">
+        {/* Scrollable Content */}
+        <div className="flex-1 overflow-y-auto p-6 space-y-6">
+          {/* Product Info */}
           <div>
-            <h2 className="text-2xl font-bold text-foreground">{product.name}</h2>
-            <p className="text-muted-foreground mt-1">{product.description}</p>
+            <h2 className="text-2xl font-bold text-foreground mb-2">{product.name}</h2>
+            {product.description && (
+              <p className="text-muted-foreground leading-relaxed">{product.description}</p>
+            )}
           </div>
 
+          {/* Variations */}
           {product.variations && product.variations.length > 0 && (
-            <div>
-              <h3 className="font-semibold text-foreground mb-3">Tamanho</h3>
-              <div className="space-y-2">
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <h3 className="font-semibold text-foreground">Escolha o tamanho</h3>
+                <Badge variant="secondary" className="text-xs">Obrigatório</Badge>
+              </div>
+              <div className="grid gap-2">
                 {product.variations.map((v) => (
-                  <button
+                  <motion.button
                     key={v.id}
+                    whileTap={{ scale: 0.98 }}
                     onClick={() => setSelectedVariation(v)}
                     className={`w-full flex items-center justify-between p-4 rounded-xl border-2 transition-all ${
                       selectedVariation?.id === v.id
-                        ? 'border-primary bg-primary/5'
-                        : 'border-border hover:border-primary/30'
+                        ? 'border-primary bg-primary/10 shadow-md'
+                        : 'border-border hover:border-primary/40 hover:bg-muted/50'
                     }`}
                   >
-                    <span className="font-medium text-foreground">{v.name}</span>
-                    <span className="font-semibold text-primary">R$ {v.price.toFixed(2)}</span>
-                  </button>
+                    <div className="flex items-center gap-3">
+                      <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${
+                        selectedVariation?.id === v.id ? 'border-primary bg-primary' : 'border-muted-foreground'
+                      }`}>
+                        {selectedVariation?.id === v.id && (
+                          <motion.div 
+                            initial={{ scale: 0 }}
+                            animate={{ scale: 1 }}
+                            className="w-2 h-2 rounded-full bg-primary-foreground"
+                          />
+                        )}
+                      </div>
+                      <span className="font-medium text-foreground">{v.name}</span>
+                    </div>
+                    <span className="font-bold text-primary">R$ {v.price.toFixed(2)}</span>
+                  </motion.button>
                 ))}
               </div>
             </div>
           )}
 
+          {/* Additionals */}
           {product.additionals && product.additionals.length > 0 && (
-            <div>
-              <h3 className="font-semibold text-foreground mb-3">Adicionais</h3>
-              <div className="space-y-2">
-                {product.additionals.map((add) => (
-                  <button
-                    key={add.id}
-                    onClick={() => toggleAdditional(add)}
-                    className={`w-full flex items-center justify-between p-4 rounded-xl border-2 transition-all ${
-                      selectedAdditionals.find((a) => a.id === add.id)
-                        ? 'border-primary bg-primary/5'
-                        : 'border-border hover:border-primary/30'
-                    }`}
-                  >
-                    <span className="font-medium text-foreground">{add.name}</span>
-                    <span className="font-semibold text-success">+ R$ {add.price.toFixed(2)}</span>
-                  </button>
-                ))}
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <h3 className="font-semibold text-foreground">Adicionais</h3>
+                <Badge variant="outline" className="text-xs">Opcional</Badge>
+              </div>
+              <div className="grid gap-2">
+                {product.additionals.map((add) => {
+                  const isSelected = selectedAdditionals.find((a) => a.id === add.id);
+                  return (
+                    <motion.button
+                      key={add.id}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={() => toggleAdditional(add)}
+                      className={`w-full flex items-center justify-between p-4 rounded-xl border-2 transition-all ${
+                        isSelected
+                          ? 'border-primary bg-primary/10 shadow-md'
+                          : 'border-border hover:border-primary/40 hover:bg-muted/50'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition-colors ${
+                          isSelected ? 'border-primary bg-primary' : 'border-muted-foreground'
+                        }`}>
+                          {isSelected && (
+                            <motion.svg 
+                              initial={{ scale: 0 }}
+                              animate={{ scale: 1 }}
+                              className="w-3 h-3 text-primary-foreground" 
+                              fill="none" 
+                              viewBox="0 0 24 24" 
+                              stroke="currentColor"
+                            >
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                            </motion.svg>
+                          )}
+                        </div>
+                        <span className="font-medium text-foreground">{add.name}</span>
+                      </div>
+                      <span className="font-semibold text-emerald-600">+ R$ {add.price.toFixed(2)}</span>
+                    </motion.button>
+                  );
+                })}
               </div>
             </div>
           )}
 
-          <div>
-            <h3 className="font-semibold text-foreground mb-3">Alguma observação?</h3>
+          {/* Observation */}
+          <div className="space-y-3">
+            <h3 className="font-semibold text-foreground">Alguma observação?</h3>
             <textarea
               value={observation}
               onChange={(e) => setObservation(e.target.value)}
-              placeholder="Ex: Tirar cebola, bem passada..."
-              className="w-full p-4 rounded-xl border-2 border-border bg-background text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none resize-none"
+              placeholder="Ex: Tirar cebola, bem passada, sem pimenta..."
+              className="w-full p-4 rounded-xl border-2 border-border bg-background text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none resize-none transition-colors"
               rows={2}
             />
           </div>
+        </div>
 
-          <div className="flex items-center gap-4 pt-4 border-t border-border">
-            <div className="flex items-center gap-3 bg-secondary rounded-xl p-1">
+        {/* Fixed Footer */}
+        <div className="p-4 border-t border-border bg-card/95 backdrop-blur-sm">
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2 bg-secondary rounded-xl p-1">
               <button
                 onClick={() => setQuantity(Math.max(1, quantity - 1))}
                 className="w-10 h-10 rounded-lg flex items-center justify-center text-foreground hover:bg-muted transition-colors"
@@ -237,7 +327,7 @@ function ProductModal({
             <Button
               variant="hero"
               size="lg"
-              className="flex-1"
+              className="flex-1 h-12"
               onClick={() => {
                 onAdd(product, quantity, selectedVariation, selectedAdditionals, observation);
                 onClose();
