@@ -27,6 +27,50 @@ interface WebhookPayload {
   data: WhatsAppMessage;
 }
 
+// Parse opening hours string like "Seg-Sex: 11h às 23h\nSáb-Dom: 11h às 00h"
+const isRestaurantOpen = (openingHours: string | null): { isOpen: boolean; schedule: string } => {
+  if (!openingHours) {
+    return { isOpen: true, schedule: 'Horário não definido' };
+  }
+
+  const now = new Date();
+  const brazilTime = new Date(now.toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' }));
+  const currentHour = brazilTime.getHours();
+  const currentDay = brazilTime.getDay(); // 0 = Sunday, 6 = Saturday
+
+  // Simple parsing - check if current hour is within typical range
+  // This is a simplified version - for production, you'd want more robust parsing
+  const lines = openingHours.split('\n');
+  
+  for (const line of lines) {
+    const hourMatch = line.match(/(\d{1,2})h?\s*(?:às|a|-)\s*(\d{1,2})h?/i);
+    if (hourMatch) {
+      const openHour = parseInt(hourMatch[1]);
+      const closeHour = parseInt(hourMatch[2]);
+      
+      // Check if it's a weekend line
+      const isWeekendLine = /s[áa]b|dom|fim\s*de\s*semana/i.test(line);
+      const isWeekdayLine = /seg|ter|qua|qui|sex|semana/i.test(line);
+      const isWeekend = currentDay === 0 || currentDay === 6;
+      
+      if ((isWeekend && isWeekendLine) || (!isWeekend && isWeekdayLine) || (!isWeekendLine && !isWeekdayLine)) {
+        // Handle overnight hours (e.g., 11h às 00h)
+        if (closeHour <= openHour) {
+          if (currentHour >= openHour || currentHour < closeHour) {
+            return { isOpen: true, schedule: openingHours };
+          }
+        } else {
+          if (currentHour >= openHour && currentHour < closeHour) {
+            return { isOpen: true, schedule: openingHours };
+          }
+        }
+      }
+    }
+  }
+
+  return { isOpen: false, schedule: openingHours };
+};
+
 serve(async (req) => {
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
@@ -80,6 +124,19 @@ serve(async (req) => {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
+
+    // Check if restaurant is open
+    const { isOpen, schedule } = isRestaurantOpen(restaurant.opening_hours);
+
+    // Check if this is the first message from this customer (for welcome message)
+    const { data: previousOrders } = await supabase
+      .from('orders')
+      .select('id')
+      .eq('restaurant_id', restaurant.id)
+      .eq('customer_phone', customerPhone)
+      .limit(1);
+
+    const isFirstContact = !previousOrders || previousOrders.length === 0;
 
     // Fetch restaurant data for AI context
     const [categoriesResult, productsResult, ordersResult] = await Promise.all([
@@ -163,6 +220,16 @@ serve(async (req) => {
       ? `\n\n📋 PEDIDO CONSULTADO:\nNúmero: #${specificOrder.id.slice(0, 8).toUpperCase()}\nStatus: ${statusTranslations[specificOrder.status] || specificOrder.status}\nTotal: R$ ${specificOrder.total.toFixed(2)}\nData: ${new Date(specificOrder.created_at).toLocaleDateString('pt-BR')}`
       : '';
 
+    // Build welcome message instruction if first contact
+    const welcomeInstruction = isFirstContact 
+      ? `\n\nIMPORTANTE: Este é o PRIMEIRO contato deste cliente. Comece sua resposta com uma mensagem de boas-vindas calorosa, apresentando-se como assistente virtual do ${restaurant.name}.`
+      : '';
+
+    // Build opening hours instruction
+    const openingHoursInstruction = !isOpen
+      ? `\n\nATENÇÃO: O restaurante está FECHADO no momento. Informe educadamente que estamos fora do horário de funcionamento mas você pode ajudar com informações sobre o cardápio e tirar dúvidas. Mencione o horário de funcionamento: ${schedule}`
+      : '';
+
     const systemPrompt = `Você é um atendente virtual do restaurante "${restaurant.name}". Seja simpático, profissional e objetivo.
 
 INFORMAÇÕES DO RESTAURANTE:
@@ -170,6 +237,7 @@ INFORMAÇÕES DO RESTAURANTE:
 - Endereço: ${restaurant.address || 'Não informado'}
 - WhatsApp: ${restaurant.whatsapp}
 - Horário: ${restaurant.opening_hours || 'Consulte nosso cardápio'}
+- Status atual: ${isOpen ? 'ABERTO' : 'FECHADO'}
 ${restaurant.description ? `- Sobre: ${restaurant.description}` : ''}
 
 CATEGORIAS DISPONÍVEIS:
@@ -189,6 +257,7 @@ REGRAS:
 5. Seja breve e direto nas respostas (máximo 3-4 frases)
 6. Use emojis com moderação para deixar a conversa mais amigável
 7. Se não souber algo, diga que vai verificar com a equipe
+${welcomeInstruction}${openingHoursInstruction}
 
 IMPORTANTE: Formate a resposta para WhatsApp (use *negrito* e _itálico_ quando apropriado).`;
 
@@ -199,6 +268,8 @@ IMPORTANTE: Formate a resposta para WhatsApp (use *negrito* e _itálico_ quando 
     }
 
     console.log('Calling AI with context...');
+    console.log('Is first contact:', isFirstContact);
+    console.log('Is restaurant open:', isOpen);
     
     const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
@@ -257,7 +328,7 @@ IMPORTANTE: Formate a resposta para WhatsApp (use *negrito* e _itálico_ quando 
     }
 
     return new Response(
-      JSON.stringify({ success: true, response: responseText }),
+      JSON.stringify({ success: true, response: responseText, isFirstContact, isOpen }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 

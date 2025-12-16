@@ -12,7 +12,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Switch } from '@/components/ui/switch';
-import { Loader2, Save, Store, Clock, MapPin, Phone, MessageSquare, Bot, Copy, Check } from 'lucide-react';
+import { Loader2, Save, Store, Clock, MapPin, Phone, MessageSquare, Bot, Copy, Check, Wifi, WifiOff } from 'lucide-react';
 import ImageUpload from '@/components/admin/ImageUpload';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
@@ -36,6 +36,8 @@ export default function SettingsPage() {
   const [saving, setSaving] = useState(false);
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [testingConnection, setTestingConnection] = useState(false);
+  const [connectionStatus, setConnectionStatus] = useState<'idle' | 'success' | 'error'>('idle');
 
   const webhookUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/whatsapp-webhook`;
 
@@ -47,6 +49,60 @@ export default function SettingsPage() {
       description: 'Cole no campo de webhook da Evolution API.',
     });
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  const testEvolutionConnection = async () => {
+    const values = form.getValues();
+    
+    if (!values.evolution_api_url || !values.evolution_api_key || !values.evolution_instance_name) {
+      toast({
+        title: 'Campos incompletos',
+        description: 'Preencha todos os campos da Evolution API antes de testar.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setTestingConnection(true);
+    setConnectionStatus('idle');
+
+    try {
+      const { data, error } = await supabase.functions.invoke('test-evolution-connection', {
+        body: {
+          evolutionApiUrl: values.evolution_api_url,
+          evolutionApiKey: values.evolution_api_key,
+          evolutionInstanceName: values.evolution_instance_name,
+        },
+      });
+
+      if (error) throw error;
+
+      if (data.success) {
+        setConnectionStatus('success');
+        toast({
+          title: data.connected ? 'Conexão estabelecida!' : 'Instância encontrada',
+          description: data.message,
+          variant: data.connected ? 'default' : 'default',
+        });
+      } else {
+        setConnectionStatus('error');
+        toast({
+          title: 'Falha na conexão',
+          description: data.error || 'Não foi possível conectar à Evolution API.',
+          variant: 'destructive',
+        });
+      }
+    } catch (error) {
+      console.error('Error testing connection:', error);
+      setConnectionStatus('error');
+      toast({
+        title: 'Erro ao testar conexão',
+        description: 'Verifique as credenciais e tente novamente.',
+        variant: 'destructive',
+      });
+    } finally {
+      setTestingConnection(false);
+    }
   };
 
   const form = useForm<SettingsFormData>({
@@ -385,6 +441,26 @@ export default function SettingsPage() {
                     </FormItem>
                   )}
                 />
+
+                {/* Test Connection Button */}
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={testEvolutionConnection}
+                  disabled={testingConnection}
+                  className="w-full"
+                >
+                  {testingConnection ? (
+                    <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                  ) : connectionStatus === 'success' ? (
+                    <Wifi className="w-4 h-4 mr-2 text-green-500" />
+                  ) : connectionStatus === 'error' ? (
+                    <WifiOff className="w-4 h-4 mr-2 text-destructive" />
+                  ) : (
+                    <Wifi className="w-4 h-4 mr-2" />
+                  )}
+                  {testingConnection ? 'Testando...' : 'Testar Conexão'}
+                </Button>
 
                 {/* Webhook URL for AI Agent */}
                 <Alert className="bg-muted/50 border-primary/20">
