@@ -4,12 +4,14 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useCart, CartProvider, DeliveryMode } from '@/contexts/CartContext';
+import { useCustomer } from '@/contexts/CustomerContext';
 import { supabase } from '@/integrations/supabase/client';
 import { ProductSearch } from '@/components/menu/ProductSearch';
 import { ProductImageCarousel } from '@/components/menu/ProductImageCarousel';
 import { ProductReviews } from '@/components/menu/ProductReviews';
 import { MenuSkeleton } from '@/components/menu/MenuSkeleton';
 import { InstallPWAButton } from '@/components/menu/InstallPWAButton';
+import { CustomerAuthModal } from '@/components/menu/CustomerAuthModal';
 import { 
   ShoppingCart, 
   Plus, 
@@ -19,7 +21,8 @@ import {
   MapPin, 
   MessageCircle,
   Package,
-  Truck
+  Truck,
+  LogIn
 } from 'lucide-react';
 
 interface DeliveryArea {
@@ -365,7 +368,9 @@ function CartSheet({
   deliveryFee,
   freeDeliveryMinimum,
   pickupEnabled,
-  deliveryAreas
+  deliveryAreas,
+  restaurantId,
+  restaurantName
 }: { 
   isOpen: boolean; 
   onClose: () => void;
@@ -374,11 +379,30 @@ function CartSheet({
   freeDeliveryMinimum: number | null;
   pickupEnabled: boolean;
   deliveryAreas: DeliveryArea[];
+  restaurantId: string;
+  restaurantName: string;
 }) {
   const { items, total, removeItem, updateQuantity, getWhatsAppMessage, clearCart, calculateDeliveryFee, getGrandTotal } = useCart();
+  const { user, customer, loadCustomerByRestaurant } = useCustomer();
   const [address, setAddress] = useState('');
   const [deliveryMode, setDeliveryMode] = useState<DeliveryMode>(pickupEnabled ? 'pickup' : 'delivery');
   const [selectedAreaId, setSelectedAreaId] = useState<string | null>(deliveryAreas.length > 0 ? deliveryAreas[0].id : null);
+  const [showAuthModal, setShowAuthModal] = useState(false);
+
+  // Load customer data when user is logged in
+  useEffect(() => {
+    if (user && restaurantId) {
+      loadCustomerByRestaurant(restaurantId);
+    }
+  }, [user, restaurantId]);
+
+  // Pre-fill address from customer profile
+  useEffect(() => {
+    if (customer?.address) {
+      const fullAddress = [customer.address, customer.neighborhood, customer.city].filter(Boolean).join(', ');
+      setAddress(fullAddress);
+    }
+  }, [customer]);
 
   const selectedArea = deliveryAreas.find(a => a.id === selectedAreaId) || null;
   
@@ -394,6 +418,11 @@ function CartSheet({
   const amountForFreeDelivery = freeDeliveryMinimum !== null && deliveryMode === 'delivery' ? freeDeliveryMinimum - total : null;
 
   const handleSendWhatsApp = () => {
+    if (!user) {
+      setShowAuthModal(true);
+      return;
+    }
+
     const message = getWhatsAppMessage(deliveryMode === 'delivery' ? address : undefined, deliveryInfo);
     const formattedWhatsapp = whatsapp.replace(/\D/g, '');
     window.open(`https://wa.me/55${formattedWhatsapp}?text=${message}`, '_blank');
@@ -609,15 +638,31 @@ function CartSheet({
                   </div>
                 </div>
                 
-                <Button variant="whatsapp" size="xl" className="w-full" onClick={handleSendWhatsApp}>
-                  <MessageCircle className="w-5 h-5" />
-                  Enviar pedido via WhatsApp
-                </Button>
+                {user ? (
+                  <Button variant="whatsapp" size="xl" className="w-full" onClick={handleSendWhatsApp}>
+                    <MessageCircle className="w-5 h-5" />
+                    Enviar pedido via WhatsApp
+                  </Button>
+                ) : (
+                  <Button variant="hero" size="xl" className="w-full" onClick={() => setShowAuthModal(true)}>
+                    <LogIn className="w-5 h-5" />
+                    Entrar para fazer pedido
+                  </Button>
+                )}
               </div>
             )}
           </motion.div>
         </motion.div>
       )}
+
+      {/* Customer Auth Modal */}
+      <CustomerAuthModal
+        isOpen={showAuthModal}
+        onClose={() => setShowAuthModal(false)}
+        restaurantId={restaurantId}
+        restaurantName={restaurantName}
+        onSuccess={() => loadCustomerByRestaurant(restaurantId)}
+      />
     </AnimatePresence>
   );
 }
@@ -971,6 +1016,8 @@ function MenuPageContent() {
         freeDeliveryMinimum={restaurant.free_delivery_minimum}
         pickupEnabled={restaurant.pickup_enabled ?? true}
         deliveryAreas={deliveryAreas}
+        restaurantId={restaurant.id}
+        restaurantName={restaurant.name}
       />
     </div>
   );
