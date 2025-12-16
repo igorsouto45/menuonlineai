@@ -58,6 +58,56 @@ export type Database = {
           },
         ]
       }
+      customers: {
+        Row: {
+          address: string | null
+          city: string | null
+          created_at: string
+          email: string
+          id: string
+          name: string
+          neighborhood: string | null
+          restaurant_id: string
+          updated_at: string
+          user_id: string
+          whatsapp: string
+        }
+        Insert: {
+          address?: string | null
+          city?: string | null
+          created_at?: string
+          email: string
+          id?: string
+          name: string
+          neighborhood?: string | null
+          restaurant_id: string
+          updated_at?: string
+          user_id: string
+          whatsapp: string
+        }
+        Update: {
+          address?: string | null
+          city?: string | null
+          created_at?: string
+          email?: string
+          id?: string
+          name?: string
+          neighborhood?: string | null
+          restaurant_id?: string
+          updated_at?: string
+          user_id?: string
+          whatsapp?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customers_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       delivery_areas: {
         Row: {
           created_at: string
