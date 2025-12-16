@@ -18,6 +18,7 @@ const statusMessages: Record<string, string> = {
   confirmed: '✅ Seu pedido foi *confirmado*! Estamos preparando com carinho.',
   preparing: '👨‍🍳 Seu pedido está sendo *preparado*!',
   ready: '🎉 Seu pedido está *pronto*! Aguardando entrega/retirada.',
+  out_for_delivery: '🚚 Seu pedido *saiu para entrega*! Em breve chegará até você.',
   delivered: '🚀 Seu pedido foi *entregue*! Obrigado pela preferência!',
   cancelled: '❌ Infelizmente seu pedido foi *cancelado*. Entre em contato para mais informações.',
 };
