@@ -291,6 +291,7 @@ export type Database = {
       products: {
         Row: {
           category_id: string
+          cost_price: number | null
           created_at: string
           current_stock: number | null
           description: string | null
@@ -305,6 +306,7 @@ export type Database = {
         }
         Insert: {
           category_id: string
+          cost_price?: number | null
           created_at?: string
           current_stock?: number | null
           description?: string | null
@@ -319,6 +321,7 @@ export type Database = {
         }
         Update: {
           category_id?: string
+          cost_price?: number | null
           created_at?: string
           current_stock?: number | null
           description?: string | null

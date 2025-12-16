@@ -33,15 +33,23 @@ import {
 import { Switch } from '@/components/ui/switch';
 import { Loader2 } from 'lucide-react';
 import ImageUpload from './ImageUpload';
+import MultiImageUpload from './MultiImageUpload';
 import type { Tables } from '@/integrations/supabase/types';
 
 type Product = Tables<'products'>;
 type Category = Tables<'categories'>;
 
+interface ImageItem {
+  id?: string;
+  url: string;
+  display_order: number;
+}
+
 const productSchema = z.object({
   name: z.string().min(2, 'Nome deve ter pelo menos 2 caracteres'),
   description: z.string().optional(),
   price: z.number().min(0.01, 'Preço deve ser maior que zero'),
+  cost_price: z.number().min(0, 'Preço de custo não pode ser negativo').optional(),
   category_id: z.string().min(1, 'Selecione uma categoria'),
   is_active: z.boolean(),
   current_stock: z.number().nullable().optional(),
@@ -67,6 +75,7 @@ export default function ProductFormDialog({
   const { toast } = useToast();
   const [saving, setSaving] = useState(false);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const [additionalImages, setAdditionalImages] = useState<ImageItem[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loadingCategories, setLoadingCategories] = useState(true);
 
@@ -78,6 +87,7 @@ export default function ProductFormDialog({
       name: '',
       description: '',
       price: 0,
+      cost_price: 0,
       category_id: '',
       is_active: true,
       current_stock: null,
@@ -97,25 +107,45 @@ export default function ProductFormDialog({
         name: product.name,
         description: product.description || '',
         price: Number(product.price),
+        cost_price: Number(product.cost_price) || 0,
         category_id: product.category_id,
         is_active: product.is_active ?? true,
         current_stock: product.current_stock ?? null,
         min_stock: product.min_stock ?? null,
       });
       setImageUrl(product.image_url);
+      loadAdditionalImages(product.id);
     } else {
       form.reset({
         name: '',
         description: '',
         price: 0,
+        cost_price: 0,
         category_id: '',
         is_active: true,
         current_stock: null,
         min_stock: null,
       });
       setImageUrl(null);
+      setAdditionalImages([]);
     }
   }, [product, form, open]);
+
+  const loadAdditionalImages = async (productId: string) => {
+    const { data } = await supabase
+      .from('product_images')
+      .select('*')
+      .eq('product_id', productId)
+      .order('display_order');
+    
+    if (data) {
+      setAdditionalImages(data.map(img => ({
+        id: img.id,
+        url: img.image_url,
+        display_order: img.display_order || 0,
+      })));
+    }
+  };
 
   const loadCategories = async () => {
     if (!restaurant) return;
@@ -146,6 +176,7 @@ export default function ProductFormDialog({
         name: data.name,
         description: data.description || null,
         price: data.price,
+        cost_price: data.cost_price || 0,
         category_id: data.category_id,
         is_active: data.is_active,
         image_url: imageUrl,
@@ -154,6 +185,8 @@ export default function ProductFormDialog({
         min_stock: data.min_stock ?? null,
       };
 
+      let productId = product?.id;
+
       if (isEditing && product) {
         const { error } = await supabase
           .from('products')
@@ -161,23 +194,52 @@ export default function ProductFormDialog({
           .eq('id', product.id);
 
         if (error) throw error;
-
-        toast({
-          title: 'Produto atualizado!',
-          description: 'As alterações foram salvas.',
-        });
       } else {
-        const { error } = await supabase
+        const { data: newProduct, error } = await supabase
           .from('products')
-          .insert([productData]);
+          .insert([productData])
+          .select()
+          .single();
 
         if (error) throw error;
-
-        toast({
-          title: 'Produto criado!',
-          description: 'O produto foi adicionado ao cardápio.',
-        });
+        productId = newProduct.id;
       }
+
+      // Save additional images
+      if (productId) {
+        // Delete removed images
+        if (isEditing) {
+          const existingIds = additionalImages.filter(img => img.id).map(img => img.id);
+          await supabase
+            .from('product_images')
+            .delete()
+            .eq('product_id', productId)
+            .not('id', 'in', `(${existingIds.join(',')})`);
+        }
+
+        // Upsert images
+        for (const img of additionalImages) {
+          if (img.id) {
+            await supabase
+              .from('product_images')
+              .update({ display_order: img.display_order })
+              .eq('id', img.id);
+          } else {
+            await supabase
+              .from('product_images')
+              .insert({
+                product_id: productId,
+                image_url: img.url,
+                display_order: img.display_order,
+              });
+          }
+        }
+      }
+
+      toast({
+        title: isEditing ? 'Produto atualizado!' : 'Produto criado!',
+        description: isEditing ? 'As alterações foram salvas.' : 'O produto foi adicionado ao cardápio.',
+      });
 
       onSuccess();
       onOpenChange(false);
@@ -209,14 +271,25 @@ export default function ProductFormDialog({
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            {/* Image */}
+            {/* Main Image */}
             <div className="space-y-2">
-              <label className="text-sm font-medium">Imagem do produto</label>
+              <label className="text-sm font-medium">Imagem principal</label>
               <ImageUpload
                 value={imageUrl}
                 onChange={setImageUrl}
                 folder="products"
                 aspectRatio="video"
+              />
+            </div>
+
+            {/* Additional Images */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Imagens adicionais (galeria)</label>
+              <MultiImageUpload
+                images={additionalImages}
+                onChange={setAdditionalImages}
+                folder="products"
+                maxImages={5}
               />
             </div>
 
@@ -259,7 +332,7 @@ export default function ProductFormDialog({
                 name="price"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Preço (R$)</FormLabel>
+                    <FormLabel>Preço de Venda (R$)</FormLabel>
                     <FormControl>
                       <Input
                         type="number"
@@ -277,39 +350,61 @@ export default function ProductFormDialog({
 
               <FormField
                 control={form.control}
-                name="category_id"
+                name="cost_price"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Categoria</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecione..." />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {loadingCategories ? (
-                          <div className="flex items-center justify-center p-4">
-                            <Loader2 className="w-4 h-4 animate-spin" />
-                          </div>
-                        ) : categories.length === 0 ? (
-                          <div className="p-4 text-center text-sm text-muted-foreground">
-                            Nenhuma categoria encontrada
-                          </div>
-                        ) : (
-                          categories.map((cat) => (
-                            <SelectItem key={cat.id} value={cat.id}>
-                              {cat.name}
-                            </SelectItem>
-                          ))
-                        )}
-                      </SelectContent>
-                    </Select>
+                    <FormLabel>Preço de Custo (R$)</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        placeholder="0,00"
+                        {...field}
+                        value={field.value ?? 0}
+                        onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                      />
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
             </div>
+
+            <FormField
+              control={form.control}
+              name="category_id"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Categoria</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione..." />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {loadingCategories ? (
+                        <div className="flex items-center justify-center p-4">
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        </div>
+                      ) : categories.length === 0 ? (
+                        <div className="p-4 text-center text-sm text-muted-foreground">
+                          Nenhuma categoria encontrada
+                        </div>
+                      ) : (
+                        categories.map((cat) => (
+                          <SelectItem key={cat.id} value={cat.id}>
+                            {cat.name}
+                          </SelectItem>
+                        ))
+                      )}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
             {/* Stock fields */}
             <div className="grid grid-cols-2 gap-4">

@@ -17,6 +17,7 @@ import ProductsPage from "./pages/admin/ProductsPage";
 import OrdersPage from "./pages/admin/OrdersPage";
 import SettingsPage from "./pages/admin/SettingsPage";
 import AppearancePage from "./pages/admin/AppearancePage";
+import ReviewsPage from "./pages/admin/ReviewsPage";
 import SystemAdminPage from "./pages/admin/SystemAdminPage";
 import NotFound from "./pages/NotFound";
 
@@ -69,6 +70,7 @@ const App = () => (
                 <Route path="categories" element={<CategoriesPage />} />
                 <Route path="products" element={<ProductsPage />} />
                 <Route path="orders" element={<OrdersPage />} />
+                <Route path="reviews" element={<ReviewsPage />} />
                 <Route path="settings" element={<SettingsPage />} />
                 <Route path="appearance" element={<AppearancePage />} />
               </Route>
