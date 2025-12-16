@@ -1,10 +1,10 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
+import { useParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useCart, CartProvider } from '@/contexts/CartContext';
-import { mockRestaurant, mockCategories, mockProducts } from '@/lib/mockData';
-import { Product, ProductVariation, ProductAdditional } from '@/lib/types';
+import { supabase } from '@/integrations/supabase/client';
 import { 
   ShoppingCart, 
   Plus, 
@@ -13,9 +13,55 @@ import {
   Clock, 
   MapPin, 
   MessageCircle,
-  ChevronDown,
-  ChevronUp
+  Loader2
 } from 'lucide-react';
+
+interface Restaurant {
+  id: string;
+  name: string;
+  description: string | null;
+  logo_url: string | null;
+  cover_url: string | null;
+  whatsapp: string;
+  address: string | null;
+  opening_hours: string | null;
+  is_open: boolean;
+  primary_color: string | null;
+  secondary_color: string | null;
+}
+
+interface Category {
+  id: string;
+  name: string;
+  description: string | null;
+  image_url: string | null;
+  is_active: boolean;
+  display_order: number;
+}
+
+interface ProductVariation {
+  id: string;
+  name: string;
+  price: number;
+}
+
+interface ProductAdditional {
+  id: string;
+  name: string;
+  price: number;
+}
+
+interface Product {
+  id: string;
+  name: string;
+  description: string | null;
+  price: number;
+  image_url: string | null;
+  category_id: string;
+  is_active: boolean;
+  variations?: ProductVariation[];
+  additionals?: ProductAdditional[];
+}
 
 function ProductCard({ product, onAddToCart }: { product: Product; onAddToCart: (product: Product) => void }) {
   return (
@@ -41,8 +87,8 @@ function ProductCard({ product, onAddToCart }: { product: Product; onAddToCart: 
         </div>
       </div>
       <div className="relative w-24 h-24 rounded-xl bg-muted flex items-center justify-center overflow-hidden flex-shrink-0">
-        {product.image ? (
-          <img src={product.image} alt={product.name} className="w-full h-full object-cover" />
+        {product.image_url ? (
+          <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
         ) : (
           <span className="text-4xl">🍕</span>
         )}
@@ -97,10 +143,9 @@ function ProductModal({
         className="w-full max-w-lg max-h-[90vh] overflow-y-auto bg-card rounded-t-3xl md:rounded-3xl shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Header Image */}
         <div className="relative h-48 bg-muted flex items-center justify-center">
-          {product.image ? (
-            <img src={product.image} alt={product.name} className="w-full h-full object-cover" />
+          {product.image_url ? (
+            <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
           ) : (
             <span className="text-8xl">🍕</span>
           )}
@@ -118,7 +163,6 @@ function ProductModal({
             <p className="text-muted-foreground mt-1">{product.description}</p>
           </div>
 
-          {/* Variations */}
           {product.variations && product.variations.length > 0 && (
             <div>
               <h3 className="font-semibold text-foreground mb-3">Tamanho</h3>
@@ -141,7 +185,6 @@ function ProductModal({
             </div>
           )}
 
-          {/* Additionals */}
           {product.additionals && product.additionals.length > 0 && (
             <div>
               <h3 className="font-semibold text-foreground mb-3">Adicionais</h3>
@@ -164,7 +207,6 @@ function ProductModal({
             </div>
           )}
 
-          {/* Observation */}
           <div>
             <h3 className="font-semibold text-foreground mb-3">Alguma observação?</h3>
             <textarea
@@ -176,7 +218,6 @@ function ProductModal({
             />
           </div>
 
-          {/* Quantity & Add */}
           <div className="flex items-center gap-4 pt-4 border-t border-border">
             <div className="flex items-center gap-3 bg-secondary rounded-xl p-1">
               <button
@@ -213,17 +254,20 @@ function ProductModal({
 
 function CartSheet({ 
   isOpen, 
-  onClose 
+  onClose,
+  whatsapp
 }: { 
   isOpen: boolean; 
-  onClose: () => void; 
+  onClose: () => void;
+  whatsapp: string;
 }) {
   const { items, total, removeItem, updateQuantity, getWhatsAppMessage, clearCart } = useCart();
   const [address, setAddress] = useState('');
 
   const handleSendWhatsApp = () => {
     const message = getWhatsAppMessage(address);
-    window.open(`https://wa.me/${mockRestaurant.whatsapp}?text=${message}`, '_blank');
+    const formattedWhatsapp = whatsapp.replace(/\D/g, '');
+    window.open(`https://wa.me/55${formattedWhatsapp}?text=${message}`, '_blank');
     clearCart();
     onClose();
   };
@@ -246,7 +290,6 @@ function CartSheet({
             className="absolute right-0 top-0 h-full w-full max-w-md bg-card shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Header */}
             <div className="flex items-center justify-between p-4 border-b border-border">
               <h2 className="text-xl font-bold text-foreground">Seu Pedido</h2>
               <button
@@ -257,7 +300,6 @@ function CartSheet({
               </button>
             </div>
 
-            {/* Content */}
             <div className="flex-1 overflow-y-auto p-4 h-[calc(100vh-200px)]">
               {items.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-full text-center">
@@ -310,7 +352,6 @@ function CartSheet({
                     </div>
                   ))}
 
-                  {/* Address */}
                   <div className="pt-4">
                     <h3 className="font-semibold text-foreground mb-2">Endereço de entrega</h3>
                     <textarea
@@ -325,7 +366,6 @@ function CartSheet({
               )}
             </div>
 
-            {/* Footer */}
             {items.length > 0 && (
               <div className="p-4 border-t border-border bg-card">
                 <div className="flex justify-between items-center mb-4">
@@ -346,44 +386,192 @@ function CartSheet({
 }
 
 function MenuPageContent() {
+  const { slug } = useParams<{ slug: string }>();
   const { addItem, itemCount, total } = useCart();
-  const [activeCategory, setActiveCategory] = useState(mockCategories[0]?.id);
+  const [restaurant, setRestaurant] = useState<Restaurant | null>(null);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [cartOpen, setCartOpen] = useState(false);
 
+  useEffect(() => {
+    async function loadData() {
+      if (!slug) {
+        setError('Restaurante não encontrado');
+        setLoading(false);
+        return;
+      }
+
+      try {
+        // Fetch restaurant
+        const { data: restaurantData, error: restaurantError } = await supabase
+          .from('restaurants')
+          .select('*')
+          .eq('slug', slug)
+          .maybeSingle();
+
+        if (restaurantError) throw restaurantError;
+        if (!restaurantData) {
+          setError('Restaurante não encontrado');
+          setLoading(false);
+          return;
+        }
+
+        setRestaurant(restaurantData);
+
+        // Fetch categories
+        const { data: categoriesData, error: categoriesError } = await supabase
+          .from('categories')
+          .select('*')
+          .eq('restaurant_id', restaurantData.id)
+          .eq('is_active', true)
+          .order('display_order', { ascending: true });
+
+        if (categoriesError) throw categoriesError;
+        setCategories(categoriesData || []);
+        if (categoriesData && categoriesData.length > 0) {
+          setActiveCategory(categoriesData[0].id);
+        }
+
+        // Fetch products with variations and additionals
+        const { data: productsData, error: productsError } = await supabase
+          .from('products')
+          .select('*')
+          .eq('restaurant_id', restaurantData.id)
+          .eq('is_active', true);
+
+        if (productsError) throw productsError;
+
+        // Fetch variations and additionals for each product
+        const productIds = productsData?.map(p => p.id) || [];
+        
+        const [variationsRes, additionalsRes] = await Promise.all([
+          supabase.from('product_variations').select('*').in('product_id', productIds),
+          supabase.from('product_additionals').select('*').in('product_id', productIds)
+        ]);
+
+        const variationsMap: Record<string, ProductVariation[]> = {};
+        const additionalsMap: Record<string, ProductAdditional[]> = {};
+
+        variationsRes.data?.forEach(v => {
+          if (!variationsMap[v.product_id]) variationsMap[v.product_id] = [];
+          variationsMap[v.product_id].push({ id: v.id, name: v.name, price: Number(v.price) });
+        });
+
+        additionalsRes.data?.forEach(a => {
+          if (!additionalsMap[a.product_id]) additionalsMap[a.product_id] = [];
+          additionalsMap[a.product_id].push({ id: a.id, name: a.name, price: Number(a.price) });
+        });
+
+        const enrichedProducts = productsData?.map(p => ({
+          ...p,
+          price: Number(p.price),
+          variations: variationsMap[p.id] || [],
+          additionals: additionalsMap[p.id] || []
+        })) || [];
+
+        setProducts(enrichedProducts);
+      } catch (err) {
+        console.error('Error loading menu:', err);
+        setError('Erro ao carregar cardápio');
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    loadData();
+  }, [slug]);
+
   const productsByCategory = useMemo(() => {
     const grouped: Record<string, Product[]> = {};
-    mockCategories.forEach((cat) => {
-      grouped[cat.id] = mockProducts.filter((p) => p.categoryId === cat.id && p.isActive);
+    categories.forEach((cat) => {
+      grouped[cat.id] = products.filter((p) => p.category_id === cat.id);
     });
     return grouped;
-  }, []);
+  }, [categories, products]);
+
+  const handleAddToCart = (
+    product: Product,
+    qty: number,
+    variation?: ProductVariation,
+    additionals?: ProductAdditional[],
+    obs?: string
+  ) => {
+    // Map to types.ts Product format
+    const cartProduct = {
+      id: product.id,
+      categoryId: product.category_id,
+      name: product.name,
+      description: product.description || undefined,
+      image: product.image_url || undefined,
+      price: product.price,
+      isActive: product.is_active,
+      variations: product.variations,
+      additionals: product.additionals
+    };
+    addItem(cartProduct, qty, variation, additionals || [], obs);
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (error || !restaurant) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
+        <h1 className="text-2xl font-bold text-foreground mb-2">Oops!</h1>
+        <p className="text-muted-foreground">{error || 'Restaurante não encontrado'}</p>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background pb-24">
       {/* Header */}
-      <div className="gradient-primary">
+      <div 
+        className="gradient-primary"
+        style={{ 
+          background: restaurant.cover_url 
+            ? `linear-gradient(to bottom, rgba(0,0,0,0.5), rgba(0,0,0,0.7)), url(${restaurant.cover_url}) center/cover`
+            : undefined
+        }}
+      >
         <div className="container py-8">
           <div className="flex items-center gap-4">
-            <div className="w-20 h-20 rounded-2xl bg-background/20 flex items-center justify-center text-4xl backdrop-blur-sm">
-              🍕
+            <div className="w-20 h-20 rounded-2xl bg-background/20 flex items-center justify-center text-4xl backdrop-blur-sm overflow-hidden">
+              {restaurant.logo_url ? (
+                <img src={restaurant.logo_url} alt={restaurant.name} className="w-full h-full object-cover" />
+              ) : (
+                '🍕'
+              )}
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-primary-foreground">{mockRestaurant.name}</h1>
-              <p className="text-primary-foreground/80 text-sm mt-1">{mockRestaurant.description}</p>
+              <h1 className="text-2xl font-bold text-primary-foreground">{restaurant.name}</h1>
+              <p className="text-primary-foreground/80 text-sm mt-1">{restaurant.description}</p>
               <div className="flex items-center gap-4 mt-2 text-sm text-primary-foreground/70">
-                <span className="flex items-center gap-1">
-                  <Clock className="w-4 h-4" />
-                  {mockRestaurant.openingHours}
-                </span>
-                <span className="flex items-center gap-1">
-                  <MapPin className="w-4 h-4" />
-                  {mockRestaurant.address?.split('-')[0]}
-                </span>
+                {restaurant.opening_hours && (
+                  <span className="flex items-center gap-1">
+                    <Clock className="w-4 h-4" />
+                    {restaurant.opening_hours}
+                  </span>
+                )}
+                {restaurant.address && (
+                  <span className="flex items-center gap-1">
+                    <MapPin className="w-4 h-4" />
+                    {restaurant.address.split('-')[0]}
+                  </span>
+                )}
               </div>
             </div>
           </div>
-          {mockRestaurant.isOpen ? (
+          {restaurant.is_open ? (
             <Badge variant="secondary" className="mt-4 bg-success/20 text-success border-success/30">
               ● Aberto agora
             </Badge>
@@ -396,45 +584,77 @@ function MenuPageContent() {
       </div>
 
       {/* Categories */}
-      <div className="sticky top-0 z-40 bg-background border-b border-border">
-        <div className="container">
-          <div className="flex gap-2 overflow-x-auto py-4 scrollbar-hide">
-            {mockCategories.filter((c) => c.isActive).map((cat) => (
-              <button
-                key={cat.id}
-                onClick={() => setActiveCategory(cat.id)}
-                className={`px-5 py-2.5 rounded-full whitespace-nowrap font-medium transition-all ${
-                  activeCategory === cat.id
-                    ? 'gradient-primary text-primary-foreground shadow-glow'
-                    : 'bg-secondary text-secondary-foreground hover:bg-muted'
-                }`}
-              >
-                {cat.name}
-              </button>
-            ))}
+      {categories.length > 0 && (
+        <div className="sticky top-0 z-40 bg-background border-b border-border">
+          <div className="container">
+            <div className="flex gap-2 overflow-x-auto py-4 scrollbar-hide">
+              {categories.map((cat) => (
+                <button
+                  key={cat.id}
+                  onClick={() => setActiveCategory(cat.id)}
+                  className={`px-5 py-2.5 rounded-full whitespace-nowrap font-medium transition-all ${
+                    activeCategory === cat.id
+                      ? 'gradient-primary text-primary-foreground shadow-glow'
+                      : 'bg-secondary text-secondary-foreground hover:bg-muted'
+                  }`}
+                >
+                  {cat.name}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Products */}
       <div className="container py-6">
-        <div className="space-y-8">
-          {mockCategories.filter((c) => c.isActive).map((category) => (
-            <div key={category.id} id={category.id}>
-              <h2 className="text-xl font-bold text-foreground mb-4">{category.name}</h2>
-              <div className="space-y-4">
-                {productsByCategory[category.id]?.map((product) => (
-                  <ProductCard
-                    key={product.id}
-                    product={product}
-                    onAddToCart={setSelectedProduct}
-                  />
-                ))}
+        {categories.length === 0 ? (
+          <div className="text-center py-12">
+            <p className="text-muted-foreground">Nenhum produto disponível no momento.</p>
+          </div>
+        ) : (
+          <div className="space-y-8">
+            {categories.map((cat) => (
+              <div key={cat.id} id={cat.id}>
+                <h2 className="text-xl font-bold text-foreground mb-4">{cat.name}</h2>
+                {productsByCategory[cat.id]?.length > 0 ? (
+                  <div className="grid gap-4">
+                    {productsByCategory[cat.id].map((product) => (
+                      <ProductCard
+                        key={product.id}
+                        product={product}
+                        onAddToCart={() => setSelectedProduct(product)}
+                      />
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-muted-foreground text-sm">Nenhum produto nesta categoria.</p>
+                )}
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
+
+      {/* Floating Cart Button */}
+      {itemCount > 0 && (
+        <motion.div
+          initial={{ y: 100, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          className="fixed bottom-6 left-4 right-4 z-40"
+        >
+          <Button
+            variant="hero"
+            size="xl"
+            className="w-full shadow-2xl"
+            onClick={() => setCartOpen(true)}
+          >
+            <ShoppingCart className="w-5 h-5" />
+            <span className="flex-1">Ver carrinho ({itemCount} itens)</span>
+            <span className="font-bold">R$ {total.toFixed(2)}</span>
+          </Button>
+        </motion.div>
+      )}
 
       {/* Product Modal */}
       <AnimatePresence>
@@ -442,38 +662,13 @@ function MenuPageContent() {
           <ProductModal
             product={selectedProduct}
             onClose={() => setSelectedProduct(null)}
-            onAdd={addItem}
+            onAdd={handleAddToCart}
           />
         )}
       </AnimatePresence>
 
       {/* Cart Sheet */}
-      <CartSheet isOpen={cartOpen} onClose={() => setCartOpen(false)} />
-
-      {/* Floating Cart Button */}
-      {itemCount > 0 && (
-        <motion.div
-          initial={{ y: 100, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          className="fixed bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-background via-background to-transparent"
-        >
-          <Button
-            variant="hero"
-            size="xl"
-            className="w-full max-w-lg mx-auto flex justify-between"
-            onClick={() => setCartOpen(true)}
-          >
-            <span className="flex items-center gap-2">
-              <ShoppingCart className="w-5 h-5" />
-              Ver Carrinho
-              <Badge className="bg-primary-foreground/20 text-primary-foreground border-0">
-                {itemCount}
-              </Badge>
-            </span>
-            <span className="font-bold">R$ {total.toFixed(2)}</span>
-          </Button>
-        </motion.div>
-      )}
+      <CartSheet isOpen={cartOpen} onClose={() => setCartOpen(false)} whatsapp={restaurant.whatsapp} />
     </div>
   );
 }
