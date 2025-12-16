@@ -19,6 +19,7 @@ import {
 import { supabase } from '@/integrations/supabase/client';
 import { useRestaurant } from '@/hooks/useRestaurant';
 import { useToast } from '@/hooks/use-toast';
+import { useNotificationSound } from '@/hooks/useNotificationSound';
 import type { Database } from '@/integrations/supabase/types';
 
 type Order = Database['public']['Tables']['orders']['Row'];
@@ -51,6 +52,7 @@ export default function OrdersPage() {
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const { toast } = useToast();
+  const { playNotification } = useNotificationSound();
 
   useEffect(() => {
     if (!restaurant?.id) return;
@@ -90,6 +92,7 @@ export default function OrdersPage() {
         (payload) => {
           if (payload.eventType === 'INSERT') {
             setOrders(prev => [payload.new as Order, ...prev]);
+            playNotification();
             toast({
               title: '🔔 Novo pedido!',
               description: `Pedido de ${(payload.new as Order).customer_name || 'Cliente'}`,
@@ -108,7 +111,7 @@ export default function OrdersPage() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [restaurant?.id, toast]);
+  }, [restaurant?.id, toast, playNotification]);
 
   const updateOrderStatus = async (orderId: string, newStatus: OrderStatus) => {
     const { error } = await supabase

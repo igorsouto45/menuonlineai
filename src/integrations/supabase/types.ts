@@ -212,10 +212,12 @@ export type Database = {
         Row: {
           category_id: string
           created_at: string
+          current_stock: number | null
           description: string | null
           id: string
           image_url: string | null
           is_active: boolean | null
+          min_stock: number | null
           name: string
           price: number
           restaurant_id: string
@@ -224,10 +226,12 @@ export type Database = {
         Insert: {
           category_id: string
           created_at?: string
+          current_stock?: number | null
           description?: string | null
           id?: string
           image_url?: string | null
           is_active?: boolean | null
+          min_stock?: number | null
           name: string
           price: number
           restaurant_id: string
@@ -236,10 +240,12 @@ export type Database = {
         Update: {
           category_id?: string
           created_at?: string
+          current_stock?: number | null
           description?: string | null
           id?: string
           image_url?: string | null
           is_active?: boolean | null
+          min_stock?: number | null
           name?: string
           price?: number
           restaurant_id?: string

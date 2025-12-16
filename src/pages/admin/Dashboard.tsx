@@ -3,15 +3,29 @@ import { motion } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useRestaurant } from '@/hooks/useRestaurant';
+import { useNotificationSound } from '@/hooks/useNotificationSound';
 import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 import { 
   ShoppingCart, 
   DollarSign, 
   TrendingUp,
   Clock,
   Package,
-  Loader2
+  Loader2,
+  AlertTriangle
 } from 'lucide-react';
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  LineChart,
+  Line,
+} from 'recharts';
 
 interface OrderItem {
   name: string;
@@ -34,8 +48,23 @@ interface TopProduct {
   revenue: number;
 }
 
+interface LowStockProduct {
+  id: string;
+  name: string;
+  current_stock: number;
+  min_stock: number;
+}
+
+interface DailyRevenue {
+  day: string;
+  revenue: number;
+  orders: number;
+}
+
 export default function Dashboard() {
   const { restaurant } = useRestaurant();
+  const { toast } = useToast();
+  const { playNotification } = useNotificationSound();
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({
     ordersToday: 0,
@@ -45,6 +74,8 @@ export default function Dashboard() {
   });
   const [recentOrders, setRecentOrders] = useState<Order[]>([]);
   const [topProducts, setTopProducts] = useState<TopProduct[]>([]);
+  const [lowStockProducts, setLowStockProducts] = useState<LowStockProduct[]>([]);
+  const [weeklyData, setWeeklyData] = useState<DailyRevenue[]>([]);
 
   useEffect(() => {
     if (!restaurant?.id) return;
@@ -109,6 +140,44 @@ export default function Dashboard() {
           .slice(0, 4);
 
         setTopProducts(topProductsList);
+
+        // Calculate weekly revenue
+        const last7Days: DailyRevenue[] = [];
+        for (let i = 6; i >= 0; i--) {
+          const date = new Date();
+          date.setDate(date.getDate() - i);
+          date.setHours(0, 0, 0, 0);
+          const nextDate = new Date(date);
+          nextDate.setDate(nextDate.getDate() + 1);
+
+          const dayOrders = orders.filter(o => {
+            const orderDate = new Date(o.created_at);
+            return orderDate >= date && orderDate < nextDate;
+          });
+
+          last7Days.push({
+            day: date.toLocaleDateString('pt-BR', { weekday: 'short' }).replace('.', ''),
+            revenue: dayOrders.reduce((sum, o) => sum + Number(o.total), 0),
+            orders: dayOrders.length
+          });
+        }
+        setWeeklyData(last7Days);
+
+        // Fetch low stock products
+        const { data: lowStockData, error: lowStockError } = await supabase
+          .from('products')
+          .select('id, name, current_stock, min_stock')
+          .eq('restaurant_id', restaurant!.id)
+          .not('current_stock', 'is', null)
+          .not('min_stock', 'is', null);
+
+        if (!lowStockError && lowStockData) {
+          const lowStock = lowStockData.filter(
+            p => p.current_stock !== null && p.min_stock !== null && p.current_stock <= p.min_stock
+          ) as LowStockProduct[];
+          setLowStockProducts(lowStock);
+        }
+
       } catch (err) {
         console.error('Error loading dashboard:', err);
       } finally {
@@ -118,6 +187,59 @@ export default function Dashboard() {
 
     loadDashboardData();
   }, [restaurant?.id]);
+
+  // Real-time subscription for new orders
+  useEffect(() => {
+    if (!restaurant?.id) return;
+
+    const channel = supabase
+      .channel('dashboard-orders')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'orders',
+          filter: `restaurant_id=eq.${restaurant.id}`,
+        },
+        (payload) => {
+          playNotification();
+          toast({
+            title: '🔔 Novo pedido!',
+            description: `Pedido de ${(payload.new as Order).customer_name || 'Cliente'}`,
+          });
+          
+          // Update recent orders
+          const newOrder = {
+            id: payload.new.id,
+            customer_name: payload.new.customer_name,
+            items: (payload.new.items as unknown as OrderItem[]) || [],
+            total: Number(payload.new.total),
+            status: payload.new.status || 'pending',
+            created_at: payload.new.created_at
+          };
+          setRecentOrders(prev => [newOrder, ...prev.slice(0, 4)]);
+          
+          // Update today stats
+          const today = new Date();
+          today.setHours(0, 0, 0, 0);
+          if (new Date(payload.new.created_at) >= today) {
+            setStats(prev => ({
+              ...prev,
+              ordersToday: prev.ordersToday + 1,
+              revenueToday: prev.revenueToday + Number(payload.new.total),
+              avgTicket: (prev.revenueToday + Number(payload.new.total)) / (prev.ordersToday + 1),
+              totalOrders: prev.totalOrders + 1
+            }));
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [restaurant?.id, playNotification, toast]);
 
   const getTimeAgo = (dateStr: string) => {
     const diff = Date.now() - new Date(dateStr).getTime();
@@ -192,6 +314,38 @@ export default function Dashboard() {
         <p className="text-muted-foreground mt-1">Visão geral do seu restaurante</p>
       </div>
 
+      {/* Low Stock Alert */}
+      {lowStockProducts.length > 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+        >
+          <Card className="border-warning/50 bg-warning/5">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-warning flex items-center gap-2 text-lg">
+                <AlertTriangle className="w-5 h-5" />
+                Alerta de Estoque Baixo
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                {lowStockProducts.map((product) => (
+                  <div 
+                    key={product.id}
+                    className="flex items-center justify-between p-3 bg-warning/10 rounded-lg"
+                  >
+                    <span className="font-medium text-foreground">{product.name}</span>
+                    <Badge variant="secondary" className="bg-warning/20 text-warning border-0">
+                      {product.current_stock}/{product.min_stock}
+                    </Badge>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+      )}
+
       {/* Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {statsData.map((stat, index) => (
@@ -216,6 +370,81 @@ export default function Dashboard() {
             </Card>
           </motion.div>
         ))}
+      </div>
+
+      {/* Charts */}
+      <div className="grid lg:grid-cols-2 gap-6">
+        {/* Revenue Chart */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: 0.3 }}
+        >
+          <Card className="border-border">
+            <CardHeader>
+              <CardTitle className="text-foreground">Faturamento Semanal</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="h-64">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={weeklyData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                    <XAxis dataKey="day" stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                    <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                    <Tooltip 
+                      contentStyle={{ 
+                        backgroundColor: 'hsl(var(--card))', 
+                        border: '1px solid hsl(var(--border))',
+                        borderRadius: '8px'
+                      }}
+                      formatter={(value: number) => [`R$ ${value.toFixed(2)}`, 'Faturamento']}
+                    />
+                    <Bar dataKey="revenue" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+
+        {/* Orders Chart */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: 0.35 }}
+        >
+          <Card className="border-border">
+            <CardHeader>
+              <CardTitle className="text-foreground">Pedidos por Dia</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="h-64">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={weeklyData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                    <XAxis dataKey="day" stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                    <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                    <Tooltip 
+                      contentStyle={{ 
+                        backgroundColor: 'hsl(var(--card))', 
+                        border: '1px solid hsl(var(--border))',
+                        borderRadius: '8px'
+                      }}
+                      formatter={(value: number) => [value, 'Pedidos']}
+                    />
+                    <Line 
+                      type="monotone" 
+                      dataKey="orders" 
+                      stroke="hsl(var(--accent))" 
+                      strokeWidth={2}
+                      dot={{ fill: 'hsl(var(--accent))' }}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
       </div>
 
       {/* Content Grid */}

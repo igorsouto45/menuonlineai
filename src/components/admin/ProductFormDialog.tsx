@@ -44,6 +44,8 @@ const productSchema = z.object({
   price: z.number().min(0.01, 'Preço deve ser maior que zero'),
   category_id: z.string().min(1, 'Selecione uma categoria'),
   is_active: z.boolean(),
+  current_stock: z.number().nullable().optional(),
+  min_stock: z.number().nullable().optional(),
 });
 
 type ProductFormData = z.infer<typeof productSchema>;
@@ -78,6 +80,8 @@ export default function ProductFormDialog({
       price: 0,
       category_id: '',
       is_active: true,
+      current_stock: null,
+      min_stock: null,
     },
   });
 
@@ -95,6 +99,8 @@ export default function ProductFormDialog({
         price: Number(product.price),
         category_id: product.category_id,
         is_active: product.is_active ?? true,
+        current_stock: product.current_stock ?? null,
+        min_stock: product.min_stock ?? null,
       });
       setImageUrl(product.image_url);
     } else {
@@ -104,6 +110,8 @@ export default function ProductFormDialog({
         price: 0,
         category_id: '',
         is_active: true,
+        current_stock: null,
+        min_stock: null,
       });
       setImageUrl(null);
     }
@@ -142,6 +150,8 @@ export default function ProductFormDialog({
         is_active: data.is_active,
         image_url: imageUrl,
         restaurant_id: restaurant.id,
+        current_stock: data.current_stock ?? null,
+        min_stock: data.min_stock ?? null,
       };
 
       if (isEditing && product) {
@@ -295,6 +305,55 @@ export default function ProductFormDialog({
                         )}
                       </SelectContent>
                     </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            {/* Stock fields */}
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="current_stock"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Estoque atual</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        min="0"
+                        placeholder="Opcional"
+                        value={field.value ?? ''}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          field.onChange(val === '' ? null : parseInt(val, 10));
+                        }}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="min_stock"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Estoque mínimo</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        min="0"
+                        placeholder="Opcional"
+                        value={field.value ?? ''}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          field.onChange(val === '' ? null : parseInt(val, 10));
+                        }}
+                      />
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
