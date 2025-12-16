@@ -176,6 +176,86 @@ export type Database = {
           },
         ]
       }
+      product_images: {
+        Row: {
+          created_at: string
+          display_order: number | null
+          id: string
+          image_url: string
+          product_id: string
+        }
+        Insert: {
+          created_at?: string
+          display_order?: number | null
+          id?: string
+          image_url: string
+          product_id: string
+        }
+        Update: {
+          created_at?: string
+          display_order?: number | null
+          id?: string
+          image_url?: string
+          product_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_images_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      product_reviews: {
+        Row: {
+          comment: string | null
+          created_at: string
+          customer_name: string
+          id: string
+          is_approved: boolean | null
+          product_id: string
+          rating: number
+          restaurant_id: string
+        }
+        Insert: {
+          comment?: string | null
+          created_at?: string
+          customer_name: string
+          id?: string
+          is_approved?: boolean | null
+          product_id: string
+          rating: number
+          restaurant_id: string
+        }
+        Update: {
+          comment?: string | null
+          created_at?: string
+          customer_name?: string
+          id?: string
+          is_approved?: boolean | null
+          product_id?: string
+          rating?: number
+          restaurant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_reviews_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_reviews_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       product_variations: {
         Row: {
           created_at: string
