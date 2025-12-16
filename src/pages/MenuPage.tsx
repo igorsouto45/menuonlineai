@@ -82,34 +82,50 @@ function ProductCard({ product, onAddToCart }: { product: Product; onAddToCart: 
   return (
     <motion.div
       layout
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="flex gap-4 p-4 bg-card rounded-2xl border border-border hover:border-primary/20 hover:shadow-card transition-all duration-300 cursor-pointer"
+      whileHover={{ scale: 1.01, y: -2 }}
+      whileTap={{ scale: 0.99 }}
+      className="group flex gap-4 p-4 bg-card rounded-2xl border border-border hover:border-primary/30 hover:shadow-xl hover:shadow-primary/5 transition-all duration-300 cursor-pointer"
       onClick={() => onAddToCart(product)}
     >
-      <div className="flex-1 min-w-0">
-        <h3 className="font-semibold text-foreground text-lg mb-1">{product.name}</h3>
-        <p className="text-muted-foreground text-sm line-clamp-2 mb-3">{product.description}</p>
-        <div className="flex items-center gap-2">
-          <span className="text-xl font-bold text-primary">
-            R$ {product.price.toFixed(2)}
-          </span>
-          {product.variations && product.variations.length > 0 && (
-            <span className="text-xs text-muted-foreground">
-              a partir de R$ {Math.min(...product.variations.map(v => v.price)).toFixed(2)}
+      <div className="flex-1 min-w-0 flex flex-col justify-between">
+        <div>
+          <h3 className="font-bold text-foreground text-lg mb-1 group-hover:text-primary transition-colors">
+            {product.name}
+          </h3>
+          <p className="text-muted-foreground text-sm line-clamp-2">{product.description}</p>
+        </div>
+        <div className="flex items-center gap-2 mt-3">
+          {product.variations && product.variations.length > 0 ? (
+            <span className="text-sm text-muted-foreground">
+              a partir de{' '}
+              <span className="text-xl font-bold text-primary">
+                R$ {Math.min(...product.variations.map(v => v.price)).toFixed(2)}
+              </span>
+            </span>
+          ) : (
+            <span className="text-xl font-bold text-primary">
+              R$ {product.price.toFixed(2)}
             </span>
           )}
         </div>
       </div>
-      <div className="relative w-24 h-24 rounded-xl bg-muted flex items-center justify-center overflow-hidden flex-shrink-0">
+      <div className="relative w-28 h-28 rounded-xl bg-gradient-to-br from-muted to-muted/50 flex items-center justify-center overflow-hidden flex-shrink-0 shadow-inner">
         {product.image_url ? (
-          <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
+          <img 
+            src={product.image_url} 
+            alt={product.name} 
+            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" 
+          />
         ) : (
           <span className="text-4xl">🍕</span>
         )}
-        <div className="absolute bottom-1 right-1 w-8 h-8 rounded-full gradient-primary flex items-center justify-center shadow-glow">
+        <motion.div 
+          initial={{ scale: 0.8, opacity: 0.8 }}
+          whileHover={{ scale: 1.1, opacity: 1 }}
+          className="absolute bottom-2 right-2 w-9 h-9 rounded-full gradient-primary flex items-center justify-center shadow-lg shadow-primary/40"
+        >
           <Plus className="w-5 h-5 text-primary-foreground" />
-        </div>
+        </motion.div>
       </div>
     </motion.div>
   );
@@ -840,21 +856,31 @@ function MenuPageContent() {
 
       {/* Categories */}
       {categories.length > 0 && (
-        <div className="sticky top-0 z-40 bg-background border-b border-border">
+        <div className="sticky top-0 z-40 bg-background/95 backdrop-blur-md border-b border-border shadow-sm">
           <div className="container">
-            <div className="flex gap-2 overflow-x-auto py-4 scrollbar-hide">
+            <div className="flex gap-2 overflow-x-auto py-3 scrollbar-hide">
               {categories.map((cat) => (
-                <button
+                <motion.button
                   key={cat.id}
-                  onClick={() => setActiveCategory(cat.id)}
-                  className={`px-5 py-2.5 rounded-full whitespace-nowrap font-medium transition-all ${
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => {
+                    setActiveCategory(cat.id);
+                    const element = document.getElementById(`category-${cat.id}`);
+                    if (element) {
+                      const yOffset = -80;
+                      const y = element.getBoundingClientRect().top + window.pageYOffset + yOffset;
+                      window.scrollTo({ top: y, behavior: 'smooth' });
+                    }
+                  }}
+                  className={`px-5 py-2.5 rounded-full whitespace-nowrap font-semibold transition-all duration-200 ${
                     activeCategory === cat.id
-                      ? 'gradient-primary text-primary-foreground shadow-glow'
-                      : 'bg-secondary text-secondary-foreground hover:bg-muted'
+                      ? 'gradient-primary text-primary-foreground shadow-lg shadow-primary/30'
+                      : 'bg-muted text-foreground hover:bg-primary/10 hover:text-primary border border-border'
                   }`}
                 >
                   {cat.name}
-                </button>
+                </motion.button>
               ))}
             </div>
           </div>
@@ -868,24 +894,43 @@ function MenuPageContent() {
             <p className="text-muted-foreground">Nenhum produto disponível no momento.</p>
           </div>
         ) : (
-          <div className="space-y-8">
+          <div className="space-y-10">
             {categories.map((cat) => (
-              <div key={cat.id} id={cat.id}>
-                <h2 className="text-xl font-bold text-foreground mb-4">{cat.name}</h2>
+              <motion.section 
+                key={cat.id} 
+                id={`category-${cat.id}`}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, margin: "-50px" }}
+                transition={{ duration: 0.4 }}
+              >
+                <div className="flex items-center gap-3 mb-5">
+                  <h2 className="text-2xl font-bold text-foreground">{cat.name}</h2>
+                  <div className="flex-1 h-px bg-gradient-to-r from-border to-transparent" />
+                </div>
                 {productsByCategory[cat.id]?.length > 0 ? (
-                  <div className="grid gap-4">
-                    {productsByCategory[cat.id].map((product) => (
-                      <ProductCard
+                  <div className="grid gap-4 md:grid-cols-2">
+                    {productsByCategory[cat.id].map((product, index) => (
+                      <motion.div
                         key={product.id}
-                        product={product}
-                        onAddToCart={() => setSelectedProduct(product)}
-                      />
+                        initial={{ opacity: 0, y: 15 }}
+                        whileInView={{ opacity: 1, y: 0 }}
+                        viewport={{ once: true }}
+                        transition={{ duration: 0.3, delay: index * 0.05 }}
+                      >
+                        <ProductCard
+                          product={product}
+                          onAddToCart={() => setSelectedProduct(product)}
+                        />
+                      </motion.div>
                     ))}
                   </div>
                 ) : (
-                  <p className="text-muted-foreground text-sm">Nenhum produto nesta categoria.</p>
+                  <p className="text-muted-foreground text-sm py-4 text-center bg-muted/30 rounded-xl">
+                    Nenhum produto nesta categoria.
+                  </p>
                 )}
-              </div>
+              </motion.section>
             ))}
           </div>
         )}
