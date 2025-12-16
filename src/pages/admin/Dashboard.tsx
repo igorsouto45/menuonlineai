@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useRestaurant } from '@/hooks/useRestaurant';
 import { useNotificationSound } from '@/hooks/useNotificationSound';
 import { supabase } from '@/integrations/supabase/client';
@@ -16,7 +17,9 @@ import {
   Loader2,
   AlertTriangle,
   FileSpreadsheet,
-  FileText
+  FileText,
+  BarChart3,
+  PieChart
 } from 'lucide-react';
 import {
   BarChart,
@@ -32,6 +35,8 @@ import {
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { ProfitMarginReport } from '@/components/admin/ProfitMarginReport';
+import { CashFlowDashboard } from '@/components/admin/CashFlowDashboard';
 
 interface OrderItem {
   name: string;
@@ -432,6 +437,24 @@ export default function Dashboard() {
         </div>
       </div>
 
+      {/* Dashboard Tabs */}
+      <Tabs defaultValue="overview" className="space-y-6">
+        <TabsList className="grid w-full grid-cols-3 lg:w-auto lg:inline-grid">
+          <TabsTrigger value="overview" className="flex items-center gap-2">
+            <BarChart3 className="w-4 h-4" />
+            Visão Geral
+          </TabsTrigger>
+          <TabsTrigger value="cashflow" className="flex items-center gap-2">
+            <DollarSign className="w-4 h-4" />
+            Fluxo de Caixa
+          </TabsTrigger>
+          <TabsTrigger value="margin" className="flex items-center gap-2">
+            <PieChart className="w-4 h-4" />
+            Margem de Lucro
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="overview" className="space-y-6">
       {/* Low Stock Alert */}
       {lowStockProducts.length > 0 && (
         <motion.div
@@ -660,6 +683,16 @@ export default function Dashboard() {
           </Card>
         </motion.div>
       </div>
+        </TabsContent>
+
+        <TabsContent value="cashflow">
+          {restaurant?.id && <CashFlowDashboard restaurantId={restaurant.id} />}
+        </TabsContent>
+
+        <TabsContent value="margin">
+          {restaurant?.id && <ProfitMarginReport restaurantId={restaurant.id} />}
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
