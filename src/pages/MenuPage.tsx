@@ -9,6 +9,7 @@ import { ProductSearch } from '@/components/menu/ProductSearch';
 import { ProductImageCarousel } from '@/components/menu/ProductImageCarousel';
 import { ProductReviews } from '@/components/menu/ProductReviews';
 import { MenuSkeleton } from '@/components/menu/MenuSkeleton';
+import { InstallPWAButton } from '@/components/menu/InstallPWAButton';
 import { 
   ShoppingCart, 
   Plus, 
@@ -825,15 +826,18 @@ function MenuPageContent() {
               </div>
             </div>
           </div>
-          {restaurant.is_open ? (
-            <Badge variant="secondary" className="mt-3 sm:mt-4 bg-success/20 text-success border-success/30 text-xs">
-              ● Aberto agora
-            </Badge>
-          ) : (
-            <Badge variant="secondary" className="mt-3 sm:mt-4 bg-destructive/20 text-destructive border-destructive/30 text-xs">
-              ● Fechado
-            </Badge>
-          )}
+          <div className="flex items-center justify-between mt-3 sm:mt-4">
+            {restaurant.is_open ? (
+              <Badge variant="secondary" className="bg-success/20 text-success border-success/30 text-xs">
+                ● Aberto agora
+              </Badge>
+            ) : (
+              <Badge variant="secondary" className="bg-destructive/20 text-destructive border-destructive/30 text-xs">
+                ● Fechado
+              </Badge>
+            )}
+            <InstallPWAButton />
+          </div>
         </div>
       </div>
 
