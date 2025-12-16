@@ -3,7 +3,7 @@ import { useParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { useCart, CartProvider } from '@/contexts/CartContext';
+import { useCart, CartProvider, DeliveryMode } from '@/contexts/CartContext';
 import { supabase } from '@/integrations/supabase/client';
 import { ProductSearch } from '@/components/menu/ProductSearch';
 import { ProductImageCarousel } from '@/components/menu/ProductImageCarousel';
@@ -16,8 +16,17 @@ import {
   Clock, 
   MapPin, 
   MessageCircle,
-  Loader2
+  Loader2,
+  Package,
+  Truck
 } from 'lucide-react';
+
+interface DeliveryArea {
+  id: string;
+  name: string;
+  fee: number;
+  is_active: boolean;
+}
 
 interface Restaurant {
   id: string;
@@ -33,6 +42,7 @@ interface Restaurant {
   secondary_color: string | null;
   delivery_fee: number | null;
   free_delivery_minimum: number | null;
+  pickup_enabled: boolean | null;
 }
 
 interface Category {
@@ -341,25 +351,38 @@ function CartSheet({
   onClose,
   whatsapp,
   deliveryFee,
-  freeDeliveryMinimum
+  freeDeliveryMinimum,
+  pickupEnabled,
+  deliveryAreas
 }: { 
   isOpen: boolean; 
   onClose: () => void;
   whatsapp: string;
   deliveryFee: number;
   freeDeliveryMinimum: number | null;
+  pickupEnabled: boolean;
+  deliveryAreas: DeliveryArea[];
 }) {
   const { items, total, removeItem, updateQuantity, getWhatsAppMessage, clearCart, calculateDeliveryFee, getGrandTotal } = useCart();
   const [address, setAddress] = useState('');
+  const [deliveryMode, setDeliveryMode] = useState<DeliveryMode>(pickupEnabled ? 'pickup' : 'delivery');
+  const [selectedAreaId, setSelectedAreaId] = useState<string | null>(deliveryAreas.length > 0 ? deliveryAreas[0].id : null);
 
-  const deliveryInfo = { deliveryFee, freeDeliveryMinimum };
+  const selectedArea = deliveryAreas.find(a => a.id === selectedAreaId) || null;
+  
+  const deliveryInfo = { 
+    mode: deliveryMode,
+    deliveryFee, 
+    freeDeliveryMinimum,
+    selectedArea: deliveryMode === 'delivery' ? selectedArea : null
+  };
   const actualDeliveryFee = calculateDeliveryFee(deliveryInfo);
   const grandTotal = getGrandTotal(deliveryInfo);
-  const hasFreeDelivery = deliveryFee > 0 && actualDeliveryFee === 0;
-  const amountForFreeDelivery = freeDeliveryMinimum !== null ? freeDeliveryMinimum - total : null;
+  const hasFreeDelivery = deliveryMode === 'delivery' && deliveryFee > 0 && actualDeliveryFee === 0;
+  const amountForFreeDelivery = freeDeliveryMinimum !== null && deliveryMode === 'delivery' ? freeDeliveryMinimum - total : null;
 
   const handleSendWhatsApp = () => {
-    const message = getWhatsAppMessage(address, deliveryInfo);
+    const message = getWhatsAppMessage(deliveryMode === 'delivery' ? address : undefined, deliveryInfo);
     const formattedWhatsapp = whatsapp.replace(/\D/g, '');
     window.open(`https://wa.me/55${formattedWhatsapp}?text=${message}`, '_blank');
     clearCart();
@@ -446,16 +469,83 @@ function CartSheet({
                     </div>
                   ))}
 
-                  <div className="pt-4">
-                    <h3 className="font-semibold text-foreground mb-2">Endereço de entrega</h3>
-                    <textarea
-                      value={address}
-                      onChange={(e) => setAddress(e.target.value)}
-                      placeholder="Rua, número, bairro, complemento..."
-                      className="w-full p-3 rounded-xl border-2 border-border bg-background text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none resize-none"
-                      rows={2}
-                    />
+                  {/* Delivery Mode Selection */}
+                  <div className="pt-4 space-y-3">
+                    <h3 className="font-semibold text-foreground">Como deseja receber?</h3>
+                    <div className="grid grid-cols-2 gap-2">
+                      {pickupEnabled && (
+                        <button
+                          onClick={() => setDeliveryMode('pickup')}
+                          className={`p-3 rounded-xl border-2 transition-all flex flex-col items-center gap-1 ${
+                            deliveryMode === 'pickup'
+                              ? 'border-primary bg-primary/10'
+                              : 'border-border hover:border-primary/40'
+                          }`}
+                        >
+                          <Package className="w-5 h-5" />
+                          <span className="text-sm font-medium">Retirada</span>
+                          <span className="text-xs text-muted-foreground">Grátis</span>
+                        </button>
+                      )}
+                      <button
+                        onClick={() => setDeliveryMode('delivery')}
+                        className={`p-3 rounded-xl border-2 transition-all flex flex-col items-center gap-1 ${
+                          deliveryMode === 'delivery'
+                            ? 'border-primary bg-primary/10'
+                            : 'border-border hover:border-primary/40'
+                        } ${!pickupEnabled ? 'col-span-2' : ''}`}
+                      >
+                        <Truck className="w-5 h-5" />
+                        <span className="text-sm font-medium">Entrega</span>
+                        {deliveryAreas.length > 0 ? (
+                          <span className="text-xs text-muted-foreground">Selecione a área</span>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">
+                            {deliveryFee > 0 ? `R$ ${deliveryFee.toFixed(2)}` : 'Grátis'}
+                          </span>
+                        )}
+                      </button>
+                    </div>
                   </div>
+
+                  {/* Delivery Area Selection */}
+                  {deliveryMode === 'delivery' && deliveryAreas.length > 0 && (
+                    <div className="space-y-2">
+                      <h3 className="font-semibold text-foreground text-sm">Selecione sua região</h3>
+                      <div className="space-y-2 max-h-32 overflow-y-auto">
+                        {deliveryAreas.map((area) => (
+                          <button
+                            key={area.id}
+                            onClick={() => setSelectedAreaId(area.id)}
+                            className={`w-full p-3 rounded-xl border-2 transition-all flex justify-between items-center ${
+                              selectedAreaId === area.id
+                                ? 'border-primary bg-primary/10'
+                                : 'border-border hover:border-primary/40'
+                            }`}
+                          >
+                            <span className="font-medium text-sm">{area.name}</span>
+                            <span className="text-sm text-primary font-semibold">
+                              {area.fee > 0 ? `R$ ${area.fee.toFixed(2)}` : 'Grátis'}
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Address input - only for delivery */}
+                  {deliveryMode === 'delivery' && (
+                    <div className="pt-2">
+                      <h3 className="font-semibold text-foreground mb-2">Endereço de entrega</h3>
+                      <textarea
+                        value={address}
+                        onChange={(e) => setAddress(e.target.value)}
+                        placeholder="Rua, número, bairro, complemento..."
+                        className="w-full p-3 rounded-xl border-2 border-border bg-background text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none resize-none"
+                        rows={2}
+                      />
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -469,19 +559,31 @@ function CartSheet({
                     <span>R$ {total.toFixed(2)}</span>
                   </div>
                   
-                  {deliveryFee > 0 && (
+                  {deliveryMode === 'delivery' && (
                     <div className="flex justify-between items-center text-muted-foreground">
-                      <span>Taxa de entrega</span>
+                      <span>
+                        Taxa de entrega
+                        {selectedArea && <span className="text-xs ml-1">({selectedArea.name})</span>}
+                      </span>
                       {hasFreeDelivery ? (
                         <span className="text-success font-medium">GRÁTIS 🎉</span>
+                      ) : actualDeliveryFee === 0 ? (
+                        <span className="text-success font-medium">Grátis</span>
                       ) : (
                         <span>R$ {actualDeliveryFee.toFixed(2)}</span>
                       )}
                     </div>
                   )}
+
+                  {deliveryMode === 'pickup' && (
+                    <div className="flex justify-between items-center text-muted-foreground">
+                      <span>Retirada no local</span>
+                      <span className="text-success font-medium">Grátis 📦</span>
+                    </div>
+                  )}
                   
                   {/* Free delivery progress */}
-                  {freeDeliveryMinimum !== null && !hasFreeDelivery && amountForFreeDelivery !== null && amountForFreeDelivery > 0 && (
+                  {deliveryMode === 'delivery' && freeDeliveryMinimum !== null && !hasFreeDelivery && amountForFreeDelivery !== null && amountForFreeDelivery > 0 && (
                     <div className="p-2 bg-primary/10 rounded-lg text-center">
                       <p className="text-sm text-primary">
                         Faltam <strong>R$ {amountForFreeDelivery.toFixed(2)}</strong> para frete grátis!
@@ -514,6 +616,7 @@ function MenuPageContent() {
   const [restaurant, setRestaurant] = useState<Restaurant | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
+  const [deliveryAreas, setDeliveryAreas] = useState<DeliveryArea[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
@@ -559,6 +662,16 @@ function MenuPageContent() {
         if (categoriesData && categoriesData.length > 0) {
           setActiveCategory(categoriesData[0].id);
         }
+
+        // Fetch delivery areas
+        const { data: areasData } = await supabase
+          .from('delivery_areas')
+          .select('*')
+          .eq('restaurant_id', restaurantData.id)
+          .eq('is_active', true)
+          .order('display_order', { ascending: true });
+
+        setDeliveryAreas(areasData || []);
 
         // Fetch products with variations and additionals
         const { data: productsData, error: productsError } = await supabase
@@ -817,6 +930,8 @@ function MenuPageContent() {
         whatsapp={restaurant.whatsapp}
         deliveryFee={restaurant.delivery_fee ?? 0}
         freeDeliveryMinimum={restaurant.free_delivery_minimum}
+        pickupEnabled={restaurant.pickup_enabled ?? true}
+        deliveryAreas={deliveryAreas}
       />
     </div>
   );

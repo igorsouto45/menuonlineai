@@ -12,8 +12,9 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Switch } from '@/components/ui/switch';
-import { Loader2, Save, Store, Clock, MapPin, Phone, MessageSquare, Bot, Copy, Check, Wifi, WifiOff, Truck, Link, ExternalLink } from 'lucide-react';
+import { Loader2, Save, Store, Clock, MapPin, Phone, MessageSquare, Bot, Copy, Check, Wifi, WifiOff, Truck, Link, ExternalLink, Package } from 'lucide-react';
 import ImageUpload from '@/components/admin/ImageUpload';
+import { DeliveryAreasManager } from '@/components/admin/DeliveryAreasManager';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 const settingsSchema = z.object({
@@ -24,6 +25,7 @@ const settingsSchema = z.object({
   address: z.string().optional(),
   opening_hours: z.string().optional(),
   is_open: z.boolean(),
+  pickup_enabled: z.boolean(),
   delivery_fee: z.coerce.number().min(0, 'Taxa não pode ser negativa').optional(),
   free_delivery_minimum: z.coerce.number().min(0, 'Valor não pode ser negativo').nullable().optional(),
   evolution_api_url: z.string().optional(),
@@ -119,6 +121,7 @@ export default function SettingsPage() {
       address: '',
       opening_hours: '',
       is_open: true,
+      pickup_enabled: true,
       delivery_fee: 0,
       free_delivery_minimum: null,
       evolution_api_url: '',
@@ -137,6 +140,7 @@ export default function SettingsPage() {
         address: restaurant.address || '',
         opening_hours: restaurant.opening_hours || '',
         is_open: restaurant.is_open ?? true,
+        pickup_enabled: (restaurant as any).pickup_enabled ?? true,
         delivery_fee: (restaurant as any).delivery_fee || 0,
         free_delivery_minimum: (restaurant as any).free_delivery_minimum || null,
         evolution_api_url: (restaurant as any).evolution_api_url || '',
@@ -412,17 +416,43 @@ export default function SettingsPage() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Truck className="w-5 h-5 text-primary" />
-                  Entrega
+                  Entrega e Retirada
                 </CardTitle>
-                <CardDescription>Configure a taxa de entrega e frete grátis</CardDescription>
+                <CardDescription>Configure as opções de entrega e retirada no local</CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="space-y-6">
+                {/* Pickup option */}
+                <FormField
+                  control={form.control}
+                  name="pickup_enabled"
+                  render={({ field }) => (
+                    <FormItem className="flex items-center justify-between rounded-lg border p-4">
+                      <div className="space-y-0.5">
+                        <FormLabel className="text-base flex items-center gap-2">
+                          <Package className="w-4 h-4" />
+                          Retirada no local
+                        </FormLabel>
+                        <FormDescription>
+                          Permite que clientes retirem o pedido no estabelecimento (sem taxa)
+                        </FormDescription>
+                      </div>
+                      <FormControl>
+                        <Switch
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                        />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+
+                {/* Default delivery fee */}
                 <FormField
                   control={form.control}
                   name="delivery_fee"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Taxa de Entrega (R$)</FormLabel>
+                      <FormLabel>Taxa de Entrega Padrão (R$)</FormLabel>
                       <FormControl>
                         <Input
                           type="number"
@@ -433,7 +463,7 @@ export default function SettingsPage() {
                         />
                       </FormControl>
                       <FormDescription>
-                        Valor cobrado pela entrega. Digite 0 para entrega grátis.
+                        Usada quando não há áreas de entrega configuradas. Digite 0 para entrega grátis.
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
@@ -463,6 +493,23 @@ export default function SettingsPage() {
                     </FormItem>
                   )}
                 />
+
+                {/* Delivery areas */}
+                <div className="space-y-3 pt-4 border-t border-border">
+                  <div>
+                    <h4 className="font-medium text-foreground flex items-center gap-2">
+                      <MapPin className="w-4 h-4" />
+                      Áreas de Entrega
+                    </h4>
+                    <p className="text-sm text-muted-foreground">
+                      Configure taxas diferentes por bairro ou região
+                    </p>
+                  </div>
+                  
+                  {restaurant && (
+                    <DeliveryAreasManager restaurantId={restaurant.id} />
+                  )}
+                </div>
               </CardContent>
             </Card>
           </motion.div>

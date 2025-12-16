@@ -1,9 +1,19 @@
 import React, { createContext, useContext, useState, useCallback, ReactNode } from 'react';
 import { CartItem, Product, ProductVariation, ProductAdditional } from '@/lib/types';
 
+export type DeliveryMode = 'delivery' | 'pickup';
+
+interface DeliveryArea {
+  id: string;
+  name: string;
+  fee: number;
+}
+
 interface DeliveryInfo {
+  mode: DeliveryMode;
   deliveryFee: number;
   freeDeliveryMinimum: number | null;
+  selectedArea?: DeliveryArea | null;
 }
 
 interface CartContextType {
@@ -45,14 +55,22 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const itemCount = items.reduce((sum, item) => sum + item.quantity, 0);
 
   const calculateDeliveryFee = useCallback((deliveryInfo: DeliveryInfo): number => {
-    const { deliveryFee, freeDeliveryMinimum } = deliveryInfo;
+    const { mode, deliveryFee, freeDeliveryMinimum, selectedArea } = deliveryInfo;
+    
+    // Pickup is always free
+    if (mode === 'pickup') {
+      return 0;
+    }
+    
+    // Use area fee if selected, otherwise use default
+    const baseFee = selectedArea ? selectedArea.fee : deliveryFee;
     
     // If free delivery minimum is set and subtotal exceeds it, delivery is free
     if (freeDeliveryMinimum !== null && total >= freeDeliveryMinimum) {
       return 0;
     }
     
-    return deliveryFee;
+    return baseFee;
   }, [total]);
 
   const getGrandTotal = useCallback((deliveryInfo: DeliveryInfo): number => {
@@ -114,7 +132,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   const getWhatsAppMessage = useCallback(
     (customerAddress?: string, deliveryInfo?: DeliveryInfo) => {
-      let message = '🍕 *Novo Pedido!*\n\n';
+      const isPickup = deliveryInfo?.mode === 'pickup';
+      let message = isPickup ? '📦 *Novo Pedido - RETIRADA*\n\n' : '🍕 *Novo Pedido - ENTREGA*\n\n';
 
       items.forEach((item, index) => {
         message += `${index + 1}. *${item.product.name}*`;
@@ -139,15 +158,22 @@ export function CartProvider({ children }: { children: ReactNode }) {
       message += `━━━━━━━━━━━━━━━━\n`;
       message += `*Subtotal: R$ ${total.toFixed(2)}*\n`;
 
-      // Add delivery fee info if provided
+      // Add delivery info if provided
       if (deliveryInfo) {
         const actualDeliveryFee = calculateDeliveryFee(deliveryInfo);
         const grandTotal = total + actualDeliveryFee;
 
-        if (actualDeliveryFee > 0) {
-          message += `*Taxa de entrega: R$ ${actualDeliveryFee.toFixed(2)}*\n`;
-        } else if (deliveryInfo.deliveryFee > 0 && actualDeliveryFee === 0) {
-          message += `*Taxa de entrega: GRÁTIS* 🎉\n`;
+        if (isPickup) {
+          message += `*Forma: RETIRADA NO LOCAL* 📦\n`;
+        } else {
+          if (deliveryInfo.selectedArea) {
+            message += `*Área: ${deliveryInfo.selectedArea.name}*\n`;
+          }
+          if (actualDeliveryFee > 0) {
+            message += `*Taxa de entrega: R$ ${actualDeliveryFee.toFixed(2)}*\n`;
+          } else if (deliveryInfo.deliveryFee > 0 && actualDeliveryFee === 0) {
+            message += `*Taxa de entrega: GRÁTIS* 🎉\n`;
+          }
         }
         
         message += `━━━━━━━━━━━━━━━━\n`;
@@ -156,7 +182,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
         message += `*TOTAL: R$ ${total.toFixed(2)}*\n`;
       }
 
-      if (customerAddress) {
+      if (customerAddress && !isPickup) {
         message += `\n📍 *Endereço de entrega:*\n${customerAddress}`;
       }
 
