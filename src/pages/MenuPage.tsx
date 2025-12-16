@@ -31,6 +31,8 @@ interface Restaurant {
   is_open: boolean;
   primary_color: string | null;
   secondary_color: string | null;
+  delivery_fee: number | null;
+  free_delivery_minimum: number | null;
 }
 
 interface Category {
@@ -337,17 +339,27 @@ function ProductModal({
 function CartSheet({ 
   isOpen, 
   onClose,
-  whatsapp
+  whatsapp,
+  deliveryFee,
+  freeDeliveryMinimum
 }: { 
   isOpen: boolean; 
   onClose: () => void;
   whatsapp: string;
+  deliveryFee: number;
+  freeDeliveryMinimum: number | null;
 }) {
-  const { items, total, removeItem, updateQuantity, getWhatsAppMessage, clearCart } = useCart();
+  const { items, total, removeItem, updateQuantity, getWhatsAppMessage, clearCart, calculateDeliveryFee, getGrandTotal } = useCart();
   const [address, setAddress] = useState('');
 
+  const deliveryInfo = { deliveryFee, freeDeliveryMinimum };
+  const actualDeliveryFee = calculateDeliveryFee(deliveryInfo);
+  const grandTotal = getGrandTotal(deliveryInfo);
+  const hasFreeDelivery = deliveryFee > 0 && actualDeliveryFee === 0;
+  const amountForFreeDelivery = freeDeliveryMinimum !== null ? freeDeliveryMinimum - total : null;
+
   const handleSendWhatsApp = () => {
-    const message = getWhatsAppMessage(address);
+    const message = getWhatsAppMessage(address, deliveryInfo);
     const formattedWhatsapp = whatsapp.replace(/\D/g, '');
     window.open(`https://wa.me/55${formattedWhatsapp}?text=${message}`, '_blank');
     clearCart();
@@ -450,10 +462,39 @@ function CartSheet({
 
             {items.length > 0 && (
               <div className="p-4 border-t border-border bg-card">
-                <div className="flex justify-between items-center mb-4">
-                  <span className="text-lg font-semibold text-foreground">Total</span>
-                  <span className="text-2xl font-bold text-primary">R$ {total.toFixed(2)}</span>
+                {/* Delivery info */}
+                <div className="space-y-2 mb-4">
+                  <div className="flex justify-between items-center text-muted-foreground">
+                    <span>Subtotal</span>
+                    <span>R$ {total.toFixed(2)}</span>
+                  </div>
+                  
+                  {deliveryFee > 0 && (
+                    <div className="flex justify-between items-center text-muted-foreground">
+                      <span>Taxa de entrega</span>
+                      {hasFreeDelivery ? (
+                        <span className="text-success font-medium">GRÁTIS 🎉</span>
+                      ) : (
+                        <span>R$ {actualDeliveryFee.toFixed(2)}</span>
+                      )}
+                    </div>
+                  )}
+                  
+                  {/* Free delivery progress */}
+                  {freeDeliveryMinimum !== null && !hasFreeDelivery && amountForFreeDelivery !== null && amountForFreeDelivery > 0 && (
+                    <div className="p-2 bg-primary/10 rounded-lg text-center">
+                      <p className="text-sm text-primary">
+                        Faltam <strong>R$ {amountForFreeDelivery.toFixed(2)}</strong> para frete grátis!
+                      </p>
+                    </div>
+                  )}
+                  
+                  <div className="flex justify-between items-center pt-2 border-t border-border">
+                    <span className="text-lg font-semibold text-foreground">Total</span>
+                    <span className="text-2xl font-bold text-primary">R$ {grandTotal.toFixed(2)}</span>
+                  </div>
                 </div>
+                
                 <Button variant="whatsapp" size="xl" className="w-full" onClick={handleSendWhatsApp}>
                   <MessageCircle className="w-5 h-5" />
                   Enviar pedido via WhatsApp
@@ -770,7 +811,13 @@ function MenuPageContent() {
       </AnimatePresence>
 
       {/* Cart Sheet */}
-      <CartSheet isOpen={cartOpen} onClose={() => setCartOpen(false)} whatsapp={restaurant.whatsapp} />
+      <CartSheet 
+        isOpen={cartOpen} 
+        onClose={() => setCartOpen(false)} 
+        whatsapp={restaurant.whatsapp}
+        deliveryFee={restaurant.delivery_fee ?? 0}
+        freeDeliveryMinimum={restaurant.free_delivery_minimum}
+      />
     </div>
   );
 }

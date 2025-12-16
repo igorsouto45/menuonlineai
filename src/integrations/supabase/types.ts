@@ -392,6 +392,7 @@ export type Database = {
           evolution_api_url: string | null
           evolution_instance_name: string | null
           font_family: string | null
+          free_delivery_minimum: number | null
           id: string
           is_open: boolean | null
           logo_url: string | null
@@ -414,6 +415,7 @@ export type Database = {
           evolution_api_url?: string | null
           evolution_instance_name?: string | null
           font_family?: string | null
+          free_delivery_minimum?: number | null
           id?: string
           is_open?: boolean | null
           logo_url?: string | null
@@ -436,6 +438,7 @@ export type Database = {
           evolution_api_url?: string | null
           evolution_instance_name?: string | null
           font_family?: string | null
+          free_delivery_minimum?: number | null
           id?: string
           is_open?: boolean | null
           logo_url?: string | null
