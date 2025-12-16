@@ -386,6 +386,7 @@ export type Database = {
           address: string | null
           cover_url: string | null
           created_at: string
+          delivery_fee: number | null
           description: string | null
           evolution_api_key: string | null
           evolution_api_url: string | null
@@ -407,6 +408,7 @@ export type Database = {
           address?: string | null
           cover_url?: string | null
           created_at?: string
+          delivery_fee?: number | null
           description?: string | null
           evolution_api_key?: string | null
           evolution_api_url?: string | null
@@ -428,6 +430,7 @@ export type Database = {
           address?: string | null
           cover_url?: string | null
           created_at?: string
+          delivery_fee?: number | null
           description?: string | null
           evolution_api_key?: string | null
           evolution_api_url?: string | null

@@ -12,7 +12,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Switch } from '@/components/ui/switch';
-import { Loader2, Save, Store, Clock, MapPin, Phone, MessageSquare, Bot, Copy, Check, Wifi, WifiOff } from 'lucide-react';
+import { Loader2, Save, Store, Clock, MapPin, Phone, MessageSquare, Bot, Copy, Check, Wifi, WifiOff, Truck } from 'lucide-react';
 import ImageUpload from '@/components/admin/ImageUpload';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
@@ -23,6 +23,7 @@ const settingsSchema = z.object({
   address: z.string().optional(),
   opening_hours: z.string().optional(),
   is_open: z.boolean(),
+  delivery_fee: z.coerce.number().min(0, 'Taxa não pode ser negativa').optional(),
   evolution_api_url: z.string().optional(),
   evolution_api_key: z.string().optional(),
   evolution_instance_name: z.string().optional(),
@@ -114,6 +115,7 @@ export default function SettingsPage() {
       address: '',
       opening_hours: '',
       is_open: true,
+      delivery_fee: 0,
       evolution_api_url: '',
       evolution_api_key: '',
       evolution_instance_name: '',
@@ -129,6 +131,7 @@ export default function SettingsPage() {
         address: restaurant.address || '',
         opening_hours: restaurant.opening_hours || '',
         is_open: restaurant.is_open ?? true,
+        delivery_fee: (restaurant as any).delivery_fee || 0,
         evolution_api_url: (restaurant as any).evolution_api_url || '',
         evolution_api_key: (restaurant as any).evolution_api_key || '',
         evolution_instance_name: (restaurant as any).evolution_instance_name || '',
@@ -372,6 +375,47 @@ export default function SettingsPage() {
                         />
                       </FormControl>
                       <FormDescription>Aparece no cardápio público</FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </CardContent>
+            </Card>
+          </motion.div>
+
+          {/* Delivery */}
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, delay: 0.35 }}
+          >
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Truck className="w-5 h-5 text-primary" />
+                  Entrega
+                </CardTitle>
+                <CardDescription>Configure a taxa de entrega</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <FormField
+                  control={form.control}
+                  name="delivery_fee"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Taxa de Entrega (R$)</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          placeholder="0.00"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        Valor cobrado pela entrega. Digite 0 para entrega grátis.
+                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
