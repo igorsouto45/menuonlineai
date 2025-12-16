@@ -19,7 +19,7 @@ export default function AuthPage() {
   const [searchParams] = useSearchParams();
   const defaultMode = searchParams.get('mode') === 'signup' ? 'signup' : 'signin';
   
-  const [mode, setMode] = useState<'signin' | 'signup'>(defaultMode);
+  const [mode, setMode] = useState<'signin' | 'signup' | 'reset'>(defaultMode);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
@@ -27,7 +27,7 @@ export default function AuthPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<{ email?: string; password?: string; fullName?: string }>({});
 
-  const { signIn, signUp, user } = useAuth();
+  const { signIn, signUp, resetPassword, user } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -64,7 +64,22 @@ export default function AuthPage() {
     setIsLoading(true);
 
     try {
-      if (mode === 'signin') {
+      if (mode === 'reset') {
+        const { error } = await resetPassword(email);
+        if (error) {
+          toast({
+            title: 'Erro ao enviar email',
+            description: error.message,
+            variant: 'destructive',
+          });
+        } else {
+          toast({
+            title: 'Email enviado!',
+            description: 'Verifique sua caixa de entrada para redefinir sua senha.',
+          });
+          setMode('signin');
+        }
+      } else if (mode === 'signin') {
         const { error } = await signIn(email, password);
         if (error) {
           if (error.message.includes('Invalid login credentials')) {
@@ -134,12 +149,14 @@ export default function AuthPage() {
           </Link>
 
           <h1 className="text-3xl font-bold text-foreground mb-2">
-            {mode === 'signin' ? 'Bem-vindo de volta!' : 'Crie sua conta'}
+            {mode === 'signin' ? 'Bem-vindo de volta!' : mode === 'signup' ? 'Crie sua conta' : 'Recuperar senha'}
           </h1>
           <p className="text-muted-foreground mb-8">
             {mode === 'signin'
               ? 'Entre para acessar seu painel'
-              : 'Comece a criar seu cardápio digital'}
+              : mode === 'signup'
+              ? 'Comece a criar seu cardápio digital'
+              : 'Enviaremos um link para redefinir sua senha'}
           </p>
 
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -175,29 +192,42 @@ export default function AuthPage() {
               )}
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="password">Senha</Label>
-              <div className="relative">
-                <Input
-                  id="password"
-                  type={showPassword ? 'text' : 'password'}
-                  placeholder="••••••••"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className={errors.password ? 'border-destructive pr-10' : 'pr-10'}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                >
-                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
+            {mode !== 'reset' && (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="password">Senha</Label>
+                  {mode === 'signin' && (
+                    <button
+                      type="button"
+                      onClick={() => setMode('reset')}
+                      className="text-sm text-primary hover:underline"
+                    >
+                      Esqueci minha senha
+                    </button>
+                  )}
+                </div>
+                <div className="relative">
+                  <Input
+                    id="password"
+                    type={showPassword ? 'text' : 'password'}
+                    placeholder="••••••••"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className={errors.password ? 'border-destructive pr-10' : 'pr-10'}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  >
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+                {errors.password && (
+                  <p className="text-sm text-destructive">{errors.password}</p>
+                )}
               </div>
-              {errors.password && (
-                <p className="text-sm text-destructive">{errors.password}</p>
-              )}
-            </div>
+            )}
 
             <Button
               type="submit"
@@ -208,12 +238,14 @@ export default function AuthPage() {
               {isLoading ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  {mode === 'signin' ? 'Entrando...' : 'Criando conta...'}
+                  {mode === 'signin' ? 'Entrando...' : mode === 'signup' ? 'Criando conta...' : 'Enviando...'}
                 </>
               ) : mode === 'signin' ? (
                 'Entrar'
-              ) : (
+              ) : mode === 'signup' ? (
                 'Criar conta grátis'
+              ) : (
+                'Enviar link de recuperação'
               )}
             </Button>
           </form>
@@ -229,7 +261,7 @@ export default function AuthPage() {
                   Criar conta grátis
                 </button>
               </>
-            ) : (
+            ) : mode === 'signup' ? (
               <>
                 Já tem uma conta?{' '}
                 <button
@@ -237,6 +269,16 @@ export default function AuthPage() {
                   className="text-primary font-medium hover:underline"
                 >
                   Fazer login
+                </button>
+              </>
+            ) : (
+              <>
+                Lembrou a senha?{' '}
+                <button
+                  onClick={() => setMode('signin')}
+                  className="text-primary font-medium hover:underline"
+                >
+                  Voltar ao login
                 </button>
               </>
             )}
