@@ -5,6 +5,9 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useCart, CartProvider } from '@/contexts/CartContext';
 import { supabase } from '@/integrations/supabase/client';
+import { ProductSearch } from '@/components/menu/ProductSearch';
+import { ProductImageCarousel } from '@/components/menu/ProductImageCarousel';
+import { ProductReviews } from '@/components/menu/ProductReviews';
 import { 
   ShoppingCart, 
   Plus, 
@@ -102,10 +105,12 @@ function ProductCard({ product, onAddToCart }: { product: Product; onAddToCart: 
 
 function ProductModal({ 
   product, 
+  restaurantId,
   onClose, 
   onAdd 
 }: { 
   product: Product; 
+  restaurantId: string;
   onClose: () => void; 
   onAdd: (product: Product, qty: number, variation?: ProductVariation, additionals?: ProductAdditional[], obs?: string) => void;
 }) {
@@ -145,28 +150,19 @@ function ProductModal({
         className="w-full max-w-lg max-h-[95vh] overflow-hidden bg-card rounded-t-3xl md:rounded-3xl shadow-2xl flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Enhanced Image Section */}
+        {/* Enhanced Image Section with Carousel */}
         <div 
-          className={`relative bg-gradient-to-b from-muted to-muted/50 flex items-center justify-center overflow-hidden cursor-pointer transition-all duration-500 ${
+          className={`relative bg-gradient-to-b from-muted to-muted/50 overflow-hidden transition-all duration-500 ${
             imageZoomed ? 'h-80 md:h-96' : 'h-56 md:h-64'
           }`}
-          onClick={() => product.image_url && setImageZoomed(!imageZoomed)}
         >
-          {product.image_url ? (
-            <motion.img 
-              src={product.image_url} 
-              alt={product.name} 
-              className={`w-full h-full transition-transform duration-500 ${
-                imageZoomed ? 'object-contain scale-110' : 'object-cover'
-              }`}
-              layoutId={`product-image-${product.id}`}
-            />
-          ) : (
-            <div className="flex flex-col items-center gap-2 text-muted-foreground">
-              <span className="text-8xl">🍕</span>
-              <span className="text-sm">Sem imagem</span>
-            </div>
-          )}
+          <ProductImageCarousel
+            productId={product.id}
+            mainImageUrl={product.image_url}
+            productName={product.name}
+            zoomed={imageZoomed}
+            onToggleZoom={() => setImageZoomed(!imageZoomed)}
+          />
           
           {/* Gradient overlay */}
           <div className="absolute inset-0 bg-gradient-to-t from-card/80 via-transparent to-transparent pointer-events-none" />
@@ -177,20 +173,13 @@ function ProductModal({
               e.stopPropagation();
               onClose();
             }}
-            className="absolute top-4 right-4 w-10 h-10 rounded-full bg-background/80 backdrop-blur-sm flex items-center justify-center text-foreground hover:bg-background transition-colors shadow-lg"
+            className="absolute top-4 right-4 w-10 h-10 rounded-full bg-background/80 backdrop-blur-sm flex items-center justify-center text-foreground hover:bg-background transition-colors shadow-lg z-10"
           >
             <X className="w-5 h-5" />
           </button>
           
-          {/* Zoom hint */}
-          {product.image_url && (
-            <div className="absolute bottom-4 left-4 text-xs text-background/80 bg-foreground/30 backdrop-blur-sm px-2 py-1 rounded-full">
-              {imageZoomed ? 'Clique para reduzir' : 'Clique para ampliar'}
-            </div>
-          )}
-          
           {/* Price badge */}
-          <div className="absolute bottom-4 right-4 bg-primary text-primary-foreground px-4 py-2 rounded-full font-bold shadow-lg">
+          <div className="absolute bottom-4 right-4 bg-primary text-primary-foreground px-4 py-2 rounded-full font-bold shadow-lg z-10">
             R$ {product.price.toFixed(2)}
           </div>
         </div>
@@ -304,6 +293,9 @@ function ProductModal({
               rows={2}
             />
           </div>
+
+          {/* Reviews */}
+          <ProductReviews productId={product.id} restaurantId={restaurantId} />
         </div>
 
         {/* Fixed Footer */}
@@ -486,6 +478,7 @@ function MenuPageContent() {
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [cartOpen, setCartOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     async function loadData() {
@@ -575,13 +568,23 @@ function MenuPageContent() {
     loadData();
   }, [slug]);
 
+  // Filter products based on search
+  const filteredProducts = useMemo(() => {
+    if (!searchQuery.trim()) return products;
+    const query = searchQuery.toLowerCase();
+    return products.filter(p => 
+      p.name.toLowerCase().includes(query) ||
+      p.description?.toLowerCase().includes(query)
+    );
+  }, [products, searchQuery]);
+
   const productsByCategory = useMemo(() => {
     const grouped: Record<string, Product[]> = {};
     categories.forEach((cat) => {
-      grouped[cat.id] = products.filter((p) => p.category_id === cat.id);
+      grouped[cat.id] = filteredProducts.filter((p) => p.category_id === cat.id);
     });
     return grouped;
-  }, [categories, products]);
+  }, [categories, filteredProducts]);
 
   const handleAddToCart = (
     product: Product,
@@ -673,6 +676,14 @@ function MenuPageContent() {
         </div>
       </div>
 
+      {/* Search Bar */}
+      <div className="container py-4 -mt-2">
+        <ProductSearch 
+          onSearch={setSearchQuery} 
+          placeholder="Buscar produtos por nome..."
+        />
+      </div>
+
       {/* Categories */}
       {categories.length > 0 && (
         <div className="sticky top-0 z-40 bg-background border-b border-border">
@@ -751,6 +762,7 @@ function MenuPageContent() {
         {selectedProduct && (
           <ProductModal
             product={selectedProduct}
+            restaurantId={restaurant.id}
             onClose={() => setSelectedProduct(null)}
             onAdd={handleAddToCart}
           />
