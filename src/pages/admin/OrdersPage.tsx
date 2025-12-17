@@ -268,7 +268,7 @@ export default function OrdersPage() {
     }
 
     try {
-      await supabase.functions.invoke('send-whatsapp-notification', {
+      const { error } = await supabase.functions.invoke('send-whatsapp-notification', {
         body: {
           orderId: order.id,
           customerPhone: order.customer_phone,
@@ -281,6 +281,11 @@ export default function OrdersPage() {
           evolutionInstanceName,
         },
       });
+
+      if (error) {
+        throw error;
+      }
+
       console.log('WhatsApp notification sent');
     } catch (error) {
       console.error('Failed to send WhatsApp notification:', error);
