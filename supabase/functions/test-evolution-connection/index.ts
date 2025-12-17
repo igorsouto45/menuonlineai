@@ -32,9 +32,17 @@ serve(async (req) => {
 
     console.log(`Testing connection to ${evolutionApiUrl} with instance ${evolutionInstanceName}`);
 
+    // Clean up URL - remove trailing slashes and /manager if present
+    let cleanUrl = evolutionApiUrl.trim().replace(/\/+$/, '');
+    if (cleanUrl.endsWith('/manager')) {
+      cleanUrl = cleanUrl.replace('/manager', '');
+    }
+
+    console.log(`Clean URL: ${cleanUrl}`);
+
     // Test connection by fetching instance info
     const response = await fetch(
-      `${evolutionApiUrl}/instance/fetchInstances?instanceName=${evolutionInstanceName}`,
+      `${cleanUrl}/instance/fetchInstances?instanceName=${evolutionInstanceName}`,
       {
         method: 'GET',
         headers: {
@@ -43,7 +51,41 @@ serve(async (req) => {
       }
     );
 
-    const data = await response.json();
+    // Check content type before parsing
+    const contentType = response.headers.get('content-type') || '';
+    const responseText = await response.text();
+    
+    console.log('Response status:', response.status);
+    console.log('Content-Type:', contentType);
+    console.log('Response preview:', responseText.substring(0, 500));
+
+    // Check if response is HTML (error page)
+    if (contentType.includes('text/html') || responseText.trim().startsWith('<!') || responseText.trim().startsWith('<html')) {
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: 'URL da Evolution API inválida. Verifique se a URL está correta (não use /manager no final).',
+          details: `A API retornou uma página HTML ao invés de JSON. URL testada: ${cleanUrl}`
+        }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Try to parse as JSON
+    let data;
+    try {
+      data = JSON.parse(responseText);
+    } catch (parseError) {
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: 'Resposta inválida da Evolution API',
+          details: `Não foi possível interpretar a resposta: ${responseText.substring(0, 200)}`
+        }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     console.log('Evolution API response:', JSON.stringify(data, null, 2));
 
     if (!response.ok) {
