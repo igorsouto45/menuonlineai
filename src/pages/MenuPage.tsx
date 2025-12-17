@@ -12,6 +12,7 @@ import { ProductReviews } from '@/components/menu/ProductReviews';
 import { MenuSkeleton } from '@/components/menu/MenuSkeleton';
 import { InstallPWAButton } from '@/components/menu/InstallPWAButton';
 import { CustomerAuthModal } from '@/components/menu/CustomerAuthModal';
+import { FloatingCart } from '@/components/menu/FloatingCart';
 import { 
   ShoppingCart, 
   Plus, 
@@ -755,7 +756,7 @@ function CartSheet({
 
 function MenuPageContent() {
   const { slug } = useParams<{ slug: string }>();
-  const { addItem, itemCount, total } = useCart();
+  const { addItem } = useCart();
   const [restaurant, setRestaurant] = useState<Restaurant | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
@@ -919,7 +920,7 @@ function MenuPageContent() {
   }
 
   return (
-    <div className="min-h-screen bg-background pb-28 sm:pb-24">
+    <div className="min-h-screen bg-background pb-40 sm:pb-36">
       {/* Header */}
       <div 
         className="gradient-primary"
@@ -1061,25 +1062,8 @@ function MenuPageContent() {
         )}
       </div>
 
-      {/* Floating Cart Button */}
-      {itemCount > 0 && (
-        <motion.div
-          initial={{ y: 100, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          className="fixed bottom-4 sm:bottom-6 left-3 right-3 sm:left-4 sm:right-4 z-40"
-        >
-          <Button
-            variant="hero"
-            size="lg"
-            className="w-full shadow-2xl h-14 sm:h-auto text-base"
-            onClick={() => setCartOpen(true)}
-          >
-            <ShoppingCart className="w-5 h-5" />
-            <span className="flex-1 text-left">Ver carrinho ({itemCount})</span>
-            <span className="font-bold">R$ {total.toFixed(2)}</span>
-          </Button>
-        </motion.div>
-      )}
+      {/* Floating Cart - Always visible */}
+      <FloatingCart onOpenFullCart={() => setCartOpen(true)} />
 
       {/* Product Modal */}
       <AnimatePresence>
