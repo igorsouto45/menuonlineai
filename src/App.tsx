@@ -20,6 +20,7 @@ import SettingsPage from "./pages/admin/SettingsPage";
 import AppearancePage from "./pages/admin/AppearancePage";
 import ReviewsPage from "./pages/admin/ReviewsPage";
 import LeadsPage from "./pages/admin/LeadsPage";
+import CampaignsPage from "./pages/admin/CampaignsPage";
 import SystemAdminPage from "./pages/admin/SystemAdminPage";
 import NotFound from "./pages/NotFound";
 
@@ -76,6 +77,7 @@ const App = () => (
                   <Route path="orders" element={<OrdersPage />} />
                   <Route path="reviews" element={<ReviewsPage />} />
                   <Route path="leads" element={<LeadsPage />} />
+                  <Route path="campaigns" element={<CampaignsPage />} />
                   <Route path="settings" element={<SettingsPage />} />
                   <Route path="appearance" element={<AppearancePage />} />
                 </Route>
