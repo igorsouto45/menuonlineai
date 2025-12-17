@@ -2,6 +2,9 @@ import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import {
   Table,
   TableBody,
@@ -16,6 +19,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { 
   BarChart3, 
   Calendar,
@@ -27,11 +37,13 @@ import {
   Loader2,
   Eye,
   TrendingUp,
-  MessageSquare
+  MessageSquare,
+  Filter,
+  X
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useRestaurant } from '@/hooks/useRestaurant';
-import { format } from 'date-fns';
+import { format, isAfter, isBefore, parseISO, subDays, subMonths, startOfDay, endOfDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import {
   BarChart,
@@ -67,21 +79,60 @@ interface CampaignSend {
   sent_at: string | null;
 }
 
+type DateFilter = 'all' | 'today' | 'week' | 'month' | 'custom';
+
 const CHART_COLORS = ['hsl(var(--primary))', 'hsl(var(--destructive))', 'hsl(var(--muted))'];
 
 export default function CampaignsPage() {
   const { restaurant } = useRestaurant();
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
+  const [filteredCampaigns, setFilteredCampaigns] = useState<Campaign[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedCampaign, setSelectedCampaign] = useState<Campaign | null>(null);
   const [campaignSends, setCampaignSends] = useState<CampaignSend[]>([]);
   const [loadingSends, setLoadingSends] = useState(false);
+  const [dateFilter, setDateFilter] = useState<DateFilter>('all');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
 
   useEffect(() => {
     if (restaurant?.id) {
       loadCampaigns();
     }
   }, [restaurant?.id]);
+
+  useEffect(() => {
+    applyFilters();
+  }, [campaigns, dateFilter, startDate, endDate]);
+
+  const applyFilters = () => {
+    let filtered = [...campaigns];
+
+    if (dateFilter !== 'all') {
+      const now = new Date();
+      filtered = filtered.filter(c => {
+        const campaignDate = c.sent_at ? parseISO(c.sent_at) : parseISO(c.created_at);
+        switch (dateFilter) {
+          case 'today':
+            return format(campaignDate, 'yyyy-MM-dd') === format(now, 'yyyy-MM-dd');
+          case 'week':
+            return isAfter(campaignDate, subDays(now, 7));
+          case 'month':
+            return isAfter(campaignDate, subMonths(now, 1));
+          case 'custom':
+            if (startDate && endDate) {
+              return isAfter(campaignDate, startOfDay(parseISO(startDate))) && 
+                     isBefore(campaignDate, endOfDay(parseISO(endDate)));
+            }
+            return true;
+          default:
+            return true;
+        }
+      });
+    }
+
+    setFilteredCampaigns(filtered);
+  };
 
   const loadCampaigns = async () => {
     if (!restaurant?.id) return;
@@ -95,6 +146,7 @@ export default function CampaignsPage() {
 
       if (error) throw error;
       setCampaigns(data || []);
+      setFilteredCampaigns(data || []);
     } catch (error) {
       console.error('Error loading campaigns:', error);
     } finally {
@@ -125,14 +177,22 @@ export default function CampaignsPage() {
     loadCampaignSends(campaign.id);
   };
 
-  // Calculate metrics
-  const totalCampaigns = campaigns.length;
-  const totalSent = campaigns.reduce((acc, c) => acc + c.sent_count, 0);
-  const totalErrors = campaigns.reduce((acc, c) => acc + c.error_count, 0);
+  const clearFilters = () => {
+    setDateFilter('all');
+    setStartDate('');
+    setEndDate('');
+  };
+
+  const hasActiveFilters = dateFilter !== 'all';
+
+  // Calculate metrics from filtered campaigns
+  const totalCampaigns = filteredCampaigns.length;
+  const totalSent = filteredCampaigns.reduce((acc, c) => acc + c.sent_count, 0);
+  const totalErrors = filteredCampaigns.reduce((acc, c) => acc + c.error_count, 0);
   const successRate = totalSent > 0 ? ((totalSent - totalErrors) / totalSent * 100).toFixed(1) : '0';
 
   // Chart data for last 7 campaigns
-  const chartData = campaigns.slice(0, 7).reverse().map(c => ({
+  const chartData = filteredCampaigns.slice(0, 7).reverse().map(c => ({
     name: c.name.substring(0, 10) + (c.name.length > 10 ? '...' : ''),
     enviados: c.sent_count,
     erros: c.error_count,
@@ -166,6 +226,61 @@ export default function CampaignsPage() {
         <h1 className="text-3xl font-bold text-foreground">Histórico de Campanhas</h1>
         <p className="text-muted-foreground">Visualize métricas detalhadas das suas campanhas de WhatsApp</p>
       </div>
+
+      {/* Date Filters */}
+      <Card>
+        <CardContent className="p-4">
+          <div className="flex flex-wrap items-end gap-4">
+            <div className="flex items-center gap-2">
+              <Filter className="w-4 h-4 text-muted-foreground" />
+              <span className="text-sm font-medium">Filtrar por período:</span>
+            </div>
+            
+            <Select value={dateFilter} onValueChange={(value: DateFilter) => setDateFilter(value)}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Selecione o período" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos</SelectItem>
+                <SelectItem value="today">Hoje</SelectItem>
+                <SelectItem value="week">Últimos 7 dias</SelectItem>
+                <SelectItem value="month">Último mês</SelectItem>
+                <SelectItem value="custom">Personalizado</SelectItem>
+              </SelectContent>
+            </Select>
+
+            {dateFilter === 'custom' && (
+              <>
+                <div className="flex flex-col gap-1">
+                  <Label className="text-xs text-muted-foreground">Data início</Label>
+                  <Input
+                    type="date"
+                    value={startDate}
+                    onChange={(e) => setStartDate(e.target.value)}
+                    className="w-[150px]"
+                  />
+                </div>
+                <div className="flex flex-col gap-1">
+                  <Label className="text-xs text-muted-foreground">Data fim</Label>
+                  <Input
+                    type="date"
+                    value={endDate}
+                    onChange={(e) => setEndDate(e.target.value)}
+                    className="w-[150px]"
+                  />
+                </div>
+              </>
+            )}
+
+            {hasActiveFilters && (
+              <Button variant="ghost" size="sm" onClick={clearFilters} className="h-9">
+                <X className="w-4 h-4 mr-1" />
+                Limpar
+              </Button>
+            )}
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Metrics Cards */}
       <div className="grid gap-4 md:grid-cols-4">
@@ -276,11 +391,11 @@ export default function CampaignsPage() {
             <div className="flex justify-center py-8">
               <Loader2 className="w-8 h-8 animate-spin text-primary" />
             </div>
-          ) : campaigns.length === 0 ? (
+          ) : filteredCampaigns.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
               <MessageSquare className="w-12 h-12 mx-auto mb-4 opacity-50" />
               <p>Nenhuma campanha encontrada</p>
-              <p className="text-sm">Crie sua primeira campanha na página de Leads</p>
+              <p className="text-sm">{campaigns.length > 0 ? 'Tente ajustar os filtros' : 'Crie sua primeira campanha na página de Leads'}</p>
             </div>
           ) : (
             <Table>
@@ -296,7 +411,7 @@ export default function CampaignsPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {campaigns.map((campaign) => (
+                {filteredCampaigns.map((campaign) => (
                   <TableRow key={campaign.id} className="cursor-pointer hover:bg-muted/50" onClick={() => handleViewDetails(campaign)}>
                     <TableCell>
                       <div>

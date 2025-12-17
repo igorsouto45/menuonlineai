@@ -917,6 +917,16 @@ export default function LeadsPage() {
               </div>
             </div>
 
+            {/* Campaign Name */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Nome da campanha (opcional)</label>
+              <Input
+                placeholder="Ex: Black Friday 2024"
+                value={promoName}
+                onChange={(e) => setPromoName(e.target.value)}
+              />
+            </div>
+
             <div className="space-y-2">
               <label className="text-sm font-medium">Mensagem da promoção</label>
               <Textarea
@@ -932,6 +942,43 @@ export default function LeadsPage() {
                 Use {'{nome}'} para personalizar com o nome do cliente
               </p>
             </div>
+
+            {/* Schedule Section */}
+            <div className="space-y-3 border-t pt-4">
+              <div className="flex items-center justify-between">
+                <label className="text-sm font-medium flex items-center gap-2">
+                  <CalendarClock className="w-4 h-4" />
+                  Agendar envio
+                </label>
+                <Checkbox
+                  checked={scheduleEnabled}
+                  onCheckedChange={(checked) => setScheduleEnabled(checked === true)}
+                />
+              </div>
+              
+              {scheduleEnabled && (
+                <div className="flex gap-4">
+                  <div className="flex-1 space-y-1">
+                    <label className="text-xs text-muted-foreground">Data</label>
+                    <Input
+                      type="date"
+                      value={scheduleDate}
+                      onChange={(e) => setScheduleDate(e.target.value)}
+                      min={format(new Date(), 'yyyy-MM-dd')}
+                    />
+                  </div>
+                  <div className="flex-1 space-y-1">
+                    <label className="text-xs text-muted-foreground">Horário</label>
+                    <Input
+                      type="time"
+                      value={scheduleTime}
+                      onChange={(e) => setScheduleTime(e.target.value)}
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+
             <div className="text-sm text-muted-foreground">
               <p>A mensagem será enviada para:</p>
               <ul className="mt-2 space-y-1">
@@ -956,11 +1003,19 @@ export default function LeadsPage() {
             <Button variant="outline" onClick={() => setShowPromoModal(false)}>
               Cancelar
             </Button>
-            <Button onClick={sendBulkPromotion} disabled={sendingPromo || !promoMessage.trim()}>
+            <Button 
+              onClick={sendBulkPromotion} 
+              disabled={sendingPromo || !promoMessage.trim() || (scheduleEnabled && (!scheduleDate || !scheduleTime))}
+            >
               {sendingPromo ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                   Enviando...
+                </>
+              ) : scheduleEnabled ? (
+                <>
+                  <CalendarClock className="w-4 h-4 mr-2" />
+                  Agendar para {selectedLeads.length} leads
                 </>
               ) : (
                 <>
