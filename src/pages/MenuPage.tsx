@@ -25,7 +25,9 @@ import {
   Truck,
   LogIn,
   CreditCard,
-  Loader2
+  Loader2,
+  Star,
+  TrendingUp
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
@@ -84,6 +86,7 @@ interface Product {
   image_url: string | null;
   category_id: string;
   is_active: boolean;
+  is_featured?: boolean;
   variations?: ProductVariation[];
   additionals?: ProductAdditional[];
 }
@@ -761,6 +764,7 @@ function MenuPageContent() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [deliveryAreas, setDeliveryAreas] = useState<DeliveryArea[]>([]);
+  const [bestSellerIds, setBestSellerIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
@@ -816,6 +820,32 @@ function MenuPageContent() {
           .order('display_order', { ascending: true });
 
         setDeliveryAreas(areasData || []);
+
+        // Fetch best sellers from orders
+        const { data: ordersData } = await supabase
+          .from('orders')
+          .select('items')
+          .eq('restaurant_id', restaurantData.id)
+          .limit(100);
+
+        if (ordersData && ordersData.length > 0) {
+          const productCounts: Record<string, number> = {};
+          ordersData.forEach(order => {
+            const items = (order.items as any[]) || [];
+            items.forEach(item => {
+              const productId = item.productId || item.id;
+              if (productId) {
+                productCounts[productId] = (productCounts[productId] || 0) + (item.quantity || 1);
+              }
+            });
+          });
+          
+          const sorted = Object.entries(productCounts)
+            .sort(([, a], [, b]) => b - a)
+            .slice(0, 6)
+            .map(([id]) => id);
+          setBestSellerIds(sorted);
+        }
 
         // Fetch products with variations and additionals
         const { data: productsData, error: productsError } = await supabase
@@ -883,6 +913,19 @@ function MenuPageContent() {
     });
     return grouped;
   }, [categories, filteredProducts]);
+
+  // Featured products
+  const featuredProducts = useMemo(() => {
+    return products.filter(p => p.is_featured);
+  }, [products]);
+
+  // Best sellers
+  const bestSellerProducts = useMemo(() => {
+    if (bestSellerIds.length === 0) return [];
+    return bestSellerIds
+      .map(id => products.find(p => p.id === id))
+      .filter((p): p is Product => !!p);
+  }, [products, bestSellerIds]);
 
   const handleAddToCart = (
     product: Product,
@@ -1015,6 +1058,68 @@ function MenuPageContent() {
 
       {/* Products */}
       <div className="container px-4 py-4 sm:py-6">
+        {/* Featured Products Section */}
+        {featuredProducts.length > 0 && !searchQuery && (
+          <motion.section 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4 }}
+            className="mb-8 sm:mb-10"
+          >
+            <div className="flex items-center gap-2 sm:gap-3 mb-4 sm:mb-5">
+              <Star className="w-5 h-5 sm:w-6 sm:h-6 text-yellow-500 fill-yellow-500" />
+              <h2 className="text-lg sm:text-2xl font-bold text-foreground">Destaques</h2>
+              <div className="flex-1 h-px bg-gradient-to-r from-yellow-500/50 to-transparent" />
+            </div>
+            <div className="grid gap-3 sm:gap-4 md:grid-cols-2">
+              {featuredProducts.map((product, index) => (
+                <motion.div
+                  key={product.id}
+                  initial={{ opacity: 0, y: 15 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.3, delay: index * 0.05 }}
+                >
+                  <ProductCard
+                    product={product}
+                    onAddToCart={() => setSelectedProduct(product)}
+                  />
+                </motion.div>
+              ))}
+            </div>
+          </motion.section>
+        )}
+
+        {/* Best Sellers Section */}
+        {bestSellerProducts.length > 0 && !searchQuery && (
+          <motion.section 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, delay: 0.1 }}
+            className="mb-8 sm:mb-10"
+          >
+            <div className="flex items-center gap-2 sm:gap-3 mb-4 sm:mb-5">
+              <TrendingUp className="w-5 h-5 sm:w-6 sm:h-6 text-primary" />
+              <h2 className="text-lg sm:text-2xl font-bold text-foreground">Mais Vendidos</h2>
+              <div className="flex-1 h-px bg-gradient-to-r from-primary/50 to-transparent" />
+            </div>
+            <div className="grid gap-3 sm:gap-4 md:grid-cols-2">
+              {bestSellerProducts.map((product, index) => (
+                <motion.div
+                  key={product.id}
+                  initial={{ opacity: 0, y: 15 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.3, delay: index * 0.05 }}
+                >
+                  <ProductCard
+                    product={product}
+                    onAddToCart={() => setSelectedProduct(product)}
+                  />
+                </motion.div>
+              ))}
+            </div>
+          </motion.section>
+        )}
+
         {categories.length === 0 ? (
           <div className="text-center py-12">
             <p className="text-muted-foreground">Nenhum produto disponível no momento.</p>
