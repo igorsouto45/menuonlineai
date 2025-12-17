@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { FunctionsHttpError } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { useRestaurant } from '@/hooks/useRestaurant';
 import { useToast } from '@/hooks/use-toast';
@@ -101,12 +102,36 @@ export default function SettingsPage() {
           variant: 'destructive',
         });
       }
-    } catch (error) {
-      console.error('Error testing connection:', error);
+    } catch (err) {
+      console.error('Error testing connection:', err);
       setConnectionStatus('error');
+
+      let description = 'Verifique as credenciais e tente novamente.';
+
+      // If the backend returned a JSON error, surface it instead of the generic FunctionsHttpError
+      if (err instanceof FunctionsHttpError && err.context instanceof Response) {
+        try {
+          const contentType = err.context.headers.get('content-type') || '';
+
+          if (contentType.includes('application/json')) {
+            const payload = await err.context.clone().json();
+            const payloadError = payload?.error || payload?.message;
+            const payloadDetails = payload?.details;
+            if (payloadError && payloadDetails) description = `${payloadError} — ${payloadDetails}`;
+            else if (payloadError) description = payloadError;
+            else if (payloadDetails) description = payloadDetails;
+          } else {
+            const text = await err.context.clone().text();
+            if (text?.trim()) description = text.trim().slice(0, 200);
+          }
+        } catch {
+          // keep fallback
+        }
+      }
+
       toast({
         title: 'Erro ao testar conexão',
-        description: 'Verifique as credenciais e tente novamente.',
+        description,
         variant: 'destructive',
       });
     } finally {
