@@ -19,7 +19,9 @@ import {
   FileSpreadsheet,
   FileText,
   BarChart3,
-  PieChart
+  PieChart,
+  CalendarClock,
+  Send
 } from 'lucide-react';
 import {
   BarChart,
@@ -72,6 +74,13 @@ interface DailyRevenue {
   orders: number;
 }
 
+interface ScheduledCampaign {
+  id: string;
+  name: string;
+  scheduled_at: string;
+  total_recipients: number;
+}
+
 export default function Dashboard() {
   const { restaurant } = useRestaurant();
   const { toast } = useToast();
@@ -87,6 +96,7 @@ export default function Dashboard() {
   const [topProducts, setTopProducts] = useState<TopProduct[]>([]);
   const [lowStockProducts, setLowStockProducts] = useState<LowStockProduct[]>([]);
   const [weeklyData, setWeeklyData] = useState<DailyRevenue[]>([]);
+  const [scheduledCampaigns, setScheduledCampaigns] = useState<ScheduledCampaign[]>([]);
 
   useEffect(() => {
     if (!restaurant?.id) return;
@@ -187,6 +197,18 @@ export default function Dashboard() {
             p => p.current_stock !== null && p.min_stock !== null && p.current_stock <= p.min_stock
           ) as LowStockProduct[];
           setLowStockProducts(lowStock);
+        }
+
+        // Fetch scheduled campaigns
+        const { data: campaignsData, error: campaignsError } = await supabase
+          .from('promotion_campaigns')
+          .select('id, name, scheduled_at, total_recipients')
+          .eq('restaurant_id', restaurant!.id)
+          .eq('status', 'scheduled')
+          .order('scheduled_at', { ascending: true });
+
+        if (!campaignsError && campaignsData) {
+          setScheduledCampaigns(campaignsData as ScheduledCampaign[]);
         }
 
       } catch (err) {
@@ -455,6 +477,49 @@ export default function Dashboard() {
         </TabsList>
 
         <TabsContent value="overview" className="space-y-6">
+      {/* Scheduled Campaigns Alert */}
+      {scheduledCampaigns.length > 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+        >
+          <Card className="border-primary/50 bg-primary/5">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-primary flex items-center gap-2 text-lg">
+                <CalendarClock className="w-5 h-5" />
+                Campanhas Agendadas ({scheduledCampaigns.length})
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                {scheduledCampaigns.slice(0, 6).map((campaign) => (
+                  <div 
+                    key={campaign.id}
+                    className="flex items-center justify-between p-3 bg-primary/10 rounded-lg"
+                  >
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-foreground truncate">{campaign.name}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {new Date(campaign.scheduled_at).toLocaleDateString('pt-BR', {
+                          day: '2-digit',
+                          month: '2-digit',
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })}
+                      </p>
+                    </div>
+                    <Badge variant="secondary" className="bg-primary/20 text-primary border-0 ml-2">
+                      <Send className="w-3 h-3 mr-1" />
+                      {campaign.total_recipients}
+                    </Badge>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+      )}
+
       {/* Low Stock Alert */}
       {lowStockProducts.length > 0 && (
         <motion.div
