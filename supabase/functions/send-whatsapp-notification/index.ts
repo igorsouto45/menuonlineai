@@ -6,12 +6,13 @@ const corsHeaders = {
 };
 
 interface OrderNotification {
-  orderId: string;
+  orderId?: string;
   customerPhone: string;
   customerName?: string;
   status: string;
   restaurantName?: string;
   orderTotal?: number;
+  customMessage?: string;
   // Evolution API credentials from restaurant settings
   evolutionApiUrl?: string;
   evolutionApiKey?: string;
@@ -41,6 +42,7 @@ serve(async (req) => {
       status, 
       restaurantName, 
       orderTotal,
+      customMessage,
       evolutionApiUrl,
       evolutionApiKey,
       evolutionInstanceName
@@ -73,14 +75,26 @@ serve(async (req) => {
     }
 
     // Build message
-    const statusMessage = statusMessages[status] || `Status do pedido: ${status}`;
-    let message = `🍕 *${restaurantName || 'Restaurante'}*\n\n`;
-    message += `Olá${customerName ? ` ${customerName}` : ''}!\n\n`;
-    message += `Pedido: *#${orderId.slice(0, 8).toUpperCase()}*\n`;
-    if (orderTotal) {
-      message += `Total: *R$ ${orderTotal.toFixed(2)}*\n`;
+    let message = '';
+    
+    if (status === 'promotion' && customMessage) {
+      // Custom promotional message
+      message = `🎉 *${restaurantName || 'Promoção Especial'}*\n\n`;
+      message += `Olá${customerName ? ` ${customerName}` : ''}!\n\n`;
+      message += customMessage;
+    } else {
+      // Order status message
+      const statusMessage = statusMessages[status] || `Status do pedido: ${status}`;
+      message = `🍕 *${restaurantName || 'Restaurante'}*\n\n`;
+      message += `Olá${customerName ? ` ${customerName}` : ''}!\n\n`;
+      if (orderId) {
+        message += `Pedido: *#${orderId.slice(0, 8).toUpperCase()}*\n`;
+      }
+      if (orderTotal) {
+        message += `Total: *R$ ${orderTotal.toFixed(2)}*\n`;
+      }
+      message += `\n${statusMessage}`;
     }
-    message += `\n${statusMessage}`;
 
     console.log(`Sending WhatsApp notification to ${phone} for order ${orderId}`);
 
