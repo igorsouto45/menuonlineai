@@ -1,5 +1,8 @@
 project_id = "efjuxymqntahxtibpqwh"
 
+[functions.process-scheduled-campaigns]
+verify_jwt = false
+
 [functions.send-whatsapp-notification]
 verify_jwt = false
 
