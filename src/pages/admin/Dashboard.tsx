@@ -41,9 +41,12 @@ import { ProfitMarginReport } from '@/components/admin/ProfitMarginReport';
 import { CashFlowDashboard } from '@/components/admin/CashFlowDashboard';
 
 interface OrderItem {
-  name: string;
+  productName?: string;
+  name?: string;
   quantity: number;
-  price: number;
+  unitPrice?: number;
+  price?: number;
+  subtotal?: number;
 }
 
 interface Order {
@@ -147,11 +150,13 @@ export default function Dashboard() {
         orders.forEach(order => {
           const items = (order.items as unknown as OrderItem[]) || [];
           items.forEach(item => {
-            if (!productCounts[item.name]) {
-              productCounts[item.name] = { orders: 0, revenue: 0 };
+            const itemName = item.productName || item.name || 'Produto';
+            const itemPrice = item.unitPrice ?? item.price ?? item.subtotal ?? 0;
+            if (!productCounts[itemName]) {
+              productCounts[itemName] = { orders: 0, revenue: 0 };
             }
-            productCounts[item.name].orders += item.quantity;
-            productCounts[item.name].revenue += item.price * item.quantity;
+            productCounts[itemName].orders += item.quantity;
+            productCounts[itemName].revenue += itemPrice * item.quantity;
           });
         });
 
