@@ -469,6 +469,104 @@ export type Database = {
         }
         Relationships: []
       }
+      promotion_campaigns: {
+        Row: {
+          created_at: string
+          error_count: number | null
+          id: string
+          message: string
+          name: string
+          restaurant_id: string
+          scheduled_at: string | null
+          sent_at: string | null
+          sent_count: number | null
+          status: string
+          total_recipients: number | null
+        }
+        Insert: {
+          created_at?: string
+          error_count?: number | null
+          id?: string
+          message: string
+          name: string
+          restaurant_id: string
+          scheduled_at?: string | null
+          sent_at?: string | null
+          sent_count?: number | null
+          status?: string
+          total_recipients?: number | null
+        }
+        Update: {
+          created_at?: string
+          error_count?: number | null
+          id?: string
+          message?: string
+          name?: string
+          restaurant_id?: string
+          scheduled_at?: string | null
+          sent_at?: string | null
+          sent_count?: number | null
+          status?: string
+          total_recipients?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "promotion_campaigns_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      promotion_sends: {
+        Row: {
+          campaign_id: string
+          created_at: string
+          customer_id: string
+          customer_phone: string
+          error_message: string | null
+          id: string
+          sent_at: string | null
+          status: string
+        }
+        Insert: {
+          campaign_id: string
+          created_at?: string
+          customer_id: string
+          customer_phone: string
+          error_message?: string | null
+          id?: string
+          sent_at?: string | null
+          status?: string
+        }
+        Update: {
+          campaign_id?: string
+          created_at?: string
+          customer_id?: string
+          customer_phone?: string
+          error_message?: string | null
+          id?: string
+          sent_at?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "promotion_sends_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "promotion_campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "promotion_sends_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       restaurants: {
         Row: {
           address: string | null

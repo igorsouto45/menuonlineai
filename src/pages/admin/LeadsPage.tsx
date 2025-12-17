@@ -47,7 +47,12 @@ import {
   UserPlus,
   Repeat,
   UserMinus,
-  FileText
+  FileText,
+  BarChart3,
+  Clock,
+  CheckCircle2,
+  XCircle,
+  CalendarClock
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useRestaurant } from '@/hooks/useRestaurant';
@@ -67,6 +72,32 @@ interface Customer {
   created_at: string;
   order_count?: number;
   last_order_date?: string | null;
+}
+
+interface Customer {
+  id: string;
+  name: string;
+  email: string;
+  whatsapp: string;
+  address: string | null;
+  neighborhood: string | null;
+  city: string | null;
+  created_at: string;
+  order_count?: number;
+  last_order_date?: string | null;
+}
+
+interface Campaign {
+  id: string;
+  name: string;
+  message: string;
+  scheduled_at: string | null;
+  sent_at: string | null;
+  status: string;
+  total_recipients: number;
+  sent_count: number;
+  error_count: number;
+  created_at: string;
 }
 
 type DateFilter = 'all' | 'today' | 'week' | 'month' | 'custom';
@@ -104,6 +135,7 @@ const PROMO_TEMPLATES = [
 export default function LeadsPage() {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [filteredCustomers, setFilteredCustomers] = useState<Customer[]>([]);
+  const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [dateFilter, setDateFilter] = useState<DateFilter>('all');
@@ -114,14 +146,19 @@ export default function LeadsPage() {
   const [selectedLeads, setSelectedLeads] = useState<string[]>([]);
   const [showPromoModal, setShowPromoModal] = useState(false);
   const [promoMessage, setPromoMessage] = useState('');
+  const [promoName, setPromoName] = useState('');
   const [sendingPromo, setSendingPromo] = useState(false);
   const [selectedTemplate, setSelectedTemplate] = useState('');
+  const [scheduleEnabled, setScheduleEnabled] = useState(false);
+  const [scheduleDate, setScheduleDate] = useState('');
+  const [scheduleTime, setScheduleTime] = useState('');
   const { restaurant } = useRestaurant();
   const { toast } = useToast();
 
   useEffect(() => {
     if (restaurant?.id) {
       loadCustomers();
+      loadCampaigns();
     }
   }, [restaurant?.id]);
 
@@ -271,6 +308,32 @@ export default function LeadsPage() {
     setLoading(false);
   };
 
+  const loadCampaigns = async () => {
+    if (!restaurant?.id) return;
+    
+    const { data, error } = await supabase
+      .from('promotion_campaigns')
+      .select('*')
+      .eq('restaurant_id', restaurant.id)
+      .order('created_at', { ascending: false })
+      .limit(10);
+
+    if (!error && data) {
+      setCampaigns(data);
+    }
+  };
+
+  // Campaign metrics
+  const campaignMetrics = {
+    totalSent: campaigns.reduce((acc, c) => acc + (c.sent_count || 0), 0),
+    totalErrors: campaigns.reduce((acc, c) => acc + (c.error_count || 0), 0),
+    successRate: campaigns.length > 0 
+      ? Math.round((campaigns.reduce((acc, c) => acc + (c.sent_count || 0), 0) / 
+          Math.max(campaigns.reduce((acc, c) => acc + (c.total_recipients || 0), 0), 1)) * 100)
+      : 0,
+    scheduledCount: campaigns.filter(c => c.status === 'scheduled').length,
+  };
+
   const exportToExcel = () => {
     const data = filteredCustomers.map(c => ({
       Nome: c.name,
@@ -368,7 +431,49 @@ export default function LeadsPage() {
       return;
     }
 
+    // Handle scheduled campaigns
+    if (scheduleEnabled && scheduleDate && scheduleTime) {
+      const scheduledAt = new Date(`${scheduleDate}T${scheduleTime}`);
+      
+      const { error } = await supabase
+        .from('promotion_campaigns')
+        .insert({
+          restaurant_id: restaurant?.id,
+          name: promoName || `Promoção ${format(new Date(), 'dd/MM/yyyy HH:mm')}`,
+          message: promoMessage,
+          scheduled_at: scheduledAt.toISOString(),
+          status: 'scheduled',
+          total_recipients: selectedLeads.length,
+        });
+
+      if (error) {
+        toast({ title: 'Erro ao agendar', description: error.message, variant: 'destructive' });
+      } else {
+        toast({ title: 'Promoção agendada!', description: `Será enviada em ${format(scheduledAt, 'dd/MM/yyyy HH:mm', { locale: ptBR })}` });
+        setShowPromoModal(false);
+        setPromoMessage('');
+        setPromoName('');
+        setScheduleEnabled(false);
+        setSelectedLeads([]);
+        loadCampaigns();
+      }
+      return;
+    }
+
     setSendingPromo(true);
+
+    // Create campaign record
+    const { data: campaign } = await supabase
+      .from('promotion_campaigns')
+      .insert({
+        restaurant_id: restaurant?.id,
+        name: promoName || `Promoção ${format(new Date(), 'dd/MM/yyyy HH:mm')}`,
+        message: promoMessage,
+        status: 'sending',
+        total_recipients: selectedLeads.length,
+      })
+      .select()
+      .single();
 
     const selectedCustomers = customers.filter(c => selectedLeads.includes(c.id));
     let successCount = 0;
@@ -398,15 +503,29 @@ export default function LeadsPage() {
       }
     }
 
+    // Update campaign with results
+    if (campaign?.id) {
+      await supabase
+        .from('promotion_campaigns')
+        .update({
+          sent_count: successCount,
+          error_count: errorCount,
+          status: 'sent',
+          sent_at: new Date().toISOString(),
+        })
+        .eq('id', campaign.id);
+    }
+
     setSendingPromo(false);
     setShowPromoModal(false);
     setPromoMessage('');
+    setPromoName('');
     setSelectedLeads([]);
+    loadCampaigns();
 
     toast({
       title: 'Envio concluído',
-      description: `${successCount} mensagens enviadas com sucesso${errorCount > 0 ? `, ${errorCount} falharam` : ''}.`,
-      variant: errorCount > 0 ? 'default' : 'default',
+      description: `${successCount} mensagens enviadas${errorCount > 0 ? `, ${errorCount} falharam` : ''}.`,
     });
   };
 
@@ -443,6 +562,48 @@ export default function LeadsPage() {
           </Button>
         </div>
       </div>
+
+      {/* Campaign Metrics */}
+      {campaigns.length > 0 && (
+        <div className="grid gap-4 md:grid-cols-4">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Mensagens Enviadas</CardTitle>
+              <CheckCircle2 className="h-4 w-4 text-success" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{campaignMetrics.totalSent}</div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Taxa de Sucesso</CardTitle>
+              <BarChart3 className="h-4 w-4 text-primary" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{campaignMetrics.successRate}%</div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Erros</CardTitle>
+              <XCircle className="h-4 w-4 text-destructive" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{campaignMetrics.totalErrors}</div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Agendadas</CardTitle>
+              <CalendarClock className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{campaignMetrics.scheduledCount}</div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       {/* Stats Cards */}
       <div className="grid gap-4 md:grid-cols-4">
