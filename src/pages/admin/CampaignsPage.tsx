@@ -39,8 +39,12 @@ import {
   TrendingUp,
   MessageSquare,
   Filter,
-  X
+  X,
+  Ban,
+  ShoppingCart,
+  ArrowUpRight
 } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useRestaurant } from '@/hooks/useRestaurant';
 import { format, isAfter, isBefore, parseISO, subDays, subMonths, startOfDay, endOfDay } from 'date-fns';
@@ -69,6 +73,8 @@ interface Campaign {
   sent_count: number;
   error_count: number;
   created_at: string;
+  orders_after?: number;
+  conversion_rate?: number;
 }
 
 interface CampaignSend {
@@ -85,6 +91,7 @@ const CHART_COLORS = ['hsl(var(--primary))', 'hsl(var(--destructive))', 'hsl(var
 
 export default function CampaignsPage() {
   const { restaurant } = useRestaurant();
+  const { toast } = useToast();
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [filteredCampaigns, setFilteredCampaigns] = useState<Campaign[]>([]);
   const [loading, setLoading] = useState(true);
@@ -94,6 +101,7 @@ export default function CampaignsPage() {
   const [dateFilter, setDateFilter] = useState<DateFilter>('all');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
+  const [cancellingId, setCancellingId] = useState<string | null>(null);
 
   useEffect(() => {
     if (restaurant?.id) {
@@ -145,8 +153,35 @@ export default function CampaignsPage() {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setCampaigns(data || []);
-      setFilteredCampaigns(data || []);
+
+      // Load orders to calculate conversion rates
+      const { data: ordersData } = await supabase
+        .from('orders')
+        .select('created_at, customer_phone')
+        .eq('restaurant_id', restaurant.id);
+
+      // Calculate conversion for each sent campaign
+      const campaignsWithConversion = (data || []).map(campaign => {
+        if (campaign.status === 'sent' && campaign.sent_at && campaign.sent_count > 0) {
+          const sentDate = new Date(campaign.sent_at);
+          const ordersAfter = (ordersData || []).filter(order => {
+            const orderDate = new Date(order.created_at);
+            // Orders within 48 hours after campaign sent
+            return orderDate > sentDate && 
+                   orderDate.getTime() - sentDate.getTime() < 48 * 60 * 60 * 1000;
+          }).length;
+          
+          return {
+            ...campaign,
+            orders_after: ordersAfter,
+            conversion_rate: (ordersAfter / campaign.sent_count) * 100
+          };
+        }
+        return campaign;
+      });
+
+      setCampaigns(campaignsWithConversion);
+      setFilteredCampaigns(campaignsWithConversion);
     } catch (error) {
       console.error('Error loading campaigns:', error);
     } finally {
@@ -177,6 +212,42 @@ export default function CampaignsPage() {
     loadCampaignSends(campaign.id);
   };
 
+  const cancelCampaign = async (campaignId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setCancellingId(campaignId);
+    
+    try {
+      const { error } = await supabase
+        .from('promotion_campaigns')
+        .update({ status: 'cancelled' })
+        .eq('id', campaignId);
+
+      if (error) throw error;
+
+      toast({
+        title: 'Campanha cancelada',
+        description: 'A campanha agendada foi cancelada com sucesso.',
+      });
+
+      // Update local state
+      setCampaigns(prev => prev.map(c => 
+        c.id === campaignId ? { ...c, status: 'cancelled' } : c
+      ));
+      setFilteredCampaigns(prev => prev.map(c => 
+        c.id === campaignId ? { ...c, status: 'cancelled' } : c
+      ));
+    } catch (error) {
+      console.error('Error cancelling campaign:', error);
+      toast({
+        title: 'Erro',
+        description: 'Não foi possível cancelar a campanha.',
+        variant: 'destructive',
+      });
+    } finally {
+      setCancellingId(null);
+    }
+  };
+
   const clearFilters = () => {
     setDateFilter('all');
     setStartDate('');
@@ -190,12 +261,18 @@ export default function CampaignsPage() {
   const totalSent = filteredCampaigns.reduce((acc, c) => acc + c.sent_count, 0);
   const totalErrors = filteredCampaigns.reduce((acc, c) => acc + c.error_count, 0);
   const successRate = totalSent > 0 ? ((totalSent - totalErrors) / totalSent * 100).toFixed(1) : '0';
+  const totalConversions = filteredCampaigns.reduce((acc, c) => acc + (c.orders_after || 0), 0);
+  const avgConversionRate = filteredCampaigns.filter(c => c.conversion_rate !== undefined).length > 0
+    ? (filteredCampaigns.reduce((acc, c) => acc + (c.conversion_rate || 0), 0) / 
+       filteredCampaigns.filter(c => c.conversion_rate !== undefined).length).toFixed(1)
+    : '0';
 
   // Chart data for last 7 campaigns
   const chartData = filteredCampaigns.slice(0, 7).reverse().map(c => ({
     name: c.name.substring(0, 10) + (c.name.length > 10 ? '...' : ''),
     enviados: c.sent_count,
     erros: c.error_count,
+    conversoes: c.orders_after || 0,
   }));
 
   // Pie chart data for selected campaign
@@ -213,6 +290,8 @@ export default function CampaignsPage() {
         return <Badge className="bg-warning/20 text-warning border-warning/30">Agendada</Badge>;
       case 'sending':
         return <Badge className="bg-primary/20 text-primary border-primary/30">Enviando</Badge>;
+      case 'cancelled':
+        return <Badge className="bg-destructive/20 text-destructive border-destructive/30">Cancelada</Badge>;
       case 'draft':
         return <Badge variant="secondary">Rascunho</Badge>;
       default:
@@ -283,7 +362,7 @@ export default function CampaignsPage() {
       </Card>
 
       {/* Metrics Cards */}
-      <div className="grid gap-4 md:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
           <Card>
             <CardContent className="p-6">
@@ -337,11 +416,27 @@ export default function CampaignsPage() {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground">Total de Erros</p>
-                  <p className="text-3xl font-bold text-foreground">{totalErrors}</p>
+                  <p className="text-sm text-muted-foreground">Pedidos Gerados</p>
+                  <p className="text-3xl font-bold text-foreground">{totalConversions}</p>
                 </div>
-                <div className="w-12 h-12 rounded-full bg-destructive/10 flex items-center justify-center">
-                  <XCircle className="w-6 h-6 text-destructive" />
+                <div className="w-12 h-12 rounded-full bg-accent/10 flex items-center justify-center">
+                  <ShoppingCart className="w-6 h-6 text-accent" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}>
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">Taxa de Conversão</p>
+                  <p className="text-3xl font-bold text-foreground">{avgConversionRate}%</p>
+                </div>
+                <div className="w-12 h-12 rounded-full bg-warning/10 flex items-center justify-center">
+                  <ArrowUpRight className="w-6 h-6 text-warning" />
                 </div>
               </div>
             </CardContent>
@@ -373,6 +468,7 @@ export default function CampaignsPage() {
                     }}
                   />
                   <Bar dataKey="enviados" fill="hsl(var(--primary))" name="Enviados" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="conversoes" fill="hsl(var(--accent))" name="Conversões" radius={[4, 4, 0, 0]} />
                   <Bar dataKey="erros" fill="hsl(var(--destructive))" name="Erros" radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
@@ -405,7 +501,7 @@ export default function CampaignsPage() {
                   <TableHead>Status</TableHead>
                   <TableHead className="text-center">Destinatários</TableHead>
                   <TableHead className="text-center">Enviados</TableHead>
-                  <TableHead className="text-center">Erros</TableHead>
+                  <TableHead className="text-center">Conversões</TableHead>
                   <TableHead>Data</TableHead>
                   <TableHead className="text-right">Ações</TableHead>
                 </TableRow>
@@ -433,10 +529,14 @@ export default function CampaignsPage() {
                       </div>
                     </TableCell>
                     <TableCell className="text-center">
-                      <div className="flex items-center justify-center gap-1 text-destructive">
-                        <XCircle className="w-4 h-4" />
-                        {campaign.error_count}
-                      </div>
+                      {campaign.conversion_rate !== undefined ? (
+                        <div className="flex items-center justify-center gap-1 text-accent">
+                          <ShoppingCart className="w-4 h-4" />
+                          {campaign.orders_after} ({campaign.conversion_rate.toFixed(1)}%)
+                        </div>
+                      ) : (
+                        <span className="text-muted-foreground">-</span>
+                      )}
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-1 text-sm text-muted-foreground">
@@ -450,9 +550,26 @@ export default function CampaignsPage() {
                       </div>
                     </TableCell>
                     <TableCell className="text-right">
-                      <button className="p-2 hover:bg-muted rounded-lg transition-colors">
-                        <Eye className="w-4 h-4 text-muted-foreground" />
-                      </button>
+                      <div className="flex items-center justify-end gap-1">
+                        {campaign.status === 'scheduled' && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={(e) => cancelCampaign(campaign.id, e)}
+                            disabled={cancellingId === campaign.id}
+                            title="Cancelar campanha"
+                          >
+                            {cancellingId === campaign.id ? (
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : (
+                              <Ban className="w-4 h-4 text-destructive" />
+                            )}
+                          </Button>
+                        )}
+                        <button className="p-2 hover:bg-muted rounded-lg transition-colors">
+                          <Eye className="w-4 h-4 text-muted-foreground" />
+                        </button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -479,7 +596,7 @@ export default function CampaignsPage() {
                 <p className="text-sm text-muted-foreground mt-1">{selectedCampaign.message}</p>
               </div>
 
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                 <div className="text-center p-4 bg-muted/50 rounded-lg">
                   <Users className="w-6 h-6 mx-auto mb-2 text-muted-foreground" />
                   <p className="text-2xl font-bold">{selectedCampaign.total_recipients}</p>
@@ -490,10 +607,17 @@ export default function CampaignsPage() {
                   <p className="text-2xl font-bold text-success">{selectedCampaign.sent_count}</p>
                   <p className="text-xs text-muted-foreground">Enviados</p>
                 </div>
-                <div className="text-center p-4 bg-destructive/10 rounded-lg">
-                  <XCircle className="w-6 h-6 mx-auto mb-2 text-destructive" />
-                  <p className="text-2xl font-bold text-destructive">{selectedCampaign.error_count}</p>
-                  <p className="text-xs text-muted-foreground">Erros</p>
+                <div className="text-center p-4 bg-accent/10 rounded-lg">
+                  <ShoppingCart className="w-6 h-6 mx-auto mb-2 text-accent" />
+                  <p className="text-2xl font-bold text-accent">{selectedCampaign.orders_after || 0}</p>
+                  <p className="text-xs text-muted-foreground">Pedidos Gerados</p>
+                </div>
+                <div className="text-center p-4 bg-warning/10 rounded-lg">
+                  <ArrowUpRight className="w-6 h-6 mx-auto mb-2 text-warning" />
+                  <p className="text-2xl font-bold text-warning">
+                    {selectedCampaign.conversion_rate?.toFixed(1) || 0}%
+                  </p>
+                  <p className="text-xs text-muted-foreground">Taxa Conversão</p>
                 </div>
               </div>
 
