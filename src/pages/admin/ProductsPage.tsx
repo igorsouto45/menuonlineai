@@ -22,7 +22,8 @@ import {
   Package,
   Loader2,
   LayoutGrid,
-  List
+  List,
+  Star
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useRestaurant } from '@/hooks/useRestaurant';
@@ -101,6 +102,37 @@ export default function ProductsPage() {
       toast({
         title: 'Erro',
         description: 'Não foi possível atualizar o produto.',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const toggleFeatured = async (product: Product) => {
+    try {
+      const { error } = await supabase
+        .from('products')
+        .update({ is_featured: !product.is_featured })
+        .eq('id', product.id);
+
+      if (error) throw error;
+
+      setProducts(prev =>
+        prev.map(p =>
+          p.id === product.id ? { ...p, is_featured: !p.is_featured } : p
+        )
+      );
+      
+      toast({
+        title: product.is_featured ? 'Destaque removido' : 'Produto destacado',
+        description: product.is_featured 
+          ? 'O produto não aparecerá mais nos destaques.' 
+          : 'O produto agora aparecerá na seção de destaques.',
+      });
+    } catch (error) {
+      console.error('Error toggling featured:', error);
+      toast({
+        title: 'Erro',
+        description: 'Não foi possível atualizar o destaque.',
         variant: 'destructive',
       });
     }
@@ -289,6 +321,14 @@ export default function ProductsPage() {
                         <><ToggleLeft className="w-4 h-4 text-muted-foreground mr-1" />Inativo</>
                       )}
                     </Button>
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      onClick={() => toggleFeatured(product)}
+                      title={product.is_featured ? 'Remover destaque' : 'Destacar produto'}
+                    >
+                      <Star className={`w-4 h-4 ${product.is_featured ? 'text-yellow-500 fill-yellow-500' : 'text-muted-foreground'}`} />
+                    </Button>
                     <Button variant="ghost" size="icon" onClick={() => openEditDialog(product)}>
                       <Edit2 className="w-4 h-4 text-muted-foreground" />
                     </Button>
@@ -320,14 +360,22 @@ export default function ProductsPage() {
                   ) : (
                     <span className="text-4xl">🍕</span>
                   )}
-                  <Badge 
-                    className={`absolute top-2 right-2 text-xs ${product.is_active 
-                      ? 'bg-success/90 text-white' 
-                      : 'bg-muted-foreground/90 text-white'
-                    }`}
-                  >
-                    {product.is_active ? 'Ativo' : 'Inativo'}
-                  </Badge>
+                  <div className="absolute top-2 right-2 flex gap-1">
+                    {product.is_featured && (
+                      <Badge className="bg-yellow-500/90 text-white text-xs">
+                        <Star className="w-3 h-3 mr-1 fill-current" />
+                        Destaque
+                      </Badge>
+                    )}
+                    <Badge 
+                      className={`text-xs ${product.is_active 
+                        ? 'bg-success/90 text-white' 
+                        : 'bg-muted-foreground/90 text-white'
+                      }`}
+                    >
+                      {product.is_active ? 'Ativo' : 'Inativo'}
+                    </Badge>
+                  </div>
                 </div>
                 <CardContent className="p-3">
                   <h3 className="font-medium text-sm text-foreground line-clamp-1">{product.name}</h3>
@@ -353,7 +401,8 @@ export default function ProductsPage() {
                 <TableHead>Categoria</TableHead>
                 <TableHead className="text-right">Preço</TableHead>
                 <TableHead className="text-center">Status</TableHead>
-                <TableHead className="text-right w-[150px]">Ações</TableHead>
+                <TableHead className="text-center">Destaque</TableHead>
+                <TableHead className="text-right w-[180px]">Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -393,6 +442,14 @@ export default function ProductsPage() {
                       {product.is_active ? 'Ativo' : 'Inativo'}
                     </Badge>
                   </TableCell>
+                  <TableCell className="text-center">
+                    {product.is_featured && (
+                      <Badge className="bg-yellow-500/20 text-yellow-600 border-0">
+                        <Star className="w-3 h-3 mr-1 fill-current" />
+                        Destaque
+                      </Badge>
+                    )}
+                  </TableCell>
                   <TableCell className="text-right">
                     <div className="flex items-center justify-end gap-1">
                       <Button variant="ghost" size="icon" onClick={() => toggleProduct(product)} title={product.is_active ? 'Desativar' : 'Ativar'}>
@@ -401,6 +458,14 @@ export default function ProductsPage() {
                         ) : (
                           <ToggleLeft className="w-4 h-4 text-muted-foreground" />
                         )}
+                      </Button>
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        onClick={() => toggleFeatured(product)}
+                        title={product.is_featured ? 'Remover destaque' : 'Destacar produto'}
+                      >
+                        <Star className={`w-4 h-4 ${product.is_featured ? 'text-yellow-500 fill-yellow-500' : 'text-muted-foreground'}`} />
                       </Button>
                       <Button variant="ghost" size="icon" onClick={() => openEditDialog(product)}>
                         <Edit2 className="w-4 h-4 text-muted-foreground" />
