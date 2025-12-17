@@ -42,7 +42,12 @@ import {
   Send,
   ShoppingBag,
   Filter,
-  X
+  X,
+  Sparkles,
+  UserPlus,
+  Repeat,
+  UserMinus,
+  FileText
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useRestaurant } from '@/hooks/useRestaurant';
@@ -66,6 +71,35 @@ interface Customer {
 
 type DateFilter = 'all' | 'today' | 'week' | 'month' | 'custom';
 type OrderFilter = 'all' | 'with_orders' | 'no_orders' | 'recent_orders';
+type SegmentFilter = 'all' | 'new' | 'recurring' | 'inactive';
+
+const PROMO_TEMPLATES = [
+  {
+    id: 'discount',
+    name: '🎉 Desconto Especial',
+    message: '🎉 Olá {nome}! Temos uma oferta especial para você!\n\n🔥 Use o cupom PROMO10 e ganhe 10% de desconto no seu próximo pedido!\n\n📱 Acesse nosso cardápio e peça agora!'
+  },
+  {
+    id: 'freedelivery',
+    name: '🚚 Frete Grátis',
+    message: '🚚 Olá {nome}! Hoje é dia de FRETE GRÁTIS!\n\nFaça seu pedido agora e não pague taxa de entrega.\n\n⏰ Promoção válida apenas hoje!'
+  },
+  {
+    id: 'comeback',
+    name: '💜 Sentimos sua falta',
+    message: '💜 Olá {nome}, sentimos sua falta!\n\nFaz tempo que você não nos visita. Que tal voltar com um desconto especial?\n\n🎁 Use VOLTEI15 e ganhe 15% OFF!'
+  },
+  {
+    id: 'newproduct',
+    name: '✨ Novidade no Cardápio',
+    message: '✨ Novidade no cardápio, {nome}!\n\nAcabamos de lançar novos produtos incríveis. Venha conferir!\n\n🍕 Acesse agora e experimente!'
+  },
+  {
+    id: 'weekend',
+    name: '🎊 Promoção de Fim de Semana',
+    message: '🎊 {nome}, o fim de semana chegou!\n\nE com ele, promoções especiais para você.\n\n🔥 Peça agora e aproveite!'
+  },
+];
 
 export default function LeadsPage() {
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -76,10 +110,12 @@ export default function LeadsPage() {
   const [orderFilter, setOrderFilter] = useState<OrderFilter>('all');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
+  const [segmentFilter, setSegmentFilter] = useState<SegmentFilter>('all');
   const [selectedLeads, setSelectedLeads] = useState<string[]>([]);
   const [showPromoModal, setShowPromoModal] = useState(false);
   const [promoMessage, setPromoMessage] = useState('');
   const [sendingPromo, setSendingPromo] = useState(false);
+  const [selectedTemplate, setSelectedTemplate] = useState('');
   const { restaurant } = useRestaurant();
   const { toast } = useToast();
 
@@ -91,7 +127,7 @@ export default function LeadsPage() {
 
   useEffect(() => {
     applyFilters();
-  }, [searchTerm, customers, dateFilter, orderFilter, startDate, endDate]);
+  }, [searchTerm, customers, dateFilter, orderFilter, startDate, endDate, segmentFilter]);
 
   const applyFilters = () => {
     let filtered = [...customers];
@@ -142,6 +178,30 @@ export default function LeadsPage() {
               return isAfter(parseISO(c.last_order_date), subDays(new Date(), 30));
             }
             return false;
+          default:
+            return true;
+        }
+      });
+    }
+
+    // Segment filter (automatic segmentation)
+    if (segmentFilter !== 'all') {
+      const now = new Date();
+      filtered = filtered.filter(c => {
+        const createdAt = parseISO(c.created_at);
+        const isNew = isAfter(createdAt, subDays(now, 7));
+        const isRecurring = (c.order_count || 0) >= 2;
+        const isInactive = c.last_order_date 
+          ? isBefore(parseISO(c.last_order_date), subDays(now, 30))
+          : (c.order_count || 0) === 0;
+        
+        switch (segmentFilter) {
+          case 'new':
+            return isNew;
+          case 'recurring':
+            return isRecurring;
+          case 'inactive':
+            return isInactive;
           default:
             return true;
         }
@@ -261,12 +321,33 @@ export default function LeadsPage() {
   const clearFilters = () => {
     setDateFilter('all');
     setOrderFilter('all');
+    setSegmentFilter('all');
     setStartDate('');
     setEndDate('');
     setSearchTerm('');
   };
 
-  const hasActiveFilters = dateFilter !== 'all' || orderFilter !== 'all' || searchTerm;
+  const hasActiveFilters = dateFilter !== 'all' || orderFilter !== 'all' || segmentFilter !== 'all' || searchTerm;
+
+  const selectTemplate = (templateId: string) => {
+    const template = PROMO_TEMPLATES.find(t => t.id === templateId);
+    if (template) {
+      setSelectedTemplate(templateId);
+      setPromoMessage(template.message);
+    }
+  };
+
+  // Get segment counts
+  const segmentCounts = {
+    new: customers.filter(c => isAfter(parseISO(c.created_at), subDays(new Date(), 7))).length,
+    recurring: customers.filter(c => (c.order_count || 0) >= 2).length,
+    inactive: customers.filter(c => {
+      if (c.last_order_date) {
+        return isBefore(parseISO(c.last_order_date), subDays(new Date(), 30));
+      }
+      return (c.order_count || 0) === 0;
+    }).length,
+  };
 
   const sendBulkPromotion = async () => {
     if (!promoMessage.trim()) {
@@ -410,6 +491,44 @@ export default function LeadsPage() {
             </div>
           </CardContent>
         </Card>
+      </div>
+
+      {/* Automatic Segmentation */}
+      <div className="flex flex-wrap gap-2">
+        <Button
+          variant={segmentFilter === 'all' ? 'default' : 'outline'}
+          size="sm"
+          onClick={() => setSegmentFilter('all')}
+        >
+          Todos
+        </Button>
+        <Button
+          variant={segmentFilter === 'new' ? 'default' : 'outline'}
+          size="sm"
+          onClick={() => setSegmentFilter('new')}
+          className="gap-2"
+        >
+          <UserPlus className="w-4 h-4" />
+          Novos ({segmentCounts.new})
+        </Button>
+        <Button
+          variant={segmentFilter === 'recurring' ? 'default' : 'outline'}
+          size="sm"
+          onClick={() => setSegmentFilter('recurring')}
+          className="gap-2"
+        >
+          <Repeat className="w-4 h-4" />
+          Recorrentes ({segmentCounts.recurring})
+        </Button>
+        <Button
+          variant={segmentFilter === 'inactive' ? 'default' : 'outline'}
+          size="sm"
+          onClick={() => setSegmentFilter('inactive')}
+          className="gap-2"
+        >
+          <UserMinus className="w-4 h-4" />
+          Inativos ({segmentCounts.inactive})
+        </Button>
       </div>
 
       {/* Filters */}
@@ -615,14 +734,42 @@ export default function LeadsPage() {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
+            {/* Template Selection */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium flex items-center gap-2">
+                <FileText className="w-4 h-4" />
+                Templates prontos
+              </label>
+              <div className="grid grid-cols-2 gap-2">
+                {PROMO_TEMPLATES.map((template) => (
+                  <Button
+                    key={template.id}
+                    type="button"
+                    variant={selectedTemplate === template.id ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => selectTemplate(template.id)}
+                    className="justify-start text-left h-auto py-2"
+                  >
+                    {template.name}
+                  </Button>
+                ))}
+              </div>
+            </div>
+
             <div className="space-y-2">
               <label className="text-sm font-medium">Mensagem da promoção</label>
               <Textarea
                 placeholder="Ex: 🎉 Promoção especial! Ganhe 10% de desconto em todos os produtos hoje. Use o código PROMO10 no seu pedido!"
                 value={promoMessage}
-                onChange={(e) => setPromoMessage(e.target.value)}
+                onChange={(e) => {
+                  setPromoMessage(e.target.value);
+                  setSelectedTemplate('');
+                }}
                 rows={5}
               />
+              <p className="text-xs text-muted-foreground">
+                Use {'{nome}'} para personalizar com o nome do cliente
+              </p>
             </div>
             <div className="text-sm text-muted-foreground">
               <p>A mensagem será enviada para:</p>
