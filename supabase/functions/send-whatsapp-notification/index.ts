@@ -49,9 +49,14 @@ serve(async (req) => {
     }: OrderNotification = await req.json();
 
     // Use credentials from request or fall back to environment variables
-    const EVOLUTION_API_URL = evolutionApiUrl || Deno.env.get('EVOLUTION_API_URL');
+    const rawEvolutionApiUrl = evolutionApiUrl || Deno.env.get('EVOLUTION_API_URL');
     const EVOLUTION_API_KEY = evolutionApiKey || Deno.env.get('EVOLUTION_API_KEY');
     const EVOLUTION_INSTANCE_NAME = evolutionInstanceName || Deno.env.get('EVOLUTION_INSTANCE_NAME');
+
+    // Normalize base URL (restaurant settings sometimes include "/manager")
+    const EVOLUTION_API_URL = rawEvolutionApiUrl
+      ? rawEvolutionApiUrl.replace(/\/+$/, '').replace(/\/manager$/, '')
+      : null;
 
     if (!EVOLUTION_API_URL || !EVOLUTION_API_KEY || !EVOLUTION_INSTANCE_NAME) {
       console.error('Evolution API credentials not configured');
