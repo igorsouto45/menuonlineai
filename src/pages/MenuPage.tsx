@@ -22,8 +22,11 @@ import {
   MessageCircle,
   Package,
   Truck,
-  LogIn
+  LogIn,
+  CreditCard,
+  Loader2
 } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 
 interface DeliveryArea {
   id: string;
@@ -47,6 +50,8 @@ interface Restaurant {
   delivery_fee: number | null;
   free_delivery_minimum: number | null;
   pickup_enabled: boolean | null;
+  mercado_pago_enabled: boolean | null;
+  mercado_pago_public_key: string | null;
 }
 
 interface Category {
@@ -370,7 +375,8 @@ function CartSheet({
   pickupEnabled,
   deliveryAreas,
   restaurantId,
-  restaurantName
+  restaurantName,
+  mercadoPagoEnabled
 }: { 
   isOpen: boolean; 
   onClose: () => void;
@@ -381,13 +387,16 @@ function CartSheet({
   deliveryAreas: DeliveryArea[];
   restaurantId: string;
   restaurantName: string;
+  mercadoPagoEnabled: boolean;
 }) {
   const { items, total, removeItem, updateQuantity, getWhatsAppMessage, clearCart, calculateDeliveryFee, getGrandTotal } = useCart();
   const { user, customer, loadCustomerByRestaurant } = useCustomer();
+  const { toast } = useToast();
   const [address, setAddress] = useState('');
   const [deliveryMode, setDeliveryMode] = useState<DeliveryMode>(pickupEnabled ? 'pickup' : 'delivery');
   const [selectedAreaId, setSelectedAreaId] = useState<string | null>(deliveryAreas.length > 0 ? deliveryAreas[0].id : null);
   const [showAuthModal, setShowAuthModal] = useState(false);
+  const [processingPayment, setProcessingPayment] = useState(false);
 
   // Load customer data when user is logged in
   useEffect(() => {
@@ -430,6 +439,65 @@ function CartSheet({
     onClose();
   };
 
+  const handleMercadoPagoCheckout = async () => {
+    if (!user || !customer) {
+      setShowAuthModal(true);
+      return;
+    }
+
+    if (deliveryMode === 'delivery' && !address.trim()) {
+      toast({
+        title: 'Endereço obrigatório',
+        description: 'Por favor, preencha o endereço de entrega.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setProcessingPayment(true);
+
+    try {
+      const { data, error } = await supabase.functions.invoke('create-mercadopago-preference', {
+        body: {
+          items: items.map(item => ({
+            product: {
+              id: item.product.id,
+              name: item.product.name,
+              price: item.product.price,
+            },
+            quantity: item.quantity,
+            subtotal: item.subtotal,
+            selectedVariation: item.selectedVariation,
+            selectedAdditionals: item.selectedAdditionals,
+          })),
+          customerName: customer.name,
+          customerEmail: customer.email,
+          customerPhone: customer.whatsapp,
+          deliveryAddress: deliveryMode === 'delivery' ? address : undefined,
+          deliveryFee: actualDeliveryFee,
+          restaurantId,
+          total: grandTotal,
+        },
+      });
+
+      if (error) throw error;
+
+      // Redirect to Mercado Pago checkout
+      if (data.init_point) {
+        window.location.href = data.init_point;
+      }
+    } catch (error: any) {
+      console.error('Error creating payment:', error);
+      toast({
+        title: 'Erro no pagamento',
+        description: error.message || 'Não foi possível processar o pagamento. Tente novamente.',
+        variant: 'destructive',
+      });
+    } finally {
+      setProcessingPayment(false);
+    }
+  };
+
   return (
     <AnimatePresence>
       {isOpen && (
@@ -445,10 +513,10 @@ function CartSheet({
             animate={{ x: 0 }}
             exit={{ x: '100%' }}
             transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-            className="absolute right-0 top-0 h-full w-full max-w-md bg-card shadow-2xl"
+            className="absolute right-0 top-0 h-full w-full max-w-md bg-card shadow-2xl flex flex-col"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between p-4 border-b border-border">
+            <div className="flex items-center justify-between p-4 border-b border-border shrink-0">
               <h2 className="text-xl font-bold text-foreground">Seu Pedido</h2>
               <button
                 onClick={onClose}
@@ -458,7 +526,7 @@ function CartSheet({
               </button>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-4 h-[calc(100vh-200px)]">
+            <div className="flex-1 overflow-y-auto p-4">
               {items.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-full text-center">
                   <ShoppingCart className="w-16 h-16 text-muted-foreground mb-4" />
@@ -592,7 +660,7 @@ function CartSheet({
             </div>
 
             {items.length > 0 && (
-              <div className="p-4 border-t border-border bg-card">
+              <div className="p-4 border-t border-border bg-card shrink-0">
                 {/* Delivery info */}
                 <div className="space-y-2 mb-4">
                   <div className="flex justify-between items-center text-muted-foreground">
@@ -639,10 +707,28 @@ function CartSheet({
                 </div>
                 
                 {user ? (
-                  <Button variant="whatsapp" size="xl" className="w-full" onClick={handleSendWhatsApp}>
-                    <MessageCircle className="w-5 h-5" />
-                    Enviar pedido via WhatsApp
-                  </Button>
+                  <div className="space-y-2">
+                    {mercadoPagoEnabled && (
+                      <Button 
+                        variant="hero" 
+                        size="xl" 
+                        className="w-full" 
+                        onClick={handleMercadoPagoCheckout}
+                        disabled={processingPayment}
+                      >
+                        {processingPayment ? (
+                          <Loader2 className="w-5 h-5 animate-spin" />
+                        ) : (
+                          <CreditCard className="w-5 h-5" />
+                        )}
+                        {processingPayment ? 'Processando...' : 'Pagar com Mercado Pago'}
+                      </Button>
+                    )}
+                    <Button variant="whatsapp" size="xl" className="w-full" onClick={handleSendWhatsApp}>
+                      <MessageCircle className="w-5 h-5" />
+                      Enviar pedido via WhatsApp
+                    </Button>
+                  </div>
                 ) : (
                   <Button variant="hero" size="xl" className="w-full" onClick={() => setShowAuthModal(true)}>
                     <LogIn className="w-5 h-5" />
@@ -1018,6 +1104,7 @@ function MenuPageContent() {
         deliveryAreas={deliveryAreas}
         restaurantId={restaurant.id}
         restaurantName={restaurant.name}
+        mercadoPagoEnabled={restaurant.mercado_pago_enabled ?? false}
       />
     </div>
   );
