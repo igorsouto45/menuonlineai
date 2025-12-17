@@ -484,6 +484,9 @@ export type Database = {
           id: string
           is_open: boolean | null
           logo_url: string | null
+          mercado_pago_access_token: string | null
+          mercado_pago_enabled: boolean | null
+          mercado_pago_public_key: string | null
           name: string
           opening_hours: string | null
           owner_id: string
@@ -508,6 +511,9 @@ export type Database = {
           id?: string
           is_open?: boolean | null
           logo_url?: string | null
+          mercado_pago_access_token?: string | null
+          mercado_pago_enabled?: boolean | null
+          mercado_pago_public_key?: string | null
           name: string
           opening_hours?: string | null
           owner_id: string
@@ -532,6 +538,9 @@ export type Database = {
           id?: string
           is_open?: boolean | null
           logo_url?: string | null
+          mercado_pago_access_token?: string | null
+          mercado_pago_enabled?: boolean | null
+          mercado_pago_public_key?: string | null
           name?: string
           opening_hours?: string | null
           owner_id?: string

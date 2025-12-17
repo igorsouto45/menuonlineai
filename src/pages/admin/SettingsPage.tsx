@@ -12,7 +12,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Switch } from '@/components/ui/switch';
-import { Loader2, Save, Store, Clock, MapPin, Phone, MessageSquare, Bot, Copy, Check, Wifi, WifiOff, Truck, Link, ExternalLink, Package } from 'lucide-react';
+import { Loader2, Save, Store, Clock, MapPin, Phone, MessageSquare, Bot, Copy, Check, Wifi, WifiOff, Truck, Link, ExternalLink, Package, CreditCard } from 'lucide-react';
 import ImageUpload from '@/components/admin/ImageUpload';
 import { DeliveryAreasManager } from '@/components/admin/DeliveryAreasManager';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -31,6 +31,9 @@ const settingsSchema = z.object({
   evolution_api_url: z.string().optional(),
   evolution_api_key: z.string().optional(),
   evolution_instance_name: z.string().optional(),
+  mercado_pago_enabled: z.boolean(),
+  mercado_pago_access_token: z.string().optional(),
+  mercado_pago_public_key: z.string().optional(),
 });
 
 type SettingsFormData = z.infer<typeof settingsSchema>;
@@ -127,6 +130,9 @@ export default function SettingsPage() {
       evolution_api_url: '',
       evolution_api_key: '',
       evolution_instance_name: '',
+      mercado_pago_enabled: false,
+      mercado_pago_access_token: '',
+      mercado_pago_public_key: '',
     },
   });
 
@@ -146,6 +152,9 @@ export default function SettingsPage() {
         evolution_api_url: (restaurant as any).evolution_api_url || '',
         evolution_api_key: (restaurant as any).evolution_api_key || '',
         evolution_instance_name: (restaurant as any).evolution_instance_name || '',
+        mercado_pago_enabled: (restaurant as any).mercado_pago_enabled ?? false,
+        mercado_pago_access_token: (restaurant as any).mercado_pago_access_token || '',
+        mercado_pago_public_key: (restaurant as any).mercado_pago_public_key || '',
       });
       setLogoUrl(restaurant.logo_url);
     }
@@ -579,11 +588,98 @@ export default function SettingsPage() {
             </Card>
           </motion.div>
 
-          {/* Evolution API */}
+          {/* Mercado Pago */}
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3, delay: 0.4 }}
+          >
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <CreditCard className="w-5 h-5 text-primary" />
+                  Gateway de Pagamentos
+                </CardTitle>
+                <CardDescription>
+                  Configure a integração com Mercado Pago para receber pagamentos online
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <FormField
+                  control={form.control}
+                  name="mercado_pago_enabled"
+                  render={({ field }) => (
+                    <FormItem className="flex items-center justify-between rounded-lg border p-4">
+                      <div className="space-y-0.5">
+                        <FormLabel className="text-base">Ativar Mercado Pago</FormLabel>
+                        <FormDescription>
+                          Permite que clientes paguem online via Pix, cartão ou boleto
+                        </FormDescription>
+                      </div>
+                      <FormControl>
+                        <Switch
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                        />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="mercado_pago_access_token"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Access Token</FormLabel>
+                      <FormControl>
+                        <Input type="password" placeholder="APP_USR-..." {...field} />
+                      </FormControl>
+                      <FormDescription>
+                        Token de acesso do Mercado Pago (encontre em Configurações → Credenciais)
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="mercado_pago_public_key"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Public Key</FormLabel>
+                      <FormControl>
+                        <Input placeholder="APP_USR-..." {...field} />
+                      </FormControl>
+                      <FormDescription>
+                        Chave pública do Mercado Pago (encontre em Configurações → Credenciais)
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <Alert className="bg-muted/50 border-primary/20">
+                  <CreditCard className="w-4 h-4 text-primary" />
+                  <AlertTitle className="text-primary">Como obter as credenciais</AlertTitle>
+                  <AlertDescription className="space-y-2 mt-2">
+                    <ol className="text-sm text-muted-foreground list-decimal list-inside space-y-1">
+                      <li>Acesse sua conta no Mercado Pago</li>
+                      <li>Vá em Seu negócio → Configurações → Gestão e administração → Credenciais</li>
+                      <li>Copie o Access Token e a Public Key de produção</li>
+                    </ol>
+                  </AlertDescription>
+                </Alert>
+              </CardContent>
+            </Card>
+          </motion.div>
+
+          {/* Evolution API */}
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, delay: 0.45 }}
           >
             <Card>
               <CardHeader>
