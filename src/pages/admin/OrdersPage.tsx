@@ -35,6 +35,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useRestaurant } from '@/hooks/useRestaurant';
 import { useToast } from '@/hooks/use-toast';
 import { useNotificationSound } from '@/hooks/useNotificationSound';
+import { useBrowserNotification } from '@/hooks/useBrowserNotification';
 import { printOrder } from '@/lib/thermalPrinter';
 import type { Database } from '@/integrations/supabase/types';
 
@@ -186,6 +187,7 @@ export default function OrdersPage() {
   const [activeOrder, setActiveOrder] = useState<Order | null>(null);
   const { toast } = useToast();
   const { playNotification } = useNotificationSound();
+  const { permission, requestPermission, showNotification, isSupported } = useBrowserNotification();
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -194,6 +196,13 @@ export default function OrdersPage() {
       },
     })
   );
+
+  // Request notification permission on mount
+  useEffect(() => {
+    if (isSupported && permission === 'default') {
+      requestPermission();
+    }
+  }, [isSupported, permission, requestPermission]);
 
   useEffect(() => {
     if (!restaurant?.id) return;
@@ -232,11 +241,22 @@ export default function OrdersPage() {
         },
         (payload) => {
           if (payload.eventType === 'INSERT') {
-            setOrders(prev => [payload.new as Order, ...prev]);
+            const newOrder = payload.new as Order;
+            setOrders(prev => [newOrder, ...prev]);
+            
+            // Play notification sound
             playNotification();
+            
+            // Show toast notification
             toast({
               title: '🔔 Novo pedido!',
-              description: `Pedido de ${(payload.new as Order).customer_name || 'Cliente'}`,
+              description: `Pedido de ${newOrder.customer_name || 'Cliente'} - R$ ${Number(newOrder.total).toFixed(2)}`,
+            });
+            
+            // Show browser push notification
+            showNotification('🔔 Novo Pedido!', {
+              body: `${newOrder.customer_name || 'Cliente'} - R$ ${Number(newOrder.total).toFixed(2)}`,
+              tag: `order-${newOrder.id}`,
             });
           } else if (payload.eventType === 'UPDATE') {
             setOrders(prev => 
@@ -252,7 +272,7 @@ export default function OrdersPage() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [restaurant?.id, toast, playNotification]);
+  }, [restaurant?.id, toast, playNotification, showNotification]);
 
   const sendWhatsAppNotification = async (order: Order, newStatus: OrderStatus) => {
     if (!order.customer_phone) return;
