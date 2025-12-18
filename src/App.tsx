@@ -11,6 +11,7 @@ import MenuPage from "./pages/MenuPage";
 import AuthPage from "./pages/AuthPage";
 import OnboardingPage from "./pages/OnboardingPage";
 import PricingPage from "./pages/PricingPage";
+import OrderTrackingPage from "./pages/OrderTrackingPage";
 import ProtectedRoute from "./components/ProtectedRoute";
 import AdminLayout from "./components/admin/AdminLayout";
 import Dashboard from "./pages/admin/Dashboard";
@@ -40,6 +41,8 @@ const App = () => (
                 <Route path="/" element={<LandingPage />} />
                 <Route path="/auth" element={<AuthPage />} />
                 <Route path="/precos" element={<PricingPage />} />
+                <Route path="/rastrear" element={<OrderTrackingPage />} />
+                <Route path="/rastrear/:orderId" element={<OrderTrackingPage />} />
                 <Route path="/demo" element={<MenuPage />} />
                 <Route path="/r/:slug" element={<MenuPage />} />
                 <Route path="/:slug" element={<MenuPage />} />
