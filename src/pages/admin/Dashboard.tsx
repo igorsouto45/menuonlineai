@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
+import { Link } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useRestaurant } from '@/hooks/useRestaurant';
 import { useNotificationSound } from '@/hooks/useNotificationSound';
+import { usePlanLimits } from '@/hooks/usePlanLimits';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { 
@@ -21,7 +23,9 @@ import {
   BarChart3,
   PieChart,
   CalendarClock,
-  Send
+  Send,
+  Lock,
+  Crown
 } from 'lucide-react';
 import {
   BarChart,
@@ -88,6 +92,7 @@ export default function Dashboard() {
   const { restaurant } = useRestaurant();
   const { toast } = useToast();
   const { playNotification } = useNotificationSound();
+  const { canViewReports } = usePlanLimits();
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({
     ordersToday: 0,
@@ -756,11 +761,55 @@ export default function Dashboard() {
         </TabsContent>
 
         <TabsContent value="cashflow">
-          {restaurant?.id && <CashFlowDashboard restaurantId={restaurant.id} />}
+          {canViewReports() ? (
+            restaurant?.id && <CashFlowDashboard restaurantId={restaurant.id} />
+          ) : (
+            <Card className="p-8">
+              <div className="flex flex-col items-center justify-center text-center gap-4">
+                <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center">
+                  <Lock className="w-8 h-8 text-muted-foreground" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold">Fluxo de Caixa Bloqueado</h3>
+                  <p className="text-muted-foreground mt-1">
+                    Faça upgrade para o plano Premium para acessar relatórios financeiros detalhados
+                  </p>
+                </div>
+                <Link to="/precos">
+                  <Button className="gap-2">
+                    <Crown className="w-4 h-4" />
+                    Ver Planos
+                  </Button>
+                </Link>
+              </div>
+            </Card>
+          )}
         </TabsContent>
 
         <TabsContent value="margin">
-          {restaurant?.id && <ProfitMarginReport restaurantId={restaurant.id} />}
+          {canViewReports() ? (
+            restaurant?.id && <ProfitMarginReport restaurantId={restaurant.id} />
+          ) : (
+            <Card className="p-8">
+              <div className="flex flex-col items-center justify-center text-center gap-4">
+                <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center">
+                  <Lock className="w-8 h-8 text-muted-foreground" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold">Margem de Lucro Bloqueada</h3>
+                  <p className="text-muted-foreground mt-1">
+                    Faça upgrade para o plano Premium para analisar suas margens de lucro
+                  </p>
+                </div>
+                <Link to="/precos">
+                  <Button className="gap-2">
+                    <Crown className="w-4 h-4" />
+                    Ver Planos
+                  </Button>
+                </Link>
+              </div>
+            </Card>
+          )}
         </TabsContent>
       </Tabs>
     </div>
