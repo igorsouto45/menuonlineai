@@ -55,7 +55,7 @@ serve(async (req) => {
 
     const { data: restaurant, error: restaurantError } = await supabase
       .from('restaurants')
-      .select('mercado_pago_access_token, mercado_pago_enabled, name')
+      .select('mercado_pago_access_token, mercado_pago_enabled, name, slug')
       .eq('id', restaurantId)
       .single();
 
@@ -150,9 +150,9 @@ serve(async (req) => {
         },
       },
       back_urls: {
-        success: `${req.headers.get('origin')}/menu/${restaurantId}?payment=success&order_id=${orderId}`,
-        failure: `${req.headers.get('origin')}/menu/${restaurantId}?payment=failure&order_id=${orderId}`,
-        pending: `${req.headers.get('origin')}/menu/${restaurantId}?payment=pending&order_id=${orderId}`,
+        success: `${req.headers.get('origin')}/${restaurant.slug}?payment=success&order_id=${orderId}`,
+        failure: `${req.headers.get('origin')}/${restaurant.slug}?payment=failure&order_id=${orderId}`,
+        pending: `${req.headers.get('origin')}/${restaurant.slug}?payment=pending&order_id=${orderId}`,
       },
       auto_return: 'approved',
       external_reference: orderId,
