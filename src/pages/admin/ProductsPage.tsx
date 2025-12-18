@@ -23,12 +23,14 @@ import {
   Loader2,
   LayoutGrid,
   List,
-  Star
+  Star,
+  GripVertical
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useRestaurant } from '@/hooks/useRestaurant';
 import { useToast } from '@/hooks/use-toast';
 import ProductFormDialog from '@/components/admin/ProductFormDialog';
+import { FeaturedProductsManager } from '@/components/admin/FeaturedProductsManager';
 import type { Tables } from '@/integrations/supabase/types';
 
 type Product = Tables<'products'>;
@@ -43,6 +45,7 @@ export default function ProductsPage() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [showFeaturedOnly, setShowFeaturedOnly] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
@@ -177,7 +180,8 @@ export default function ProductsPage() {
   const filteredProducts = products.filter(product => {
     const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesCategory = !selectedCategory || product.category_id === selectedCategory;
-    return matchesSearch && matchesCategory;
+    const matchesFeatured = !showFeaturedOnly || product.is_featured;
+    return matchesSearch && matchesCategory && matchesFeatured;
   });
 
   const getCategoryName = (categoryId: string) => {
@@ -219,18 +223,27 @@ export default function ProductsPage() {
         </div>
         <div className="flex gap-2 overflow-x-auto">
           <Button
-            variant={selectedCategory === null ? 'default' : 'secondary'}
+            variant={selectedCategory === null && !showFeaturedOnly ? 'default' : 'secondary'}
             size="sm"
-            onClick={() => setSelectedCategory(null)}
+            onClick={() => { setSelectedCategory(null); setShowFeaturedOnly(false); }}
           >
             Todos
+          </Button>
+          <Button
+            variant={showFeaturedOnly ? 'default' : 'secondary'}
+            size="sm"
+            onClick={() => { setShowFeaturedOnly(!showFeaturedOnly); setSelectedCategory(null); }}
+            className={showFeaturedOnly ? 'bg-yellow-500 hover:bg-yellow-600 text-white' : ''}
+          >
+            <Star className={`w-4 h-4 mr-1 ${showFeaturedOnly ? 'fill-white' : ''}`} />
+            Destaques
           </Button>
           {categories.map(cat => (
             <Button
               key={cat.id}
               variant={selectedCategory === cat.id ? 'default' : 'secondary'}
               size="sm"
-              onClick={() => setSelectedCategory(cat.id)}
+              onClick={() => { setSelectedCategory(cat.id); setShowFeaturedOnly(false); }}
             >
               {cat.name}
             </Button>
@@ -268,6 +281,18 @@ export default function ProductsPage() {
           </Button>
         </div>
       </div>
+
+      {/* Featured Products Manager */}
+      {showFeaturedOnly && (
+        <Card className="p-4">
+          <div className="flex items-center gap-2 mb-4">
+            <Star className="w-5 h-5 text-yellow-500 fill-yellow-500" />
+            <h3 className="font-semibold text-foreground">Ordenar Destaques</h3>
+            <span className="text-sm text-muted-foreground">(arraste para reordenar)</span>
+          </div>
+          <FeaturedProductsManager products={products} onUpdate={loadData} />
+        </Card>
+      )}
 
       {/* Products Grid View */}
       {viewMode === 'grid' && (
