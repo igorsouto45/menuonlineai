@@ -121,6 +121,7 @@ serve(async (req) => {
       auto_return: 'approved',
       external_reference: `${restaurantId}_${Date.now()}`,
       statement_descriptor: restaurant.name.substring(0, 22),
+      notification_url: `${supabaseUrl}/functions/v1/mercadopago-webhook`,
     };
 
     console.log('Creating preference with items:', preferenceItems.length);
