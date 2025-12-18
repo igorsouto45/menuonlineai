@@ -12,6 +12,7 @@ import AuthPage from "./pages/AuthPage";
 import OnboardingPage from "./pages/OnboardingPage";
 import PricingPage from "./pages/PricingPage";
 import OrderTrackingPage from "./pages/OrderTrackingPage";
+import OrderReviewPage from "./pages/OrderReviewPage";
 import ProtectedRoute from "./components/ProtectedRoute";
 import AdminLayout from "./components/admin/AdminLayout";
 import Dashboard from "./pages/admin/Dashboard";
@@ -43,6 +44,7 @@ const App = () => (
                 <Route path="/precos" element={<PricingPage />} />
                 <Route path="/rastrear" element={<OrderTrackingPage />} />
                 <Route path="/rastrear/:orderId" element={<OrderTrackingPage />} />
+                <Route path="/avaliar/:orderId" element={<OrderReviewPage />} />
                 <Route path="/demo" element={<MenuPage />} />
                 <Route path="/r/:slug" element={<MenuPage />} />
                 <Route path="/:slug" element={<MenuPage />} />
