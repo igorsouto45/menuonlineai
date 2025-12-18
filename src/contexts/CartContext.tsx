@@ -16,6 +16,8 @@ interface DeliveryInfo {
   selectedArea?: DeliveryArea | null;
 }
 
+export type PaymentMethod = 'credit' | 'debit' | 'cash' | 'pix';
+
 interface CartContextType {
   items: CartItem[];
   total: number;
@@ -30,7 +32,7 @@ interface CartContextType {
   removeItem: (itemId: string) => void;
   updateQuantity: (itemId: string, quantity: number) => void;
   clearCart: () => void;
-  getWhatsAppMessage: (customerAddress?: string, deliveryInfo?: DeliveryInfo) => string;
+  getWhatsAppMessage: (customerAddress?: string, deliveryInfo?: DeliveryInfo, paymentMethod?: PaymentMethod) => string;
   calculateDeliveryFee: (deliveryInfo: DeliveryInfo) => number;
   getGrandTotal: (deliveryInfo: DeliveryInfo) => number;
 }
@@ -130,8 +132,18 @@ export function CartProvider({ children }: { children: ReactNode }) {
     setItems([]);
   }, []);
 
+  const getPaymentMethodLabel = (method: PaymentMethod): string => {
+    const labels: Record<PaymentMethod, string> = {
+      credit: '💳 Crédito',
+      debit: '💳 Débito',
+      cash: '💵 Dinheiro',
+      pix: '📱 Pix',
+    };
+    return labels[method];
+  };
+
   const getWhatsAppMessage = useCallback(
-    (customerAddress?: string, deliveryInfo?: DeliveryInfo) => {
+    (customerAddress?: string, deliveryInfo?: DeliveryInfo, paymentMethod?: PaymentMethod) => {
       const isPickup = deliveryInfo?.mode === 'pickup';
       let message = isPickup ? '📦 *Novo Pedido - RETIRADA*\n\n' : '🍕 *Novo Pedido - ENTREGA*\n\n';
 
@@ -180,6 +192,11 @@ export function CartProvider({ children }: { children: ReactNode }) {
         message += `*TOTAL: R$ ${grandTotal.toFixed(2)}*\n`;
       } else {
         message += `*TOTAL: R$ ${total.toFixed(2)}*\n`;
+      }
+
+      // Add payment method
+      if (paymentMethod) {
+        message += `\n💰 *Pagamento na entrega:* ${getPaymentMethodLabel(paymentMethod)}\n`;
       }
 
       if (customerAddress && !isPickup) {
