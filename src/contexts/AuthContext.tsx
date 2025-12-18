@@ -8,6 +8,8 @@ interface SubscriptionState {
   plan: PlanType | null;
   subscriptionEnd: string | null;
   loading: boolean;
+  isTrialActive: boolean;
+  trialEndsAt: string | null;
 }
 
 interface AuthContextType {
@@ -24,6 +26,8 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+const TRIAL_DAYS = 7;
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
@@ -33,6 +37,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     plan: null,
     subscriptionEnd: null,
     loading: false,
+    isTrialActive: false,
+    trialEndsAt: null,
   });
 
   const checkSubscription = async () => {
@@ -42,6 +48,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         plan: null,
         subscriptionEnd: null,
         loading: false,
+        isTrialActive: false,
+        trialEndsAt: null,
       });
       return;
     }
@@ -49,6 +57,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setSubscription(prev => ({ ...prev, loading: true }));
 
     try {
+      // Check Stripe subscription
       const { data, error } = await supabase.functions.invoke('check-subscription', {
         headers: {
           Authorization: `Bearer ${session.access_token}`,
@@ -63,12 +72,45 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       const plan = data.product_id ? getPlanByProductId(data.product_id) : null;
       
+      // If subscribed, no need to check trial
+      if (data.subscribed) {
+        setSubscription({
+          subscribed: true,
+          plan,
+          subscriptionEnd: data.subscription_end || null,
+          loading: false,
+          isTrialActive: false,
+          trialEndsAt: null,
+        });
+        return;
+      }
+
+      // Check trial status based on restaurant creation date
+      const { data: restaurant } = await supabase
+        .from('restaurants')
+        .select('created_at')
+        .eq('owner_id', session.user.id)
+        .single();
+
+      let isTrialActive = false;
+      let trialEndsAt: string | null = null;
+
+      if (restaurant) {
+        const createdAt = new Date(restaurant.created_at);
+        const trialEnd = new Date(createdAt.getTime() + TRIAL_DAYS * 24 * 60 * 60 * 1000);
+        trialEndsAt = trialEnd.toISOString();
+        isTrialActive = new Date() < trialEnd;
+      }
+
       setSubscription({
         subscribed: data.subscribed || false,
         plan,
         subscriptionEnd: data.subscription_end || null,
         loading: false,
+        isTrialActive,
+        trialEndsAt,
       });
+
     } catch (error) {
       console.error('Error checking subscription:', error);
       setSubscription(prev => ({ ...prev, loading: false }));
@@ -151,6 +193,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       plan: null,
       subscriptionEnd: null,
       loading: false,
+      isTrialActive: false,
+      trialEndsAt: null,
     });
   };
 

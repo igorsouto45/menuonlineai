@@ -189,7 +189,7 @@ export default function AdminLayout() {
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const { signOut } = useAuth();
   const { toast } = useToast();
-  const { planName, isSubscribed } = usePlanLimits();
+  const { planName, isSubscribed, isInTrial, trialEndsAt } = usePlanLimits();
   const navigate = useNavigate();
 
   const handleLogout = async () => {
@@ -202,11 +202,20 @@ export default function AdminLayout() {
   };
 
   const getPlanBadgeColor = () => {
+    if (isInTrial) return 'bg-blue-500/20 text-blue-600';
     if (!isSubscribed) return 'bg-yellow-500/20 text-yellow-600';
     if (planName === 'Premium') return 'bg-purple-500/20 text-purple-600';
     if (planName === 'Pro') return 'bg-primary/20 text-primary';
     return 'bg-muted text-muted-foreground';
   };
+
+  const getTrialDaysLeft = () => {
+    if (!trialEndsAt) return 0;
+    const diff = new Date(trialEndsAt).getTime() - Date.now();
+    return Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
+  };
+
+  const displayPlanName = isInTrial ? `Trial (${getTrialDaysLeft()}d)` : planName;
 
   return (
     <div className="min-h-screen bg-background">
@@ -239,7 +248,7 @@ export default function AdminLayout() {
           <Link to="/precos">
             <Badge className={`${getPlanBadgeColor()} border-0 cursor-pointer`}>
               <Crown className="w-3 h-3 mr-1" />
-              {planName}
+              {displayPlanName}
             </Badge>
           </Link>
         </header>
@@ -249,7 +258,7 @@ export default function AdminLayout() {
           <Link to="/precos">
             <Badge className={`${getPlanBadgeColor()} border-0 cursor-pointer hover:opacity-80 transition-opacity`}>
               <Crown className="w-3 h-3 mr-1" />
-              {planName}
+              {displayPlanName}
             </Badge>
           </Link>
         </header>

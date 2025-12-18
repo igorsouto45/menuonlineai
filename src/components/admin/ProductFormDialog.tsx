@@ -5,6 +5,7 @@ import { z } from 'zod';
 import { supabase } from '@/integrations/supabase/client';
 import { useRestaurant } from '@/hooks/useRestaurant';
 import { useToast } from '@/hooks/use-toast';
+import { usePlanLimits } from '@/hooks/usePlanLimits';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -31,7 +32,9 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
-import { Loader2 } from 'lucide-react';
+import { Card } from '@/components/ui/card';
+import { Loader2, Plus, Trash2, Lock, Crown } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import ImageUpload from './ImageUpload';
 import MultiImageUpload from './MultiImageUpload';
 import type { Tables } from '@/integrations/supabase/types';
@@ -65,6 +68,18 @@ interface ProductFormDialogProps {
   onSuccess: () => void;
 }
 
+interface Variation {
+  id?: string;
+  name: string;
+  price: number;
+}
+
+interface Additional {
+  id?: string;
+  name: string;
+  price: number;
+}
+
 export default function ProductFormDialog({
   open,
   onOpenChange,
@@ -73,11 +88,14 @@ export default function ProductFormDialog({
 }: ProductFormDialogProps) {
   const { restaurant } = useRestaurant();
   const { toast } = useToast();
+  const { canUseVariations, canUseAdditionals } = usePlanLimits();
   const [saving, setSaving] = useState(false);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [additionalImages, setAdditionalImages] = useState<ImageItem[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loadingCategories, setLoadingCategories] = useState(true);
+  const [variations, setVariations] = useState<Variation[]>([]);
+  const [additionals, setAdditionals] = useState<Additional[]>([]);
 
   const isEditing = !!product;
 
@@ -115,6 +133,7 @@ export default function ProductFormDialog({
       });
       setImageUrl(product.image_url);
       loadAdditionalImages(product.id);
+      loadVariationsAndAdditionals(product.id);
     } else {
       form.reset({
         name: '',
@@ -128,8 +147,24 @@ export default function ProductFormDialog({
       });
       setImageUrl(null);
       setAdditionalImages([]);
+      setVariations([]);
+      setAdditionals([]);
     }
   }, [product, form, open]);
+
+  const loadVariationsAndAdditionals = async (productId: string) => {
+    const [variationsRes, additionalsRes] = await Promise.all([
+      supabase.from('product_variations').select('*').eq('product_id', productId),
+      supabase.from('product_additionals').select('*').eq('product_id', productId),
+    ]);
+    
+    if (variationsRes.data) {
+      setVariations(variationsRes.data.map(v => ({ id: v.id, name: v.name, price: Number(v.price) })));
+    }
+    if (additionalsRes.data) {
+      setAdditionals(additionalsRes.data.map(a => ({ id: a.id, name: a.name, price: Number(a.price) })));
+    }
+  };
 
   const loadAdditionalImages = async (productId: string) => {
     const { data } = await supabase
@@ -210,11 +245,18 @@ export default function ProductFormDialog({
         // Delete removed images
         if (isEditing) {
           const existingIds = additionalImages.filter(img => img.id).map(img => img.id);
-          await supabase
-            .from('product_images')
-            .delete()
-            .eq('product_id', productId)
-            .not('id', 'in', `(${existingIds.join(',')})`);
+          if (existingIds.length > 0) {
+            await supabase
+              .from('product_images')
+              .delete()
+              .eq('product_id', productId)
+              .not('id', 'in', `(${existingIds.join(',')})`);
+          } else {
+            await supabase
+              .from('product_images')
+              .delete()
+              .eq('product_id', productId);
+          }
         }
 
         // Upsert images
@@ -232,6 +274,30 @@ export default function ProductFormDialog({
                 image_url: img.url,
                 display_order: img.display_order,
               });
+          }
+        }
+
+        // Save variations if allowed
+        if (canUseVariations()) {
+          // Delete old variations
+          await supabase.from('product_variations').delete().eq('product_id', productId);
+          // Insert new variations
+          if (variations.length > 0) {
+            await supabase.from('product_variations').insert(
+              variations.map(v => ({ product_id: productId, name: v.name, price: v.price }))
+            );
+          }
+        }
+
+        // Save additionals if allowed
+        if (canUseAdditionals()) {
+          // Delete old additionals
+          await supabase.from('product_additionals').delete().eq('product_id', productId);
+          // Insert new additionals
+          if (additionals.length > 0) {
+            await supabase.from('product_additionals').insert(
+              additionals.map(a => ({ product_id: productId, name: a.name, price: a.price }))
+            );
           }
         }
       }
@@ -453,6 +519,142 @@ export default function ProductFormDialog({
                   </FormItem>
                 )}
               />
+            </div>
+
+            {/* Variations Section */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <label className="text-sm font-medium">Variações (ex: tamanhos)</label>
+                {!canUseVariations() && (
+                  <Link to="/precos" className="text-xs text-primary flex items-center gap-1 hover:underline">
+                    <Crown className="w-3 h-3" /> Upgrade
+                  </Link>
+                )}
+              </div>
+              {canUseVariations() ? (
+                <div className="space-y-2">
+                  {variations.map((variation, index) => (
+                    <div key={index} className="flex gap-2">
+                      <Input
+                        placeholder="Nome (ex: Grande)"
+                        value={variation.name}
+                        onChange={(e) => {
+                          const updated = [...variations];
+                          updated[index].name = e.target.value;
+                          setVariations(updated);
+                        }}
+                        className="flex-1"
+                      />
+                      <Input
+                        type="number"
+                        step="0.01"
+                        placeholder="Preço"
+                        value={variation.price || ''}
+                        onChange={(e) => {
+                          const updated = [...variations];
+                          updated[index].price = parseFloat(e.target.value) || 0;
+                          setVariations(updated);
+                        }}
+                        className="w-24"
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => setVariations(variations.filter((_, i) => i !== index))}
+                      >
+                        <Trash2 className="w-4 h-4 text-destructive" />
+                      </Button>
+                    </div>
+                  ))}
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setVariations([...variations, { name: '', price: 0 }])}
+                  >
+                    <Plus className="w-4 h-4 mr-1" /> Adicionar variação
+                  </Button>
+                </div>
+              ) : (
+                <Card className="p-4 bg-muted/50 border-dashed">
+                  <div className="flex items-center gap-3 text-muted-foreground">
+                    <Lock className="w-5 h-5" />
+                    <div>
+                      <p className="text-sm font-medium">Variações bloqueadas</p>
+                      <p className="text-xs">Faça upgrade para o plano Pro para adicionar variações</p>
+                    </div>
+                  </div>
+                </Card>
+              )}
+            </div>
+
+            {/* Additionals Section */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <label className="text-sm font-medium">Adicionais (ex: ingredientes extras)</label>
+                {!canUseAdditionals() && (
+                  <Link to="/precos" className="text-xs text-primary flex items-center gap-1 hover:underline">
+                    <Crown className="w-3 h-3" /> Upgrade
+                  </Link>
+                )}
+              </div>
+              {canUseAdditionals() ? (
+                <div className="space-y-2">
+                  {additionals.map((additional, index) => (
+                    <div key={index} className="flex gap-2">
+                      <Input
+                        placeholder="Nome (ex: Bacon)"
+                        value={additional.name}
+                        onChange={(e) => {
+                          const updated = [...additionals];
+                          updated[index].name = e.target.value;
+                          setAdditionals(updated);
+                        }}
+                        className="flex-1"
+                      />
+                      <Input
+                        type="number"
+                        step="0.01"
+                        placeholder="Preço"
+                        value={additional.price || ''}
+                        onChange={(e) => {
+                          const updated = [...additionals];
+                          updated[index].price = parseFloat(e.target.value) || 0;
+                          setAdditionals(updated);
+                        }}
+                        className="w-24"
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => setAdditionals(additionals.filter((_, i) => i !== index))}
+                      >
+                        <Trash2 className="w-4 h-4 text-destructive" />
+                      </Button>
+                    </div>
+                  ))}
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setAdditionals([...additionals, { name: '', price: 0 }])}
+                  >
+                    <Plus className="w-4 h-4 mr-1" /> Adicionar adicional
+                  </Button>
+                </div>
+              ) : (
+                <Card className="p-4 bg-muted/50 border-dashed">
+                  <div className="flex items-center gap-3 text-muted-foreground">
+                    <Lock className="w-5 h-5" />
+                    <div>
+                      <p className="text-sm font-medium">Adicionais bloqueados</p>
+                      <p className="text-xs">Faça upgrade para o plano Pro para adicionar adicionais</p>
+                    </div>
+                  </div>
+                </Card>
+              )}
             </div>
 
             <FormField
