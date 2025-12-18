@@ -1,15 +1,25 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
+import { getPlanByProductId, PlanType } from '@/lib/stripeConfig';
+
+interface SubscriptionState {
+  subscribed: boolean;
+  plan: PlanType | null;
+  subscriptionEnd: string | null;
+  loading: boolean;
+}
 
 interface AuthContextType {
   user: User | null;
   session: Session | null;
   loading: boolean;
+  subscription: SubscriptionState;
   signUp: (email: string, password: string, fullName?: string) => Promise<{ error: Error | null }>;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<{ error: Error | null }>;
+  checkSubscription: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -18,14 +28,67 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const [subscription, setSubscription] = useState<SubscriptionState>({
+    subscribed: false,
+    plan: null,
+    subscriptionEnd: null,
+    loading: false,
+  });
+
+  const checkSubscription = async () => {
+    if (!session?.access_token) {
+      setSubscription({
+        subscribed: false,
+        plan: null,
+        subscriptionEnd: null,
+        loading: false,
+      });
+      return;
+    }
+
+    setSubscription(prev => ({ ...prev, loading: true }));
+
+    try {
+      const { data, error } = await supabase.functions.invoke('check-subscription', {
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
+      });
+
+      if (error) {
+        console.error('Error checking subscription:', error);
+        setSubscription(prev => ({ ...prev, loading: false }));
+        return;
+      }
+
+      const plan = data.product_id ? getPlanByProductId(data.product_id) : null;
+      
+      setSubscription({
+        subscribed: data.subscribed || false,
+        plan,
+        subscriptionEnd: data.subscription_end || null,
+        loading: false,
+      });
+    } catch (error) {
+      console.error('Error checking subscription:', error);
+      setSubscription(prev => ({ ...prev, loading: false }));
+    }
+  };
 
   useEffect(() => {
     // Set up auth state listener FIRST
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+    const { data: { subscription: authSubscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
         setSession(session);
         setUser(session?.user ?? null);
         setLoading(false);
+        
+        // Check subscription after auth state change
+        if (session?.access_token) {
+          setTimeout(() => {
+            checkSubscription();
+          }, 0);
+        }
       }
     );
 
@@ -36,8 +99,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setLoading(false);
     });
 
-    return () => subscription.unsubscribe();
+    return () => authSubscription.unsubscribe();
   }, []);
+
+  // Check subscription when session changes
+  useEffect(() => {
+    if (session?.access_token) {
+      checkSubscription();
+    }
+  }, [session?.access_token]);
+
+  // Auto-refresh subscription every minute
+  useEffect(() => {
+    if (!session?.access_token) return;
+
+    const interval = setInterval(() => {
+      checkSubscription();
+    }, 60000);
+
+    return () => clearInterval(interval);
+  }, [session?.access_token]);
 
   const signUp = async (email: string, password: string, fullName?: string) => {
     const redirectUrl = `${window.location.origin}/`;
@@ -65,6 +146,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signOut = async () => {
     await supabase.auth.signOut();
+    setSubscription({
+      subscribed: false,
+      plan: null,
+      subscriptionEnd: null,
+      loading: false,
+    });
   };
 
   const resetPassword = async (email: string) => {
@@ -81,10 +168,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         user,
         session,
         loading,
+        subscription,
         signUp,
         signIn,
         signOut,
         resetPassword,
+        checkSubscription,
       }}
     >
       {children}

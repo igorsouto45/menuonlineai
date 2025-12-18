@@ -383,6 +383,7 @@ export type Database = {
           created_at: string
           current_stock: number | null
           description: string | null
+          featured_order: number | null
           id: string
           image_url: string | null
           is_active: boolean | null
@@ -399,6 +400,7 @@ export type Database = {
           created_at?: string
           current_stock?: number | null
           description?: string | null
+          featured_order?: number | null
           id?: string
           image_url?: string | null
           is_active?: boolean | null
@@ -415,6 +417,7 @@ export type Database = {
           created_at?: string
           current_stock?: number | null
           description?: string | null
+          featured_order?: number | null
           id?: string
           image_url?: string | null
           is_active?: boolean | null
