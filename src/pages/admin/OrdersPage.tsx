@@ -299,6 +299,7 @@ export default function OrdersPage() {
           evolutionApiUrl,
           evolutionApiKey,
           evolutionInstanceName,
+          baseUrl: window.location.origin,
         },
       });
 

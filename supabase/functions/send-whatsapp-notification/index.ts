@@ -28,6 +28,10 @@ const statusMessages: Record<string, string> = {
   cancelled: '❌ Infelizmente seu pedido foi *cancelado*. Entre em contato para mais informações.',
 };
 
+interface RequestBody extends OrderNotification {
+  baseUrl?: string;
+}
+
 serve(async (req) => {
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
@@ -45,8 +49,9 @@ serve(async (req) => {
       customMessage,
       evolutionApiUrl,
       evolutionApiKey,
-      evolutionInstanceName
-    }: OrderNotification = await req.json();
+      evolutionInstanceName,
+      baseUrl
+    }: RequestBody = await req.json();
 
     // Use credentials from request or fall back to environment variables
     const rawEvolutionApiUrl = evolutionApiUrl || Deno.env.get('EVOLUTION_API_URL');
@@ -99,6 +104,11 @@ serve(async (req) => {
         message += `Total: *R$ ${orderTotal.toFixed(2)}*\n`;
       }
       message += `\n${statusMessage}`;
+
+      // Add review link when delivered
+      if (status === 'delivered' && orderId && baseUrl) {
+        message += `\n\n⭐ *Avalie seu pedido:*\n${baseUrl}/avaliar/${orderId}`;
+      }
     }
 
     console.log(`Sending WhatsApp notification to ${phone} for order ${orderId}`);
