@@ -22,49 +22,53 @@ import {
 const features = [
   {
     icon: Smartphone,
-    title: 'Funciona no celular',
-    description: 'Cardápio 100% responsivo, perfeito em qualquer dispositivo',
+    title: 'Cardápio 100% responsivo',
+    description: 'Seu menu digital funciona perfeitamente em celular, tablet e computador',
   },
   {
     icon: ShoppingCart,
-    title: 'Não precisa baixar app',
-    description: 'Cliente acessa direto pelo link, sem instalar nada',
+    title: 'Sem app para baixar',
+    description: 'Cliente acessa o cardápio pelo link ou QR Code, sem instalar nada',
   },
   {
     icon: MessageCircle,
-    title: 'Pedido organizado',
-    description: 'Mensagem formatada automaticamente no WhatsApp',
+    title: 'Pedidos organizados no WhatsApp',
+    description: 'Receba pedidos formatados automaticamente com todos os detalhes',
   },
   {
     icon: Palette,
-    title: 'Visual profissional',
-    description: 'Design moderno que impressiona seus clientes',
+    title: 'Design profissional',
+    description: 'Cardápio com visual moderno que valoriza seu restaurante',
   },
   {
     icon: BarChart3,
-    title: 'Setup em minutos',
-    description: 'Configure tudo rapidamente, sem complicação',
+    title: 'Pronto em minutos',
+    description: 'Configure seu menu digital rapidamente, sem conhecimento técnico',
   },
   {
     icon: Zap,
-    title: 'Ultra rápido',
-    description: 'Carregamento instantâneo, sem travamentos',
+    title: 'Carregamento ultra rápido',
+    description: 'Cardápio leve que abre instantaneamente no celular do cliente',
   },
 ];
 
 const problems = [
-  'Cliente pergunta "tem cardápio?"',
-  'Você manda PDF pesado',
-  'Pedido vem todo errado',
-  'Tempo perdido = dinheiro perdido',
+  'Cliente pergunta "tem cardápio digital?"',
+  'Você ainda manda PDF pesado pelo WhatsApp',
+  'Pedido chega incompleto ou errado',
+  'Tempo perdido anotando pedidos manualmente',
 ];
 
 const idealFor = [
   'Lanchonetes',
   'Pizzarias',
+  'Hamburguerias',
   'Restaurantes',
   'Delivery',
   'Food trucks',
+  'Açaiterias',
+  'Pastelarias',
+  'Marmitarias',
 ];
 
 const plans = [
@@ -122,80 +126,86 @@ export default function LandingPage() {
     <div className="min-h-screen bg-background">
       {/* Header */}
       <header className="fixed top-0 left-0 right-0 z-50 glass border-b border-border/50">
-        <div className="container flex h-16 items-center justify-between">
-          <Link to="/" className="flex items-center gap-2">
+        <nav className="container flex h-16 items-center justify-between" aria-label="Navegação principal">
+          <Link to="/" className="flex items-center gap-2" aria-label="MENU AI - Início">
             <div className="h-9 w-9 rounded-xl gradient-primary flex items-center justify-center">
               <span className="text-primary-foreground font-bold text-lg">M</span>
             </div>
             <span className="font-bold text-xl text-foreground">MENU AI</span>
           </Link>
-          <nav className="hidden md:flex items-center gap-6">
-            <a href="#features" className="text-muted-foreground hover:text-foreground transition-colors">
+          <div className="hidden md:flex items-center gap-6">
+            <a href="#funcionalidades" className="text-muted-foreground hover:text-foreground transition-colors">
               Funcionalidades
             </a>
-            <Link to="/precos" className="text-muted-foreground hover:text-foreground transition-colors">
+            <a href="#para-quem" className="text-muted-foreground hover:text-foreground transition-colors">
+              Para quem
+            </a>
+            <a href="#precos" className="text-muted-foreground hover:text-foreground transition-colors">
               Preços
-            </Link>
+            </a>
             <Link to="/demo" className="text-muted-foreground hover:text-foreground transition-colors">
-              Demo
+              Ver Demo
             </Link>
-          </nav>
+          </div>
           <div className="flex items-center gap-3">
             <Link to="/auth">
               <Button variant="ghost">Entrar</Button>
             </Link>
             <Link to="/auth?mode=signup">
-              <Button variant="hero">Começar Grátis</Button>
+              <Button variant="hero">Criar Cardápio Grátis</Button>
             </Link>
           </div>
-        </div>
+        </nav>
       </header>
 
       {/* Hero Section */}
-      <section className="pt-32 pb-20 px-4 gradient-hero">
-        <div className="container">
-          <div className="max-w-4xl mx-auto text-center">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6 }}
-            >
-              <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 text-primary text-sm font-medium mb-6">
-                <Star className="w-4 h-4 fill-current" />
-                7 dias grátis para testar
-              </span>
-              <h1 className="text-4xl md:text-6xl lg:text-7xl font-extrabold text-foreground leading-tight mb-6">
-                Seu cardápio no WhatsApp.{' '}
-                <br />
-                <span className="text-gradient">Mais pedidos. Menos complicação.</span>
-              </h1>
-              <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto mb-8">
-                Crie um cardápio digital profissional em minutos e receba pedidos direto no WhatsApp — sem taxas, sem apps e sem dor de cabeça.
-              </p>
-              <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12">
-                <Link to="/auth?mode=signup">
-                  <Button variant="hero" size="xl" className="w-full sm:w-auto">
-                    Teste grátis agora
-                    <ChevronRight className="w-5 h-5" />
-                  </Button>
-                </Link>
-                <Link to="/demo">
-                  <Button variant="outline" size="xl" className="w-full sm:w-auto">
-                    Ver demonstração
-                  </Button>
-                </Link>
-              </div>
-            </motion.div>
+      <main>
+        <section className="pt-32 pb-20 px-4 gradient-hero" aria-labelledby="hero-heading">
+          <div className="container">
+            <div className="max-w-4xl mx-auto text-center">
+              <motion.article
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6 }}
+              >
+                <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 text-primary text-sm font-medium mb-6">
+                  <Star className="w-4 h-4 fill-current" />
+                  Teste grátis por 7 dias - Sem cartão de crédito
+                </span>
+                <h1 id="hero-heading" className="text-4xl md:text-6xl lg:text-7xl font-extrabold text-foreground leading-tight mb-6">
+                  Cardápio Digital para Restaurantes com{' '}
+                  <span className="text-gradient">Pedidos via WhatsApp</span>
+                </h1>
+                <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto mb-8">
+                  Crie seu cardápio online profissional em minutos. Seus clientes fazem pedidos pelo celular e você recebe tudo organizado no WhatsApp — <strong>sem taxas por pedido</strong>, sem aplicativo, sem complicação.
+                </p>
+                <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12">
+                  <Link to="/auth?mode=signup">
+                    <Button variant="hero" size="xl" className="w-full sm:w-auto">
+                      Criar meu cardápio grátis
+                      <ChevronRight className="w-5 h-5" />
+                    </Button>
+                  </Link>
+                  <Link to="/demo">
+                    <Button variant="outline" size="xl" className="w-full sm:w-auto">
+                      Ver cardápio de exemplo
+                    </Button>
+                  </Link>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  ✓ Ideal para pizzarias, lanchonetes, hamburguerias, delivery e food trucks
+                </p>
+              </motion.article>
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
 
       {/* Problem Section */}
-      <section className="py-16 px-4 bg-muted/30">
+      <section className="py-16 px-4 bg-muted/30" aria-labelledby="problems-heading">
         <div className="container">
           <div className="max-w-3xl mx-auto">
-            <h2 className="text-2xl md:text-3xl font-bold text-foreground text-center mb-8">
-              O problema que você conhece bem:
+            <h2 id="problems-heading" className="text-2xl md:text-3xl font-bold text-foreground text-center mb-8">
+              Problemas que donos de restaurantes enfrentam todo dia:
             </h2>
             <div className="grid sm:grid-cols-2 gap-4">
               {problems.map((problem, index) => (
@@ -207,7 +217,7 @@ export default function LandingPage() {
                   transition={{ duration: 0.4, delay: index * 0.1 }}
                   className="flex items-center gap-3 p-4 bg-destructive/10 rounded-xl border border-destructive/20"
                 >
-                  <X className="w-5 h-5 text-destructive shrink-0" />
+                  <X className="w-5 h-5 text-destructive shrink-0" aria-hidden="true" />
                   <span className="text-foreground">{problem}</span>
                 </motion.div>
               ))}
@@ -217,16 +227,16 @@ export default function LandingPage() {
       </section>
 
       {/* Solution Section */}
-      <section className="py-16 px-4">
+      <section className="py-16 px-4" aria-labelledby="solution-heading">
         <div className="container">
           <div className="max-w-3xl mx-auto text-center">
-            <h2 className="text-2xl md:text-3xl font-bold text-foreground mb-4">
-              A solução é simples:
+            <h2 id="solution-heading" className="text-2xl md:text-3xl font-bold text-foreground mb-4">
+              A solução: Cardápio Digital com Pedidos pelo WhatsApp
             </h2>
             <p className="text-lg text-muted-foreground mb-8">
-              Um cardápio online <strong className="text-foreground">bonito, rápido e fácil de usar</strong>.<br />
-              O cliente escolhe. O pedido chega pronto no seu WhatsApp.<br />
-              <span className="text-primary font-semibold">Simples assim.</span>
+              Um menu online <strong className="text-foreground">bonito, rápido e fácil de usar</strong>.<br />
+              O cliente escolhe os produtos, personaliza o pedido, e tudo chega organizado no seu WhatsApp.<br />
+              <span className="text-primary font-semibold">Sem taxa por pedido. Sem comissão.</span>
             </p>
           </div>
         </div>
@@ -288,19 +298,19 @@ export default function LandingPage() {
       </section>
 
       {/* Features */}
-      <section id="features" className="py-20 px-4">
+      <section id="funcionalidades" className="py-20 px-4" aria-labelledby="features-heading">
         <div className="container">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
-              Tudo que você precisa para vender mais
+          <header className="text-center mb-16">
+            <h2 id="features-heading" className="text-3xl md:text-4xl font-bold text-foreground mb-4">
+              Sistema completo de cardápio digital
             </h2>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              Um sistema completo, bonito e fácil de usar. Sem complicação.
+              Tudo que seu restaurante, pizzaria ou lanchonete precisa para receber pedidos online pelo WhatsApp.
             </p>
-          </div>
+          </header>
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             {features.map((feature, index) => (
-              <motion.div
+              <motion.article
                 key={feature.title}
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
@@ -308,50 +318,54 @@ export default function LandingPage() {
                 transition={{ duration: 0.5, delay: index * 0.1 }}
                 className="group p-6 rounded-2xl bg-card border border-border hover:border-primary/30 hover:shadow-card transition-all duration-300"
               >
-                <div className="w-12 h-12 rounded-xl gradient-primary flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300">
+                <div className="w-12 h-12 rounded-xl gradient-primary flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300" aria-hidden="true">
                   <feature.icon className="w-6 h-6 text-primary-foreground" />
                 </div>
                 <h3 className="text-xl font-semibold text-foreground mb-2">{feature.title}</h3>
                 <p className="text-muted-foreground">{feature.description}</p>
-              </motion.div>
+              </motion.article>
             ))}
           </div>
         </div>
       </section>
 
       {/* Ideal For */}
-      <section className="py-16 px-4 bg-muted/30">
+      <section id="para-quem" className="py-16 px-4 bg-muted/30" aria-labelledby="ideal-heading">
         <div className="container">
-          <h2 className="text-2xl md:text-3xl font-bold text-foreground text-center mb-8">
-            Ideal para:
+          <h2 id="ideal-heading" className="text-2xl md:text-3xl font-bold text-foreground text-center mb-8">
+            Cardápio digital ideal para:
           </h2>
-          <div className="flex flex-wrap justify-center gap-4">
+          <div className="flex flex-wrap justify-center gap-4" role="list">
             {idealFor.map((item) => (
               <span
                 key={item}
+                role="listitem"
                 className="px-6 py-3 rounded-full bg-card border border-border text-foreground font-medium"
               >
                 {item}
               </span>
             ))}
           </div>
+          <p className="text-center text-muted-foreground mt-6 max-w-2xl mx-auto">
+            Qualquer estabelecimento que vende comida pode usar o MENU AI para criar um cardápio online profissional e receber pedidos pelo WhatsApp.
+          </p>
         </div>
       </section>
 
       {/* Pricing */}
-      <section id="pricing" className="py-20 px-4">
+      <section id="precos" className="py-20 px-4" aria-labelledby="pricing-heading">
         <div className="container">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
-              Planos simples e acessíveis
+          <header className="text-center mb-16">
+            <h2 id="pricing-heading" className="text-3xl md:text-4xl font-bold text-foreground mb-4">
+              Planos de cardápio digital sem taxa por pedido
             </h2>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              Escolha o plano ideal para o seu negócio. Todos incluem 7 dias grátis para testar.
+              Escolha o plano ideal para seu restaurante. Todos incluem 7 dias grátis para testar. Cancele quando quiser.
             </p>
-          </div>
+          </header>
           <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto">
             {plans.map((plan, index) => (
-              <motion.div
+              <motion.article
                 key={plan.name}
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
@@ -377,7 +391,7 @@ export default function LandingPage() {
                 <ul className="space-y-3 mb-6">
                   {plan.features.map((feature) => (
                     <li key={feature} className="flex items-center gap-3 text-muted-foreground">
-                      <Check className="w-5 h-5 text-success shrink-0" />
+                      <Check className="w-5 h-5 text-success shrink-0" aria-hidden="true" />
                       <span>{feature}</span>
                     </li>
                   ))}
@@ -387,56 +401,60 @@ export default function LandingPage() {
                     variant={plan.popular ? 'hero' : 'outline'}
                     className="w-full"
                   >
-                    Começar agora
+                    Testar grátis por 7 dias
                   </Button>
                 </Link>
-              </motion.div>
+              </motion.article>
             ))}
           </div>
         </div>
       </section>
 
       {/* CTA */}
-      <section className="py-20 px-4">
+      <section className="py-20 px-4" aria-labelledby="cta-heading">
         <div className="container">
           <div className="max-w-4xl mx-auto gradient-primary rounded-3xl p-8 md:p-12 text-center shadow-glow">
-            <h2 className="text-3xl md:text-4xl font-bold text-primary-foreground mb-4">
-              🚀 Criar meu cardápio agora
+            <h2 id="cta-heading" className="text-3xl md:text-4xl font-bold text-primary-foreground mb-4">
+              Crie seu cardápio digital agora mesmo
             </h2>
             <p className="text-lg text-primary-foreground/80 mb-8 max-w-xl mx-auto">
-              Teste grátis por 7 dias. Sem cartão de crédito.
+              Teste grátis por 7 dias. Sem cartão de crédito. Sem taxa por pedido.
             </p>
             <Link to="/auth?mode=signup">
               <Button variant="glass" size="xl" className="bg-background/10 text-primary-foreground border-primary-foreground/20 hover:bg-background/20">
-                Começar agora — é grátis
+                Criar meu cardápio grátis
                 <ChevronRight className="w-5 h-5" />
               </Button>
             </Link>
           </div>
         </div>
       </section>
+      </main>
 
       {/* Footer */}
-      <footer className="py-12 px-4 border-t border-border">
+      <footer className="py-12 px-4 border-t border-border" role="contentinfo">
         <div className="container">
           <div className="flex flex-col md:flex-row items-center justify-between gap-6">
             <div className="flex items-center gap-2">
-              <div className="h-8 w-8 rounded-lg gradient-primary flex items-center justify-center">
+              <div className="h-8 w-8 rounded-lg gradient-primary flex items-center justify-center" aria-hidden="true">
                 <span className="text-primary-foreground font-bold">M</span>
               </div>
               <span className="font-bold text-lg text-foreground">MENU AI</span>
             </div>
             <p className="text-muted-foreground text-sm">
-              © 2024 MENU AI. Todos os direitos reservados.
+              © 2024 MENU AI - Sistema de cardápio digital para restaurantes. Todos os direitos reservados.
             </p>
-            <div className="flex gap-6">
+            <nav className="flex gap-6" aria-label="Links do rodapé">
               <a href="#" className="text-muted-foreground hover:text-foreground text-sm transition-colors">
                 Termos de Uso
               </a>
               <a href="#" className="text-muted-foreground hover:text-foreground text-sm transition-colors">
                 Privacidade
               </a>
-            </div>
+              <a href="#" className="text-muted-foreground hover:text-foreground text-sm transition-colors">
+                Contato
+              </a>
+            </nav>
           </div>
         </div>
       </footer>
