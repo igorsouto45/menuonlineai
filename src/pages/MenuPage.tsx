@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -467,8 +467,11 @@ function CartSheet({
     const message = getWhatsAppMessage(deliveryMode === 'delivery' ? address : undefined, deliveryInfo);
     const formattedWhatsapp = whatsapp.replace(/\D/g, '');
     window.open(`https://wa.me/55${formattedWhatsapp}?text=${message}`, '_blank');
-    clearCart();
-    onClose();
+    // Não limpa o carrinho para permitir pagamento posterior
+    toast({
+      title: 'Pedido enviado!',
+      description: 'O pedido foi enviado para o WhatsApp. Você ainda pode pagar pelo Mercado Pago.',
+    });
   };
 
   const handleMercadoPagoCheckout = async () => {
@@ -787,7 +790,9 @@ function CartSheet({
 
 function MenuPageContent() {
   const { slug } = useParams<{ slug: string }>();
-  const { addItem } = useCart();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const { addItem, clearCart } = useCart();
+  const { toast } = useToast();
   const [restaurant, setRestaurant] = useState<Restaurant | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
@@ -799,6 +804,30 @@ function MenuPageContent() {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [cartOpen, setCartOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+
+  // Get payment status from URL
+  const paymentStatus = searchParams.get('payment');
+  const orderId = searchParams.get('order_id');
+
+  // Handle payment return - clear cart on success
+  useEffect(() => {
+    if (paymentStatus === 'success' && orderId) {
+      clearCart();
+      toast({
+        title: 'Pagamento realizado!',
+        description: 'Seu pedido foi confirmado. Acompanhe o status abaixo.',
+      });
+      // Clean URL params after handling
+      setSearchParams({});
+    } else if (paymentStatus === 'failure') {
+      toast({
+        title: 'Pagamento não realizado',
+        description: 'O pagamento foi cancelado ou falhou. Tente novamente.',
+        variant: 'destructive',
+      });
+      setSearchParams({});
+    }
+  }, [paymentStatus, orderId, clearCart, toast, setSearchParams]);
 
   useEffect(() => {
     async function loadData() {
