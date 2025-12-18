@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import { CheckCircle, XCircle, Clock, Loader2, X, Package, ChefHat, Truck } from 'lucide-react';
+import { CheckCircle, XCircle, Clock, Loader2, X, Package, ChefHat, Truck, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import type { Database } from '@/integrations/supabase/types';
 
@@ -14,48 +14,61 @@ interface PaymentStatusIndicatorProps {
 
 type PaymentStatus = 'pending' | 'success' | 'failure' | null;
 
-const orderStatusConfig: Record<OrderStatus, { icon: React.ElementType; title: string; description: string; color: string }> = {
+const orderStatusConfig: Record<OrderStatus, { 
+  icon: React.ElementType; 
+  title: string; 
+  description: string; 
+  color: string;
+  estimatedMinutes: number;
+}> = {
   pending: {
     icon: Clock,
     title: 'Aguardando Pagamento',
-    description: 'Seu pedido foi criado e está aguardando a confirmação do pagamento.',
+    description: 'Seu pedido está aguardando a confirmação do pagamento.',
     color: 'text-yellow-500',
+    estimatedMinutes: 0,
   },
   confirmed: {
     icon: CheckCircle,
     title: 'Pedido Confirmado!',
-    description: 'Seu pagamento foi aprovado e o pedido foi recebido pelo restaurante.',
+    description: 'Seu pagamento foi aprovado e o pedido foi recebido.',
     color: 'text-green-500',
+    estimatedMinutes: 45,
   },
   preparing: {
     icon: ChefHat,
     title: 'Preparando seu Pedido',
-    description: 'O restaurante está preparando seu pedido com carinho.',
+    description: 'O restaurante está preparando seu pedido.',
     color: 'text-orange-500',
+    estimatedMinutes: 30,
   },
   ready: {
     icon: Package,
     title: 'Pedido Pronto!',
-    description: 'Seu pedido está pronto e aguardando entrega ou retirada.',
+    description: 'Aguardando entrega ou retirada.',
     color: 'text-blue-500',
+    estimatedMinutes: 15,
   },
   out_for_delivery: {
     icon: Truck,
     title: 'Saiu para Entrega',
-    description: 'Seu pedido está a caminho! Em breve chegará até você.',
+    description: 'Seu pedido está a caminho!',
     color: 'text-purple-500',
+    estimatedMinutes: 10,
   },
   delivered: {
     icon: CheckCircle,
     title: 'Pedido Entregue!',
-    description: 'Seu pedido foi entregue. Bom apetite!',
+    description: 'Bom apetite!',
     color: 'text-green-500',
+    estimatedMinutes: 0,
   },
   cancelled: {
     icon: XCircle,
     title: 'Pedido Cancelado',
-    description: 'Infelizmente seu pedido foi cancelado.',
+    description: 'Seu pedido foi cancelado.',
     color: 'text-red-500',
+    estimatedMinutes: 0,
   },
 };
 
@@ -229,10 +242,25 @@ export function PaymentStatusIndicator({ restaurantId }: PaymentStatusIndicatorP
               <div className="flex-1 min-w-0">
                 <h3 className="font-semibold text-foreground">{config.title}</h3>
                 <p className="text-sm text-muted-foreground mt-1">{config.description}</p>
-                {orderId && (
-                  <p className="text-xs text-muted-foreground mt-2">
-                    Pedido: #{orderId.slice(0, 8).toUpperCase()}
+                {/* Estimated time */}
+                {currentOrderConfig && currentOrderConfig.estimatedMinutes > 0 && orderStatus !== 'cancelled' && (
+                  <p className="text-xs text-primary font-medium mt-2 flex items-center gap-1">
+                    <Clock className="w-3 h-3" />
+                    ~{currentOrderConfig.estimatedMinutes} min restantes
                   </p>
+                )}
+                {orderId && (
+                  <div className="flex items-center gap-2 mt-2">
+                    <p className="text-xs text-muted-foreground">
+                      Pedido: #{orderId.slice(0, 8).toUpperCase()}
+                    </p>
+                    <Link 
+                      to={`/rastrear/${orderId}`} 
+                      className="text-xs text-primary hover:underline flex items-center gap-1"
+                    >
+                      Ver detalhes <ExternalLink className="w-3 h-3" />
+                    </Link>
+                  </div>
                 )}
               </div>
               <button
