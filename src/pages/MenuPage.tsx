@@ -433,6 +433,7 @@ function CartSheet({
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [processingPayment, setProcessingPayment] = useState(false);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<PaymentMethod>('pix');
+  const [changeFor, setChangeFor] = useState<string>('');
 
   // Load customer data when user is logged in
   useEffect(() => {
@@ -468,7 +469,8 @@ function CartSheet({
       return;
     }
 
-    const message = getWhatsAppMessage(deliveryMode === 'delivery' ? address : undefined, deliveryInfo, selectedPaymentMethod);
+    const changeAmount = selectedPaymentMethod === 'cash' && changeFor ? parseFloat(changeFor) : null;
+    const message = getWhatsAppMessage(deliveryMode === 'delivery' ? address : undefined, deliveryInfo, selectedPaymentMethod, changeAmount);
     const formattedWhatsapp = whatsapp.replace(/\D/g, '');
     window.open(`https://wa.me/55${formattedWhatsapp}?text=${message}`, '_blank');
     // Não limpa o carrinho para permitir pagamento posterior
@@ -728,7 +730,12 @@ function CartSheet({
                       {paymentMethods.map((method) => (
                         <button
                           key={method.value}
-                          onClick={() => setSelectedPaymentMethod(method.value)}
+                          onClick={() => {
+                            setSelectedPaymentMethod(method.value);
+                            if (method.value !== 'cash') {
+                              setChangeFor('');
+                            }
+                          }}
                           className={`p-3 rounded-xl border-2 transition-all flex items-center justify-center gap-2 ${
                             selectedPaymentMethod === method.value
                               ? 'border-primary bg-primary/10'
@@ -740,6 +747,28 @@ function CartSheet({
                         </button>
                       ))}
                     </div>
+                    
+                    {/* Change input - only for cash */}
+                    {selectedPaymentMethod === 'cash' && (
+                      <div className="pt-2">
+                        <label className="text-sm text-muted-foreground mb-2 block">
+                          Precisa de troco? Para quanto?
+                        </label>
+                        <div className="relative">
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">R$</span>
+                          <input
+                            type="number"
+                            value={changeFor}
+                            onChange={(e) => setChangeFor(e.target.value)}
+                            placeholder="0,00"
+                            className="w-full pl-10 p-3 rounded-xl border-2 border-border bg-background text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none"
+                          />
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Deixe em branco se não precisar de troco
+                        </p>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
