@@ -133,9 +133,9 @@ export default function LandingPage() {
             <a href="#features" className="text-muted-foreground hover:text-foreground transition-colors">
               Funcionalidades
             </a>
-            <a href="#pricing" className="text-muted-foreground hover:text-foreground transition-colors">
+            <Link to="/precos" className="text-muted-foreground hover:text-foreground transition-colors">
               Preços
-            </a>
+            </Link>
             <Link to="/demo" className="text-muted-foreground hover:text-foreground transition-colors">
               Demo
             </Link>

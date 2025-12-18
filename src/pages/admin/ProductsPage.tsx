@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -24,11 +25,14 @@ import {
   LayoutGrid,
   List,
   Star,
-  GripVertical
+  GripVertical,
+  AlertTriangle,
+  Crown
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useRestaurant } from '@/hooks/useRestaurant';
 import { useToast } from '@/hooks/use-toast';
+import { usePlanLimits } from '@/hooks/usePlanLimits';
 import ProductFormDialog from '@/components/admin/ProductFormDialog';
 import { FeaturedProductsManager } from '@/components/admin/FeaturedProductsManager';
 import type { Tables } from '@/integrations/supabase/types';
@@ -40,6 +44,7 @@ type ViewMode = 'grid' | 'compact' | 'list';
 export default function ProductsPage() {
   const { restaurant, loading: loadingRestaurant } = useRestaurant();
   const { toast } = useToast();
+  const { canAddProduct, limits, planName } = usePlanLimits();
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
@@ -49,6 +54,10 @@ export default function ProductsPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
+
+  const productCount = products.length;
+  const canAdd = canAddProduct(productCount);
+  const limitReached = !canAdd;
 
   useEffect(() => {
     if (restaurant) {
@@ -173,6 +182,14 @@ export default function ProductsPage() {
   };
 
   const openNewDialog = () => {
+    if (!canAdd) {
+      toast({
+        title: 'Limite de produtos atingido',
+        description: `Seu plano ${planName} permite até ${limits.maxProducts} produtos. Faça upgrade para adicionar mais.`,
+        variant: 'destructive',
+      });
+      return;
+    }
     setEditingProduct(null);
     setDialogOpen(true);
   };
@@ -198,13 +215,43 @@ export default function ProductsPage() {
 
   return (
     <div className="space-y-8">
+      {/* Limit Warning */}
+      {limitReached && (
+        <Card className="border-yellow-500/50 bg-yellow-500/10">
+          <CardContent className="flex items-center justify-between p-4">
+            <div className="flex items-center gap-3">
+              <AlertTriangle className="w-5 h-5 text-yellow-600" />
+              <div>
+                <p className="font-medium text-foreground">Limite de produtos atingido</p>
+                <p className="text-sm text-muted-foreground">
+                  Seu plano {planName} permite até {limits.maxProducts} produtos. Faça upgrade para adicionar mais.
+                </p>
+              </div>
+            </div>
+            <Link to="/precos">
+              <Button variant="outline" size="sm">
+                <Crown className="w-4 h-4 mr-2" />
+                Ver planos
+              </Button>
+            </Link>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold text-foreground">Produtos</h1>
-          <p className="text-muted-foreground mt-1">Gerencie os itens do seu cardápio</p>
+          <p className="text-muted-foreground mt-1">
+            Gerencie os itens do seu cardápio 
+            {limits.maxProducts !== Infinity && (
+              <span className="ml-2 text-sm">
+                ({productCount}/{limits.maxProducts} produtos)
+              </span>
+            )}
+          </p>
         </div>
-        <Button variant="hero" onClick={openNewDialog}>
+        <Button variant="hero" onClick={openNewDialog} disabled={limitReached}>
           <Plus className="w-4 h-4" />
           Novo Produto
         </Button>
