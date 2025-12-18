@@ -91,14 +91,41 @@ interface Product {
   additionals?: ProductAdditional[];
 }
 
-function ProductCard({ product, onAddToCart }: { product: Product; onAddToCart: (product: Product) => void }) {
+function ProductCard({ 
+  product, 
+  onAddToCart,
+  isFeatured = false,
+  isBestSeller = false
+}: { 
+  product: Product; 
+  onAddToCart: (product: Product) => void;
+  isFeatured?: boolean;
+  isBestSeller?: boolean;
+}) {
   return (
     <motion.div
       layout
       whileTap={{ scale: 0.98 }}
-      className="group flex gap-3 p-3 sm:p-4 bg-card rounded-xl sm:rounded-2xl border border-border active:border-primary/30 hover:border-primary/30 hover:shadow-xl hover:shadow-primary/5 transition-all duration-300 cursor-pointer"
+      className="group flex gap-3 p-3 sm:p-4 bg-card rounded-xl sm:rounded-2xl border border-border active:border-primary/30 hover:border-primary/30 hover:shadow-xl hover:shadow-primary/5 transition-all duration-300 cursor-pointer relative"
       onClick={() => onAddToCart(product)}
     >
+      {/* Badges */}
+      {(isFeatured || isBestSeller) && (
+        <div className="absolute top-2 left-2 z-10 flex gap-1">
+          {isFeatured && (
+            <Badge className="bg-yellow-500 text-white text-xs px-2 py-0.5">
+              <Star className="w-3 h-3 mr-1 fill-current" />
+              Destaque
+            </Badge>
+          )}
+          {isBestSeller && !isFeatured && (
+            <Badge className="bg-primary text-primary-foreground text-xs px-2 py-0.5">
+              <TrendingUp className="w-3 h-3 mr-1" />
+              Mais Vendido
+            </Badge>
+          )}
+        </div>
+      )}
       <div className="flex-1 min-w-0 flex flex-col justify-between py-1">
         <div>
           <h3 className="font-bold text-foreground text-base sm:text-lg mb-1 group-hover:text-primary transition-colors line-clamp-2">
@@ -1082,6 +1109,7 @@ function MenuPageContent() {
                   <ProductCard
                     product={product}
                     onAddToCart={() => setSelectedProduct(product)}
+                    isFeatured={true}
                   />
                 </motion.div>
               ))}
@@ -1113,6 +1141,7 @@ function MenuPageContent() {
                   <ProductCard
                     product={product}
                     onAddToCart={() => setSelectedProduct(product)}
+                    isBestSeller={true}
                   />
                 </motion.div>
               ))}
@@ -1152,6 +1181,8 @@ function MenuPageContent() {
                         <ProductCard
                           product={product}
                           onAddToCart={() => setSelectedProduct(product)}
+                          isFeatured={product.is_featured}
+                          isBestSeller={bestSellerIds.includes(product.id)}
                         />
                       </motion.div>
                     ))}
