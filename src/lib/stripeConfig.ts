@@ -12,6 +12,16 @@ export const STRIPE_PLANS = {
       'Pedido via WhatsApp',
       'Suporte básico',
     ],
+    limits: {
+      maxProducts: 30,
+      variations: false,
+      additionals: false,
+      orderHistory: false,
+      customColors: false,
+      qrCode: false,
+      reports: false,
+      customDomain: false,
+    },
   },
   pro: {
     name: 'Pro',
@@ -27,6 +37,16 @@ export const STRIPE_PLANS = {
       'QR Code do cardápio',
     ],
     popular: true,
+    limits: {
+      maxProducts: Infinity,
+      variations: true,
+      additionals: true,
+      orderHistory: true,
+      customColors: true,
+      qrCode: true,
+      reports: false,
+      customDomain: false,
+    },
   },
   premium: {
     name: 'Premium',
@@ -41,10 +61,43 @@ export const STRIPE_PLANS = {
       'Domínio personalizado',
       'Acesso antecipado a novas funções',
     ],
+    limits: {
+      maxProducts: Infinity,
+      variations: true,
+      additionals: true,
+      orderHistory: true,
+      customColors: true,
+      qrCode: true,
+      reports: true,
+      customDomain: true,
+    },
   },
 } as const;
 
 export type PlanType = keyof typeof STRIPE_PLANS;
+
+export type PlanLimits = {
+  maxProducts: number;
+  variations: boolean;
+  additionals: boolean;
+  orderHistory: boolean;
+  customColors: boolean;
+  qrCode: boolean;
+  reports: boolean;
+  customDomain: boolean;
+};
+
+// Default limits for users without subscription (trial)
+export const DEFAULT_LIMITS: PlanLimits = {
+  maxProducts: 30,
+  variations: true,
+  additionals: true,
+  orderHistory: true,
+  customColors: true,
+  qrCode: true,
+  reports: true,
+  customDomain: false,
+};
 
 export function getPlanByProductId(productId: string): PlanType | null {
   for (const [key, plan] of Object.entries(STRIPE_PLANS)) {
@@ -53,4 +106,9 @@ export function getPlanByProductId(productId: string): PlanType | null {
     }
   }
   return null;
+}
+
+export function getPlanLimits(plan: PlanType | null): PlanLimits {
+  if (!plan) return DEFAULT_LIMITS;
+  return STRIPE_PLANS[plan].limits;
 }

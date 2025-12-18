@@ -2,8 +2,10 @@ import { useState } from 'react';
 import { Link, useLocation, Outlet, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
+import { usePlanLimits } from '@/hooks/usePlanLimits';
 import { 
   LayoutDashboard, 
   FolderOpen, 
@@ -18,7 +20,9 @@ import {
   Store,
   Star,
   Users,
-  Megaphone
+  Megaphone,
+  CreditCard,
+  Crown
 } from 'lucide-react';
 
 const navItems = [
@@ -31,6 +35,7 @@ const navItems = [
   { icon: Megaphone, label: 'Campanhas', path: '/admin/campaigns' },
   { icon: Palette, label: 'Aparência', path: '/admin/appearance' },
   { icon: Settings, label: 'Configurações', path: '/admin/settings' },
+  { icon: CreditCard, label: 'Planos', path: '/precos' },
 ];
 
 function Sidebar({ collapsed, setCollapsed, onLogout }: { collapsed: boolean; setCollapsed: (v: boolean) => void; onLogout: () => void }) {
@@ -184,6 +189,7 @@ export default function AdminLayout() {
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const { signOut } = useAuth();
   const { toast } = useToast();
+  const { planName, isSubscribed } = usePlanLimits();
   const navigate = useNavigate();
 
   const handleLogout = async () => {
@@ -193,6 +199,13 @@ export default function AdminLayout() {
       description: 'Você saiu da sua conta.',
     });
     navigate('/');
+  };
+
+  const getPlanBadgeColor = () => {
+    if (!isSubscribed) return 'bg-yellow-500/20 text-yellow-600';
+    if (planName === 'Premium') return 'bg-purple-500/20 text-purple-600';
+    if (planName === 'Pro') return 'bg-primary/20 text-primary';
+    return 'bg-muted text-muted-foreground';
   };
 
   return (
@@ -208,19 +221,37 @@ export default function AdminLayout() {
       {/* Main Content */}
       <div className={`transition-all duration-300 ${sidebarCollapsed ? 'lg:ml-20' : 'lg:ml-64'}`}>
         {/* Mobile Header */}
-        <header className="lg:hidden sticky top-0 z-30 h-16 bg-card border-b border-border flex items-center px-4">
-          <button
-            onClick={() => setMobileNavOpen(true)}
-            className="w-10 h-10 rounded-lg hover:bg-muted flex items-center justify-center text-foreground"
-          >
-            <Menu className="w-5 h-5" />
-          </button>
-          <div className="flex items-center gap-2 ml-4">
-            <div className="h-8 w-8 rounded-lg gradient-primary flex items-center justify-center">
-              <span className="text-primary-foreground font-bold">M</span>
+        <header className="lg:hidden sticky top-0 z-30 h-16 bg-card border-b border-border flex items-center justify-between px-4">
+          <div className="flex items-center">
+            <button
+              onClick={() => setMobileNavOpen(true)}
+              className="w-10 h-10 rounded-lg hover:bg-muted flex items-center justify-center text-foreground"
+            >
+              <Menu className="w-5 h-5" />
+            </button>
+            <div className="flex items-center gap-2 ml-4">
+              <div className="h-8 w-8 rounded-lg gradient-primary flex items-center justify-center">
+                <span className="text-primary-foreground font-bold">M</span>
+              </div>
+              <span className="font-bold text-foreground">MENU AI</span>
             </div>
-            <span className="font-bold text-foreground">MENU AI</span>
           </div>
+          <Link to="/precos">
+            <Badge className={`${getPlanBadgeColor()} border-0 cursor-pointer`}>
+              <Crown className="w-3 h-3 mr-1" />
+              {planName}
+            </Badge>
+          </Link>
+        </header>
+
+        {/* Desktop Header with Plan Badge */}
+        <header className="hidden lg:flex sticky top-0 z-30 h-16 bg-card border-b border-border items-center justify-end px-8">
+          <Link to="/precos">
+            <Badge className={`${getPlanBadgeColor()} border-0 cursor-pointer hover:opacity-80 transition-opacity`}>
+              <Crown className="w-3 h-3 mr-1" />
+              {planName}
+            </Badge>
+          </Link>
         </header>
 
         {/* Page Content */}
