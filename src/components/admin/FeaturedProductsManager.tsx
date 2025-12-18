@@ -99,7 +99,9 @@ interface FeaturedProductsManagerProps {
 export function FeaturedProductsManager({ products, onUpdate }: FeaturedProductsManagerProps) {
   const { toast } = useToast();
   const [featuredProducts, setFeaturedProducts] = useState<Product[]>(
-    products.filter(p => p.is_featured)
+    products
+      .filter(p => p.is_featured)
+      .sort((a, b) => (a.featured_order ?? 0) - (b.featured_order ?? 0))
   );
   const [saving, setSaving] = useState(false);
 
@@ -120,8 +122,33 @@ export function FeaturedProductsManager({ products, onUpdate }: FeaturedProducts
       const newOrder = arrayMove(featuredProducts, oldIndex, newIndex);
       setFeaturedProducts(newOrder);
       
-      // Save order to database (using a custom field or display_order for products)
-      // For now, we just update local state - in production you'd want to persist this
+      // Persist order to database
+      setSaving(true);
+      try {
+        const updates = newOrder.map((product, index) => 
+          supabase
+            .from('products')
+            .update({ featured_order: index })
+            .eq('id', product.id)
+        );
+        
+        await Promise.all(updates);
+        onUpdate();
+        
+        toast({
+          title: 'Ordem salva',
+          description: 'A ordem dos destaques foi atualizada.',
+        });
+      } catch (error) {
+        console.error('Error saving order:', error);
+        toast({
+          title: 'Erro',
+          description: 'Não foi possível salvar a ordem.',
+          variant: 'destructive',
+        });
+      } finally {
+        setSaving(false);
+      }
     }
   };
 
