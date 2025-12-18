@@ -32,7 +32,7 @@ interface CartContextType {
   removeItem: (itemId: string) => void;
   updateQuantity: (itemId: string, quantity: number) => void;
   clearCart: () => void;
-  getWhatsAppMessage: (customerAddress?: string, deliveryInfo?: DeliveryInfo, paymentMethod?: PaymentMethod) => string;
+  getWhatsAppMessage: (customerAddress?: string, deliveryInfo?: DeliveryInfo, paymentMethod?: PaymentMethod, changeFor?: number | null) => string;
   calculateDeliveryFee: (deliveryInfo: DeliveryInfo) => number;
   getGrandTotal: (deliveryInfo: DeliveryInfo) => number;
 }
@@ -143,7 +143,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   };
 
   const getWhatsAppMessage = useCallback(
-    (customerAddress?: string, deliveryInfo?: DeliveryInfo, paymentMethod?: PaymentMethod) => {
+    (customerAddress?: string, deliveryInfo?: DeliveryInfo, paymentMethod?: PaymentMethod, changeFor?: number | null) => {
       const isPickup = deliveryInfo?.mode === 'pickup';
       let message = isPickup ? '📦 *Novo Pedido - RETIRADA*\n\n' : '🍕 *Novo Pedido - ENTREGA*\n\n';
 
@@ -196,7 +196,11 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
       // Add payment method
       if (paymentMethod) {
-        message += `\n💰 *Pagamento na entrega:* ${getPaymentMethodLabel(paymentMethod)}\n`;
+        message += `\n💰 *Pagamento na entrega:* ${getPaymentMethodLabel(paymentMethod)}`;
+        if (paymentMethod === 'cash' && changeFor && changeFor > 0) {
+          message += `\n💵 *Troco para:* R$ ${changeFor.toFixed(2)}`;
+        }
+        message += '\n';
       }
 
       if (customerAddress && !isPickup) {
