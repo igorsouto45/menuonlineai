@@ -103,51 +103,7 @@ serve(async (req) => {
       });
     }
 
-    // Create Mercado Pago preference
-    const preference = {
-      items: preferenceItems,
-      payer: {
-        name: customerName,
-        email: customerEmail,
-        phone: {
-          number: customerPhone.replace(/\D/g, ''),
-        },
-      },
-      back_urls: {
-        success: `${req.headers.get('origin')}/menu/${restaurantId}?payment=success`,
-        failure: `${req.headers.get('origin')}/menu/${restaurantId}?payment=failure`,
-        pending: `${req.headers.get('origin')}/menu/${restaurantId}?payment=pending`,
-      },
-      auto_return: 'approved',
-      external_reference: `${restaurantId}_${Date.now()}`,
-      statement_descriptor: restaurant.name.substring(0, 22),
-      notification_url: `${supabaseUrl}/functions/v1/mercadopago-webhook`,
-    };
-
-    console.log('Creating preference with items:', preferenceItems.length);
-
-    const mpResponse = await fetch('https://api.mercadopago.com/checkout/preferences', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${restaurant.mercado_pago_access_token}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(preference),
-    });
-
-    if (!mpResponse.ok) {
-      const errorData = await mpResponse.text();
-      console.error('Mercado Pago error:', errorData);
-      return new Response(
-        JSON.stringify({ error: 'Erro ao criar preferência de pagamento', details: errorData }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    const mpData = await mpResponse.json();
-    console.log('Preference created successfully:', mpData.id);
-
-    // Create order in database
+    // Create order in database first so we have the order ID
     const orderItems = items.map(item => ({
       productId: item.product.id,
       productName: item.product.name,
@@ -168,21 +124,79 @@ serve(async (req) => {
         items: orderItems,
         total: total,
         status: 'pending',
-        notes: `Pagamento via Mercado Pago - ID: ${mpData.id}`,
+        notes: `Pagamento via Mercado Pago`,
       })
       .select()
       .single();
 
     if (orderError) {
       console.error('Error creating order:', orderError);
+      return new Response(
+        JSON.stringify({ error: 'Erro ao criar pedido' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
+
+    const orderId = order.id;
+
+    // Create Mercado Pago preference with order ID in URLs
+    const preference = {
+      items: preferenceItems,
+      payer: {
+        name: customerName,
+        email: customerEmail,
+        phone: {
+          number: customerPhone.replace(/\D/g, ''),
+        },
+      },
+      back_urls: {
+        success: `${req.headers.get('origin')}/menu/${restaurantId}?payment=success&order_id=${orderId}`,
+        failure: `${req.headers.get('origin')}/menu/${restaurantId}?payment=failure&order_id=${orderId}`,
+        pending: `${req.headers.get('origin')}/menu/${restaurantId}?payment=pending&order_id=${orderId}`,
+      },
+      auto_return: 'approved',
+      external_reference: orderId,
+      statement_descriptor: restaurant.name.substring(0, 22),
+      notification_url: `${supabaseUrl}/functions/v1/mercadopago-webhook`,
+    };
+
+    console.log('Creating preference with items:', preferenceItems.length, 'order:', orderId);
+
+    const mpResponse = await fetch('https://api.mercadopago.com/checkout/preferences', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${restaurant.mercado_pago_access_token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(preference),
+    });
+
+    if (!mpResponse.ok) {
+      const errorData = await mpResponse.text();
+      console.error('Mercado Pago error:', errorData);
+      // Delete the order if MP preference creation fails
+      await supabase.from('orders').delete().eq('id', orderId);
+      return new Response(
+        JSON.stringify({ error: 'Erro ao criar preferência de pagamento', details: errorData }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const mpData = await mpResponse.json();
+    console.log('Preference created successfully:', mpData.id);
+
+    // Update order with MP preference ID
+    await supabase
+      .from('orders')
+      .update({ notes: `Pagamento via Mercado Pago - ID: ${mpData.id}` })
+      .eq('id', orderId);
 
     return new Response(
       JSON.stringify({
         id: mpData.id,
         init_point: mpData.init_point,
         sandbox_init_point: mpData.sandbox_init_point,
-        orderId: order?.id,
+        orderId: orderId,
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );

@@ -82,26 +82,71 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Find orders with this payment ID in notes
-    const { data: orders, error: ordersError } = await supabase
-      .from('orders')
-      .select('id, status, notes, restaurant_id, customer_name, customer_phone, total')
-      .like('notes', `%${paymentId}%`)
-      .eq('status', 'pending');
+    // First, try to find order by ID from external_reference
+    // Then fall back to searching by payment ID in notes
+    let order = null;
+    let ordersError = null;
+
+    // Get payment data first to get external_reference
+    const { data: allRestaurants } = await supabase
+      .from('restaurants')
+      .select('mercado_pago_access_token')
+      .not('mercado_pago_access_token', 'is', null);
+
+    for (const rest of allRestaurants || []) {
+      if (!rest.mercado_pago_access_token) continue;
+      
+      const mpResponse = await fetch(`https://api.mercadopago.com/v1/payments/${paymentId}`, {
+        headers: { 'Authorization': `Bearer ${rest.mercado_pago_access_token}` },
+      });
+
+      if (mpResponse.ok) {
+        const paymentData = await mpResponse.json();
+        const externalRef = paymentData.external_reference;
+        
+        if (externalRef) {
+          // If external_reference is a UUID (order ID), use it directly
+          const { data: orderById } = await supabase
+            .from('orders')
+            .select('id, status, notes, restaurant_id, customer_name, customer_phone, total')
+            .eq('id', externalRef)
+            .single();
+          
+          if (orderById) {
+            order = orderById;
+            logStep('Found order by external_reference', { orderId: order.id });
+            break;
+          }
+        }
+      }
+    }
+
+    // Fallback: search by payment ID in notes
+    if (!order) {
+      const { data: orders, error } = await supabase
+        .from('orders')
+        .select('id, status, notes, restaurant_id, customer_name, customer_phone, total')
+        .like('notes', `%${paymentId}%`)
+        .eq('status', 'pending');
+
+      ordersError = error;
+      if (orders && orders.length > 0) {
+        order = orders[0];
+        logStep('Found order by payment ID in notes', { orderId: order.id });
+      }
+    }
 
     if (ordersError) {
       logStep('Error fetching orders', { error: ordersError.message });
       throw ordersError;
     }
 
-    if (!orders || orders.length === 0) {
+    if (!order) {
       logStep('No pending orders found for payment', { paymentId });
       return new Response(JSON.stringify({ received: true, message: 'No matching orders' }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
-
-    const order = orders[0];
     const { data: restaurant } = await supabase
       .from('restaurants')
       .select('mercado_pago_access_token, name, evolution_api_url, evolution_api_key, evolution_instance_name')
