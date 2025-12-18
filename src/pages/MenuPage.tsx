@@ -3,7 +3,7 @@ import { useParams, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { useCart, CartProvider, DeliveryMode } from '@/contexts/CartContext';
+import { useCart, CartProvider, DeliveryMode, PaymentMethod } from '@/contexts/CartContext';
 import { useCustomer } from '@/contexts/CustomerContext';
 import { supabase } from '@/integrations/supabase/client';
 import { ProductSearch } from '@/components/menu/ProductSearch';
@@ -28,7 +28,10 @@ import {
   CreditCard,
   Loader2,
   Star,
-  TrendingUp
+  TrendingUp,
+  Trash2,
+  Banknote,
+  Smartphone
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
@@ -429,6 +432,7 @@ function CartSheet({
   const [selectedAreaId, setSelectedAreaId] = useState<string | null>(deliveryAreas.length > 0 ? deliveryAreas[0].id : null);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [processingPayment, setProcessingPayment] = useState(false);
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<PaymentMethod>('pix');
 
   // Load customer data when user is logged in
   useEffect(() => {
@@ -464,7 +468,7 @@ function CartSheet({
       return;
     }
 
-    const message = getWhatsAppMessage(deliveryMode === 'delivery' ? address : undefined, deliveryInfo);
+    const message = getWhatsAppMessage(deliveryMode === 'delivery' ? address : undefined, deliveryInfo, selectedPaymentMethod);
     const formattedWhatsapp = whatsapp.replace(/\D/g, '');
     window.open(`https://wa.me/55${formattedWhatsapp}?text=${message}`, '_blank');
     // Não limpa o carrinho para permitir pagamento posterior
@@ -473,6 +477,21 @@ function CartSheet({
       description: 'O pedido foi enviado para o WhatsApp. Você ainda pode pagar pelo Mercado Pago.',
     });
   };
+
+  const handleClearCart = () => {
+    clearCart();
+    toast({
+      title: 'Carrinho limpo',
+      description: 'Todos os itens foram removidos do carrinho.',
+    });
+  };
+
+  const paymentMethods: { value: PaymentMethod; label: string; icon: React.ReactNode }[] = [
+    { value: 'pix', label: 'Pix', icon: <Smartphone className="w-4 h-4" /> },
+    { value: 'credit', label: 'Crédito', icon: <CreditCard className="w-4 h-4" /> },
+    { value: 'debit', label: 'Débito', icon: <CreditCard className="w-4 h-4" /> },
+    { value: 'cash', label: 'Dinheiro', icon: <Banknote className="w-4 h-4" /> },
+  ];
 
   const handleMercadoPagoCheckout = async () => {
     if (!user || !customer) {
@@ -553,12 +572,23 @@ function CartSheet({
           >
             <div className="flex items-center justify-between p-4 border-b border-border shrink-0">
               <h2 className="text-xl font-bold text-foreground">Seu Pedido</h2>
-              <button
-                onClick={onClose}
-                className="w-10 h-10 rounded-full hover:bg-muted flex items-center justify-center transition-colors"
-              >
-                <X className="w-5 h-5 text-foreground" />
-              </button>
+              <div className="flex items-center gap-2">
+                {items.length > 0 && (
+                  <button
+                    onClick={handleClearCart}
+                    className="w-10 h-10 rounded-full hover:bg-destructive/10 flex items-center justify-center transition-colors text-destructive"
+                    title="Limpar carrinho"
+                  >
+                    <Trash2 className="w-5 h-5" />
+                  </button>
+                )}
+                <button
+                  onClick={onClose}
+                  className="w-10 h-10 rounded-full hover:bg-muted flex items-center justify-center transition-colors"
+                >
+                  <X className="w-5 h-5 text-foreground" />
+                </button>
+              </div>
             </div>
 
             <div className="flex-1 overflow-y-auto p-4">
@@ -690,6 +720,27 @@ function CartSheet({
                       />
                     </div>
                   )}
+
+                  {/* Payment Method Selection */}
+                  <div className="pt-4 space-y-3">
+                    <h3 className="font-semibold text-foreground">Pagamento na entrega</h3>
+                    <div className="grid grid-cols-2 gap-2">
+                      {paymentMethods.map((method) => (
+                        <button
+                          key={method.value}
+                          onClick={() => setSelectedPaymentMethod(method.value)}
+                          className={`p-3 rounded-xl border-2 transition-all flex items-center justify-center gap-2 ${
+                            selectedPaymentMethod === method.value
+                              ? 'border-primary bg-primary/10'
+                              : 'border-border hover:border-primary/40'
+                          }`}
+                        >
+                          {method.icon}
+                          <span className="text-sm font-medium">{method.label}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                 </div>
               )}
             </div>
