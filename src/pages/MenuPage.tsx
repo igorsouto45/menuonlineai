@@ -13,6 +13,7 @@ import { MenuSkeleton } from '@/components/menu/MenuSkeleton';
 import { InstallPWAButton } from '@/components/menu/InstallPWAButton';
 import { CustomerAuthModal } from '@/components/menu/CustomerAuthModal';
 import { FloatingCart } from '@/components/menu/FloatingCart';
+import { PaymentStatusIndicator } from '@/components/menu/PaymentStatusIndicator';
 import { 
   ShoppingCart, 
   Plus, 
@@ -991,6 +992,8 @@ function MenuPageContent() {
 
   return (
     <div className="min-h-screen bg-background pb-40 sm:pb-36">
+      {/* Payment Status Indicator */}
+      <PaymentStatusIndicator restaurantId={restaurant.id} />
       {/* Header */}
       <div 
         className="gradient-primary"

@@ -11,6 +11,42 @@ const logStep = (step: string, details?: any) => {
   console.log(`[MERCADOPAGO-WEBHOOK] ${step}${detailsStr}`);
 };
 
+async function sendWhatsAppNotification(
+  supabaseUrl: string,
+  order: any,
+  restaurant: any,
+  status: string
+) {
+  try {
+    logStep('Sending WhatsApp notification', { orderId: order.id, status });
+    
+    const response = await fetch(`${supabaseUrl}/functions/v1/send-whatsapp-notification`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        orderId: order.id,
+        customerPhone: order.customer_phone,
+        customerName: order.customer_name,
+        status: status,
+        restaurantName: restaurant.name,
+        orderTotal: order.total,
+        evolutionApiUrl: restaurant.evolution_api_url,
+        evolutionApiKey: restaurant.evolution_api_key,
+        evolutionInstanceName: restaurant.evolution_instance_name,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.text();
+      logStep('WhatsApp notification failed', { error: errorData });
+    } else {
+      logStep('WhatsApp notification sent successfully');
+    }
+  } catch (error: any) {
+    logStep('Error sending WhatsApp notification', { error: error.message });
+  }
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -22,10 +58,8 @@ serve(async (req) => {
     const body = await req.json();
     logStep('Webhook body', body);
 
-    // Mercado Pago sends different types of notifications
     const { type, data, action } = body;
 
-    // Only process payment notifications
     if (type !== 'payment' && action !== 'payment.created' && action !== 'payment.updated') {
       logStep('Ignoring non-payment notification', { type, action });
       return new Response(JSON.stringify({ received: true }), {
@@ -51,7 +85,7 @@ serve(async (req) => {
     // Find orders with this payment ID in notes
     const { data: orders, error: ordersError } = await supabase
       .from('orders')
-      .select('id, status, notes, restaurant_id')
+      .select('id, status, notes, restaurant_id, customer_name, customer_phone, total')
       .like('notes', `%${paymentId}%`)
       .eq('status', 'pending');
 
@@ -61,18 +95,16 @@ serve(async (req) => {
     }
 
     if (!orders || orders.length === 0) {
-      // Try to fetch payment details from Mercado Pago to get restaurant info
       logStep('No pending orders found for payment', { paymentId });
       return new Response(JSON.stringify({ received: true, message: 'No matching orders' }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    // Get the restaurant's Mercado Pago access token to verify payment
     const order = orders[0];
     const { data: restaurant } = await supabase
       .from('restaurants')
-      .select('mercado_pago_access_token')
+      .select('mercado_pago_access_token, name, evolution_api_url, evolution_api_key, evolution_instance_name')
       .eq('id', order.restaurant_id)
       .single();
 
@@ -118,6 +150,11 @@ serve(async (req) => {
       }
 
       logStep('Order confirmed', { orderId: order.id });
+
+      // Send WhatsApp notification for confirmed payment
+      if (order.customer_phone && restaurant.evolution_api_url) {
+        await sendWhatsAppNotification(supabaseUrl, order, restaurant, 'confirmed');
+      }
     } else if (paymentData.status === 'rejected' || paymentData.status === 'cancelled') {
       const { error: updateError } = await supabase
         .from('orders')
@@ -133,6 +170,11 @@ serve(async (req) => {
       }
 
       logStep('Order cancelled due to payment rejection', { orderId: order.id });
+
+      // Send WhatsApp notification for cancelled payment
+      if (order.customer_phone && restaurant.evolution_api_url) {
+        await sendWhatsAppNotification(supabaseUrl, order, restaurant, 'cancelled');
+      }
     }
 
     return new Response(JSON.stringify({ success: true }), {
