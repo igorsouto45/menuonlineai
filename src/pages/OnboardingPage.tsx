@@ -32,8 +32,8 @@ export default function OnboardingPage() {
   const [loading, setLoading] = useState(false);
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
-  const { user } = useAuth();
-  const { hasRestaurant, loading: restaurantLoading } = useRestaurant();
+  const { user, signOut } = useAuth();
+  const { hasRestaurant, loading: restaurantLoading, refetch } = useRestaurant();
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -127,12 +127,15 @@ export default function OnboardingPage() {
 
       if (error) throw error;
 
+      // Ensure UI state catches up before routing (avoids bouncing back to onboarding)
+      await refetch();
+
       toast({
         title: '🎉 Restaurante criado!',
         description: 'Agora você pode começar a montar seu cardápio.',
       });
 
-      navigate('/admin');
+      navigate('/admin', { replace: true });
     } catch (error: unknown) {
       toast({
         title: 'Erro',
@@ -188,6 +191,26 @@ export default function OnboardingPage() {
             <CardDescription className="text-muted-foreground">
               Configure as informações básicas para começar
             </CardDescription>
+
+            {user?.email && (
+              <div className="mt-3 flex flex-col items-center gap-2">
+                <p className="text-xs text-muted-foreground">
+                  Logado como <span className="font-medium text-foreground">{user.email}</span>
+                </p>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 px-3"
+                  onClick={async () => {
+                    await signOut();
+                    navigate('/auth', { replace: true });
+                  }}
+                >
+                  Trocar conta
+                </Button>
+              </div>
+            )}
           </CardHeader>
           <CardContent>
             <Form {...form}>

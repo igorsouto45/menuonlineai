@@ -18,13 +18,19 @@ export function useRestaurant() {
     }
 
     setLoading(true);
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('restaurants')
       .select('*')
       .eq('owner_id', user.id)
+      .order('created_at', { ascending: true })
+      .limit(1)
       .maybeSingle();
 
-    setRestaurant(data);
+    if (error) {
+      console.error('Error fetching restaurant:', error);
+    }
+
+    setRestaurant(data ?? null);
     setLoading(false);
   }, [user]);
 
