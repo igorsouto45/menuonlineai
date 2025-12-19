@@ -6,6 +6,21 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Anti-blocking configuration
+const BATCH_SIZE = 10; // Send 10 messages per batch
+const MIN_DELAY_MS = 3000; // Minimum 3 seconds between messages
+const MAX_DELAY_MS = 10000; // Maximum 10 seconds between messages
+const MIN_PAUSE_MS = 120000; // Minimum 2 minutes pause after batch
+const MAX_PAUSE_MS = 300000; // Maximum 5 minutes pause after batch
+
+// Random delay helper
+const randomDelay = (min: number, max: number) => {
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+};
+
+// Sleep helper
+const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -23,7 +38,7 @@ serve(async (req) => {
     const { data: campaigns, error: fetchError } = await supabase
       .from('promotion_campaigns')
       .select('*, restaurants(*)')
-      .eq('status', 'scheduled')
+      .in('status', ['scheduled', 'sending'])
       .lte('scheduled_at', now);
 
     if (fetchError) {
@@ -46,11 +61,13 @@ serve(async (req) => {
     for (const campaign of campaigns) {
       console.log(`Processing campaign: ${campaign.id} - ${campaign.name}`);
 
-      // Update status to sending
-      await supabase
-        .from('promotion_campaigns')
-        .update({ status: 'sending' })
-        .eq('id', campaign.id);
+      // Update status to sending if not already
+      if (campaign.status !== 'sending') {
+        await supabase
+          .from('promotion_campaigns')
+          .update({ status: 'sending' })
+          .eq('id', campaign.id);
+      }
 
       // Get the restaurant's Evolution API credentials
       const restaurant = campaign.restaurants;
@@ -66,17 +83,15 @@ serve(async (req) => {
         continue;
       }
 
-      // Get promotion_sends for this campaign (recipients)
-      const { data: sends } = await supabase
+      // Get pending sends for this campaign
+      let { data: sends } = await supabase
         .from('promotion_sends')
         .select('*, customers(*)')
         .eq('campaign_id', campaign.id)
         .eq('status', 'pending');
 
-      // If no sends exist, get customers directly
-      let recipients = sends || [];
-      
-      if (recipients.length === 0) {
+      // If no sends exist, get customers directly and create send records
+      if (!sends || sends.length === 0) {
         // Get all customers for the restaurant
         const { data: customers } = await supabase
           .from('customers')
@@ -102,14 +117,29 @@ serve(async (req) => {
             .eq('campaign_id', campaign.id)
             .eq('status', 'pending');
           
-          recipients = newSends || [];
+          sends = newSends || [];
         }
       }
 
-      let successCount = 0;
-      let errorCount = 0;
+      if (!sends || sends.length === 0) {
+        console.log(`No pending sends for campaign ${campaign.id}`);
+        await supabase
+          .from('promotion_campaigns')
+          .update({ status: 'sent', sent_at: new Date().toISOString() })
+          .eq('id', campaign.id);
+        continue;
+      }
 
-      for (const send of recipients) {
+      let successCount = campaign.sent_count || 0;
+      let errorCount = campaign.error_count || 0;
+      let batchCount = 0;
+
+      console.log(`Processing ${sends.length} pending sends for campaign ${campaign.id}`);
+      console.log(`Anti-blocking: Batch size ${BATCH_SIZE}, delay ${MIN_DELAY_MS}-${MAX_DELAY_MS}ms, pause ${MIN_PAUSE_MS/1000}-${MAX_PAUSE_MS/1000}s`);
+
+      for (let i = 0; i < sends.length; i++) {
+        const send = sends[i];
+        
         try {
           const customer = send.customers;
           const phone = send.customer_phone?.replace(/\D/g, '') || '';
@@ -120,6 +150,8 @@ serve(async (req) => {
             /\{nome\}/gi,
             customer?.name || 'Cliente'
           );
+
+          console.log(`Sending message ${i + 1}/${sends.length} to ${formattedPhone}`);
 
           // Send via Evolution API
           const response = await fetch(
@@ -143,6 +175,7 @@ serve(async (req) => {
               .from('promotion_sends')
               .update({ status: 'sent', sent_at: new Date().toISOString() })
               .eq('id', send.id);
+            console.log(`Message sent successfully to ${formattedPhone}`);
           } else {
             errorCount++;
             const errorData = await response.json();
@@ -150,10 +183,42 @@ serve(async (req) => {
               .from('promotion_sends')
               .update({ status: 'error', error_message: JSON.stringify(errorData) })
               .eq('id', send.id);
+            console.error(`Failed to send to ${formattedPhone}:`, errorData);
           }
 
-          // Small delay to avoid rate limiting
-          await new Promise(resolve => setTimeout(resolve, 200));
+          batchCount++;
+
+          // Update campaign progress periodically
+          if (batchCount % BATCH_SIZE === 0) {
+            await supabase
+              .from('promotion_campaigns')
+              .update({ sent_count: successCount, error_count: errorCount })
+              .eq('id', campaign.id);
+          }
+
+          // Anti-blocking: delay between messages (3-10 seconds)
+          if (i < sends.length - 1) {
+            const messageDelay = randomDelay(MIN_DELAY_MS, MAX_DELAY_MS);
+            console.log(`Waiting ${messageDelay}ms before next message...`);
+            await sleep(messageDelay);
+          }
+
+          // Anti-blocking: pause after every batch of 10 messages (2-5 minutes)
+          if (batchCount === BATCH_SIZE && i < sends.length - 1) {
+            const batchPause = randomDelay(MIN_PAUSE_MS, MAX_PAUSE_MS);
+            console.log(`Batch complete. Pausing for ${Math.round(batchPause/1000)} seconds to avoid blocking...`);
+            
+            // Update progress before pause
+            await supabase
+              .from('promotion_campaigns')
+              .update({ sent_count: successCount, error_count: errorCount })
+              .eq('id', campaign.id);
+            
+            await sleep(batchPause);
+            batchCount = 0; // Reset batch counter
+            console.log('Resuming message sending...');
+          }
+
         } catch (sendError) {
           console.error('Error sending to recipient:', sendError);
           errorCount++;
