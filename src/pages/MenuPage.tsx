@@ -424,7 +424,7 @@ function CartSheet({
   restaurantName: string;
 }) {
   const { items, total, removeItem, updateQuantity, getWhatsAppMessage, clearCart, calculateDeliveryFee, getGrandTotal } = useCart();
-  const { user, customer, loadCustomerByRestaurant } = useCustomer();
+  const { session, user, customer, loadCustomerByRestaurant } = useCustomer();
   const { toast } = useToast();
   const [address, setAddress] = useState('');
   const [deliveryMode, setDeliveryMode] = useState<DeliveryMode>(pickupEnabled ? 'pickup' : 'delivery');
@@ -462,7 +462,7 @@ function CartSheet({
   const amountForFreeDelivery = freeDeliveryMinimum !== null && deliveryMode === 'delivery' ? freeDeliveryMinimum - total : null;
 
   const handleSendWhatsApp = async () => {
-    if (!user || !customer) {
+    if (!session?.user || !customer) {
       setShowAuthModal(true);
       return;
     }
