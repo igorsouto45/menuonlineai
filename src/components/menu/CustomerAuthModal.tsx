@@ -98,12 +98,20 @@ export function CustomerAuthModal({
         });
 
         if (error) {
-          if (error.message.includes('already registered')) {
+          if (error.message.includes('senha') && error.message.includes('incorreta')) {
             toast({
               title: 'Email já cadastrado',
-              description: 'Faça login ou use outro email.',
+              description: 'Você já possui conta. A senha informada está incorreta. Tente fazer login.',
               variant: 'destructive',
             });
+          } else if (error.message.includes('already registered')) {
+            toast({
+              title: 'Conta criada!',
+              description: 'Você foi conectado automaticamente ao restaurante.',
+            });
+            onSuccess();
+            onClose();
+            return;
           } else {
             toast({
               title: 'Erro ao cadastrar',
@@ -120,7 +128,7 @@ export function CustomerAuthModal({
           onClose();
         }
       } else {
-        const { error } = await signIn(formData.email, formData.password);
+        const { error } = await signIn(formData.email, formData.password, restaurantId);
 
         if (error) {
           if (error.message.includes('Invalid login credentials')) {

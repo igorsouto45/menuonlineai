@@ -27,7 +27,7 @@ interface CustomerContextType {
     city?: string;
     restaurantId: string;
   }) => Promise<{ error: Error | null }>;
-  signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
+  signIn: (email: string, password: string, restaurantId: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
   updateProfile: (data: Partial<CustomerProfile>) => Promise<{ error: Error | null }>;
   loadCustomerByRestaurant: (restaurantId: string) => Promise<void>;
@@ -79,6 +79,56 @@ export function CustomerProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const createCustomerRecord = async (
+    userId: string,
+    restaurantId: string,
+    data: {
+      name: string;
+      email: string;
+      whatsapp: string;
+      address?: string;
+      neighborhood?: string;
+      city?: string;
+    }
+  ) => {
+    // Check if customer already exists for this restaurant
+    const { data: existingCustomer } = await supabase
+      .from('customers')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('restaurant_id', restaurantId)
+      .maybeSingle();
+
+    if (existingCustomer) {
+      setCustomer(existingCustomer);
+      return { error: null };
+    }
+
+    // Create new customer record
+    const { data: newCustomer, error: customerError } = await supabase
+      .from('customers')
+      .insert({
+        user_id: userId,
+        restaurant_id: restaurantId,
+        name: data.name,
+        email: data.email,
+        whatsapp: data.whatsapp,
+        address: data.address || null,
+        neighborhood: data.neighborhood || null,
+        city: data.city || null,
+      })
+      .select()
+      .single();
+
+    if (customerError) return { error: customerError };
+
+    if (newCustomer) {
+      setCustomer(newCustomer);
+    }
+
+    return { error: null };
+  };
+
   const signUp = async (data: {
     email: string;
     password: string;
@@ -91,6 +141,7 @@ export function CustomerProvider({ children }: { children: ReactNode }) {
   }) => {
     const redirectUrl = `${window.location.origin}${window.location.pathname}`;
     
+    // First, try to sign up
     const { data: authData, error: authError } = await supabase.auth.signUp({
       email: data.email,
       password: data.password,
@@ -102,44 +153,79 @@ export function CustomerProvider({ children }: { children: ReactNode }) {
       },
     });
 
-    if (authError) return { error: authError };
+    // If user already exists, try to sign them in
+    if (authError?.message?.includes('already registered')) {
+      const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+        email: data.email,
+        password: data.password,
+      });
 
-    if (authData.user) {
-      const { error: customerError } = await supabase
-        .from('customers')
-        .insert({
-          user_id: authData.user.id,
-          restaurant_id: data.restaurantId,
+      if (signInError) {
+        // If sign in fails with wrong password, let the user know
+        if (signInError.message.includes('Invalid login credentials')) {
+          return { error: new Error('Email já cadastrado. A senha informada está incorreta.') };
+        }
+        return { error: signInError };
+      }
+
+      // User signed in successfully, create customer record for this restaurant
+      if (signInData.user) {
+        return await createCustomerRecord(signInData.user.id, data.restaurantId, {
           name: data.name,
           email: data.email,
           whatsapp: data.whatsapp,
-          address: data.address || null,
-          neighborhood: data.neighborhood || null,
-          city: data.city || null,
+          address: data.address,
+          neighborhood: data.neighborhood,
+          city: data.city,
         });
+      }
+    }
 
-      if (customerError) return { error: customerError };
+    if (authError) return { error: authError };
 
-      setCustomer({
-        id: authData.user.id,
+    if (authData.user) {
+      return await createCustomerRecord(authData.user.id, data.restaurantId, {
         name: data.name,
         email: data.email,
         whatsapp: data.whatsapp,
-        address: data.address || null,
-        neighborhood: data.neighborhood || null,
-        city: data.city || null,
+        address: data.address,
+        neighborhood: data.neighborhood,
+        city: data.city,
       });
     }
 
     return { error: null };
   };
 
-  const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({
+  const signIn = async (email: string, password: string, restaurantId: string) => {
+    const { data: signInData, error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
-    return { error };
+
+    if (error) return { error };
+
+    // After sign in, load or wait for customer record
+    if (signInData.user) {
+      await loadCustomerByRestaurantInternal(signInData.user.id, restaurantId);
+    }
+
+    return { error: null };
+  };
+
+  const loadCustomerByRestaurantInternal = async (userId: string, restaurantId: string) => {
+    const { data, error } = await supabase
+      .from('customers')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('restaurant_id', restaurantId)
+      .maybeSingle();
+    
+    if (!error && data) {
+      setCustomer(data);
+    } else {
+      setCustomer(null);
+    }
   };
 
   const signOut = async () => {
