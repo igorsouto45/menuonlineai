@@ -411,8 +411,7 @@ function CartSheet({
   pickupEnabled,
   deliveryAreas,
   restaurantId,
-  restaurantName,
-  mercadoPagoEnabled
+  restaurantName
 }: { 
   isOpen: boolean; 
   onClose: () => void;
@@ -423,7 +422,6 @@ function CartSheet({
   deliveryAreas: DeliveryArea[];
   restaurantId: string;
   restaurantName: string;
-  mercadoPagoEnabled: boolean;
 }) {
   const { items, total, removeItem, updateQuantity, getWhatsAppMessage, clearCart, calculateDeliveryFee, getGrandTotal } = useCart();
   const { user, customer, loadCustomerByRestaurant } = useCustomer();
@@ -432,10 +430,8 @@ function CartSheet({
   const [deliveryMode, setDeliveryMode] = useState<DeliveryMode>(pickupEnabled ? 'pickup' : 'delivery');
   const [selectedAreaId, setSelectedAreaId] = useState<string | null>(deliveryAreas.length > 0 ? deliveryAreas[0].id : null);
   const [showAuthModal, setShowAuthModal] = useState(false);
-  const [processingPayment, setProcessingPayment] = useState(false);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<PaymentMethod>('pix');
   const [changeFor, setChangeFor] = useState<string>('');
-  const [paymentType, setPaymentType] = useState<'online' | 'on_delivery'>(mercadoPagoEnabled ? 'online' : 'on_delivery');
 
   // Load customer data when user is logged in
   useEffect(() => {
@@ -569,64 +565,6 @@ function CartSheet({
     { value: 'cash', label: 'Dinheiro', icon: <Banknote className="w-4 h-4" /> },
   ];
 
-  const handleMercadoPagoCheckout = async () => {
-    if (!user || !customer) {
-      setShowAuthModal(true);
-      return;
-    }
-
-    if (deliveryMode === 'delivery' && !address.trim()) {
-      toast({
-        title: 'Endereço obrigatório',
-        description: 'Por favor, preencha o endereço de entrega.',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    setProcessingPayment(true);
-
-    try {
-      const { data, error } = await supabase.functions.invoke('create-mercadopago-preference', {
-        body: {
-          items: items.map(item => ({
-            product: {
-              id: item.product.id,
-              name: item.product.name,
-              price: item.product.price,
-            },
-            quantity: item.quantity,
-            subtotal: item.subtotal,
-            selectedVariation: item.selectedVariation,
-            selectedAdditionals: item.selectedAdditionals,
-          })),
-          customerName: customer.name,
-          customerEmail: customer.email,
-          customerPhone: customer.whatsapp,
-          deliveryAddress: deliveryMode === 'delivery' ? address : undefined,
-          deliveryFee: actualDeliveryFee,
-          restaurantId,
-          total: grandTotal,
-        },
-      });
-
-      if (error) throw error;
-
-      // Redirect to Mercado Pago checkout
-      if (data.init_point) {
-        window.location.href = data.init_point;
-      }
-    } catch (error: any) {
-      console.error('Error creating payment:', error);
-      toast({
-        title: 'Erro no pagamento',
-        description: error.message || 'Não foi possível processar o pagamento. Tente novamente.',
-        variant: 'destructive',
-      });
-    } finally {
-      setProcessingPayment(false);
-    }
-  };
 
   return (
     <AnimatePresence>
@@ -1397,7 +1335,6 @@ function MenuPageContent() {
         deliveryAreas={deliveryAreas}
         restaurantId={restaurant.id}
         restaurantName={restaurant.name}
-        mercadoPagoEnabled={restaurant.mercado_pago_enabled ?? false}
       />
     </div>
   );
