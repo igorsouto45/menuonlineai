@@ -62,16 +62,19 @@ export function CustomerProvider({ children }: { children: ReactNode }) {
     return () => subscription.unsubscribe();
   }, []);
 
+  const getActiveUserId = () => session?.user?.id ?? user?.id ?? null;
+
   const loadCustomerByRestaurant = async (restaurantId: string) => {
-    if (!user) return;
-    
+    const userId = getActiveUserId();
+    if (!userId) return;
+
     const { data, error } = await supabase
       .from('customers')
       .select('*')
-      .eq('user_id', user.id)
+      .eq('user_id', userId)
       .eq('restaurant_id', restaurantId)
       .maybeSingle();
-    
+
     if (!error && data) {
       setCustomer(data);
     } else {
@@ -153,33 +156,32 @@ export function CustomerProvider({ children }: { children: ReactNode }) {
       },
     });
 
-    // If user already exists, try to sign them in
-    if (authError?.message?.includes('already registered')) {
-      const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
-        email: data.email,
-        password: data.password,
-      });
+     // If user already exists, sign them in and create a restaurant-specific customer record
+     const alreadyRegistered = !!authError?.message && /already\s+registered/i.test(authError.message);
+     if (alreadyRegistered) {
+       const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+         email: data.email,
+         password: data.password,
+       });
 
-      if (signInError) {
-        // If sign in fails with wrong password, let the user know
-        if (signInError.message.includes('Invalid login credentials')) {
-          return { error: new Error('Email já cadastrado. A senha informada está incorreta.') };
-        }
-        return { error: signInError };
-      }
+       if (signInError) {
+         if (signInError.message.includes('Invalid login credentials')) {
+           return { error: new Error('Email já cadastrado. A senha informada está incorreta.') };
+         }
+         return { error: signInError };
+       }
 
-      // User signed in successfully, create customer record for this restaurant
-      if (signInData.user) {
-        return await createCustomerRecord(signInData.user.id, data.restaurantId, {
-          name: data.name,
-          email: data.email,
-          whatsapp: data.whatsapp,
-          address: data.address,
-          neighborhood: data.neighborhood,
-          city: data.city,
-        });
-      }
-    }
+       if (signInData.user) {
+         return await createCustomerRecord(signInData.user.id, data.restaurantId, {
+           name: data.name,
+           email: data.email,
+           whatsapp: data.whatsapp,
+           address: data.address,
+           neighborhood: data.neighborhood,
+           city: data.city,
+         });
+       }
+     }
 
     if (authError) return { error: authError };
 
@@ -205,9 +207,12 @@ export function CustomerProvider({ children }: { children: ReactNode }) {
 
     if (error) return { error };
 
-    // After sign in, load or wait for customer record
     if (signInData.user) {
-      await loadCustomerByRestaurantInternal(signInData.user.id, restaurantId);
+      const found = await loadCustomerByRestaurantInternal(signInData.user.id, restaurantId);
+      if (!found) {
+        // Logged in, but this restaurant requires a separate customer profile
+        return { error: new Error('NEEDS_RESTAURANT_PROFILE') };
+      }
     }
 
     return { error: null };
@@ -220,12 +225,14 @@ export function CustomerProvider({ children }: { children: ReactNode }) {
       .eq('user_id', userId)
       .eq('restaurant_id', restaurantId)
       .maybeSingle();
-    
+
     if (!error && data) {
       setCustomer(data);
-    } else {
-      setCustomer(null);
+      return data;
     }
+
+    setCustomer(null);
+    return null;
   };
 
   const signOut = async () => {

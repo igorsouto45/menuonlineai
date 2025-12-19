@@ -97,61 +97,63 @@ export function CustomerAuthModal({
           restaurantId,
         });
 
-        if (error) {
-          if (error.message.includes('senha') && error.message.includes('incorreta')) {
-            toast({
-              title: 'Email já cadastrado',
-              description: 'Você já possui conta. A senha informada está incorreta. Tente fazer login.',
-              variant: 'destructive',
-            });
-          } else if (error.message.includes('already registered')) {
-            toast({
-              title: 'Conta criada!',
-              description: 'Você foi conectado automaticamente ao restaurante.',
-            });
-            onSuccess();
-            onClose();
-            return;
-          } else {
-            toast({
-              title: 'Erro ao cadastrar',
-              description: error.message,
-              variant: 'destructive',
-            });
-          }
-        } else {
-          toast({
-            title: 'Cadastro realizado!',
-            description: 'Bem-vindo ao nosso cardápio.',
-          });
-          onSuccess();
-          onClose();
-        }
-      } else {
-        const { error } = await signIn(formData.email, formData.password, restaurantId);
+         if (error) {
+           if (error.message.includes('senha') && error.message.includes('incorreta')) {
+             toast({
+               title: 'Email já cadastrado',
+               description: 'Você já possui conta. A senha informada está incorreta. Tente fazer login.',
+               variant: 'destructive',
+             });
+             setMode('signin');
+           } else {
+             toast({
+               title: 'Erro ao cadastrar',
+               description: error.message,
+               variant: 'destructive',
+             });
+           }
+         } else {
+           toast({
+             title: 'Cadastro realizado!',
+             description: 'Bem-vindo ao nosso cardápio.',
+           });
+           onSuccess();
+           onClose();
+         }
+       } else {
+         const { error } = await signIn(formData.email, formData.password, restaurantId);
 
-        if (error) {
-          if (error.message.includes('Invalid login credentials')) {
-            toast({
-              title: 'Erro ao entrar',
-              description: 'Email ou senha incorretos.',
-              variant: 'destructive',
-            });
-          } else {
-            toast({
-              title: 'Erro ao entrar',
-              description: error.message,
-              variant: 'destructive',
-            });
-          }
-        } else {
-          toast({
-            title: 'Bem-vindo de volta!',
-          });
-          onSuccess();
-          onClose();
-        }
-      }
+         if (error) {
+           if (error.message === 'NEEDS_RESTAURANT_PROFILE') {
+             toast({
+               title: 'Complete seu cadastro',
+               description: 'Para pedir neste restaurante, informe seu nome e WhatsApp.',
+             });
+             setMode('signup');
+             return;
+           }
+
+           if (error.message.includes('Invalid login credentials')) {
+             toast({
+               title: 'Erro ao entrar',
+               description: 'Email ou senha incorretos.',
+               variant: 'destructive',
+             });
+           } else {
+             toast({
+               title: 'Erro ao entrar',
+               description: error.message,
+               variant: 'destructive',
+             });
+           }
+         } else {
+           toast({
+             title: 'Bem-vindo de volta!',
+           });
+           onSuccess();
+           onClose();
+         }
+       }
     } finally {
       setIsLoading(false);
     }
