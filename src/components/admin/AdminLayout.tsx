@@ -202,11 +202,17 @@ export default function AdminLayout() {
   };
 
   const getPlanBadgeColor = () => {
-    if (isInTrial) return 'bg-blue-500/20 text-blue-600';
-    if (!isSubscribed) return 'bg-yellow-500/20 text-yellow-600';
-    if (planName === 'Premium') return 'bg-purple-500/20 text-purple-600';
+    if (isInTrial) return 'bg-blue-500/20 text-blue-600 dark:text-blue-400';
+    if (!isSubscribed) return 'bg-destructive/20 text-destructive';
+    if (planName === 'Premium') return 'bg-purple-500/20 text-purple-600 dark:text-purple-400';
     if (planName === 'Pro') return 'bg-primary/20 text-primary';
     return 'bg-muted text-muted-foreground';
+  };
+
+  const getStatusIndicator = () => {
+    if (isInTrial) return { color: 'bg-blue-500', pulse: true };
+    if (!isSubscribed) return { color: 'bg-destructive', pulse: true };
+    return { color: 'bg-green-500', pulse: false };
   };
 
   const getTrialDaysLeft = () => {
@@ -215,7 +221,17 @@ export default function AdminLayout() {
     return Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
   };
 
+  const getSubscriptionStatus = () => {
+    if (isInTrial) {
+      const days = getTrialDaysLeft();
+      return days > 0 ? `Trial • ${days} dias restantes` : 'Trial expirado';
+    }
+    if (!isSubscribed) return 'Sem assinatura ativa';
+    return `${planName} • Ativo`;
+  };
+
   const displayPlanName = isInTrial ? `Trial (${getTrialDaysLeft()}d)` : planName;
+  const statusIndicator = getStatusIndicator();
 
   return (
     <div className="min-h-screen bg-background">
@@ -245,21 +261,30 @@ export default function AdminLayout() {
               <span className="font-bold text-foreground">MENU AI</span>
             </div>
           </div>
-          <Link to="/precos">
-            <Badge className={`${getPlanBadgeColor()} border-0 cursor-pointer`}>
-              <Crown className="w-3 h-3 mr-1" />
-              {displayPlanName}
-            </Badge>
+          <Link to="/precos" className="flex items-center gap-2">
+            <div className="relative">
+              <span className={`absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full ${statusIndicator.color} ${statusIndicator.pulse ? 'animate-pulse' : ''}`} />
+              <Badge className={`${getPlanBadgeColor()} border-0 cursor-pointer`}>
+                <Crown className="w-3 h-3 mr-1" />
+                {displayPlanName}
+              </Badge>
+            </div>
           </Link>
         </header>
 
         {/* Desktop Header with Plan Badge */}
         <header className="hidden lg:flex sticky top-0 z-30 h-16 bg-card border-b border-border items-center justify-end px-8">
-          <Link to="/precos">
-            <Badge className={`${getPlanBadgeColor()} border-0 cursor-pointer hover:opacity-80 transition-opacity`}>
-              <Crown className="w-3 h-3 mr-1" />
-              {displayPlanName}
-            </Badge>
+          <Link to="/precos" className="flex items-center gap-3 hover:opacity-80 transition-opacity">
+            <div className="text-right hidden sm:block">
+              <p className="text-xs text-muted-foreground">{getSubscriptionStatus()}</p>
+            </div>
+            <div className="relative">
+              <span className={`absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full ${statusIndicator.color} ${statusIndicator.pulse ? 'animate-pulse' : ''}`} />
+              <Badge className={`${getPlanBadgeColor()} border-0 cursor-pointer`}>
+                <Crown className="w-3 h-3 mr-1" />
+                {displayPlanName}
+              </Badge>
+            </div>
           </Link>
         </header>
 
