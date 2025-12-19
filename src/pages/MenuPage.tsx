@@ -507,9 +507,14 @@ function CartSheet({
       }
 
       // Create order in database - directly as confirmed since payment is on delivery
-      const { data: order, error: orderError } = await supabase
+      // IMPORTANT: don't request the inserted row back (SELECT) because customers may be unauthenticated
+      // and orders are not publicly readable due to sensitive data.
+      const orderId = crypto.randomUUID();
+
+      const { error: orderError } = await supabase
         .from('orders')
         .insert({
+          id: orderId,
           restaurant_id: restaurantId,
           customer_name: customer.name,
           customer_phone: customer.whatsapp,
@@ -518,23 +523,26 @@ function CartSheet({
           total: grandTotal,
           status: 'confirmed', // Payment on delivery goes directly to confirmed
           notes: paymentNote,
-        })
-        .select()
-        .single();
+        });
 
       if (orderError) throw orderError;
 
       // Send WhatsApp message
-      const message = getWhatsAppMessage(deliveryMode === 'delivery' ? address : undefined, deliveryInfo, selectedPaymentMethod, changeAmount);
+      const message = getWhatsAppMessage(
+        deliveryMode === 'delivery' ? address : undefined,
+        deliveryInfo,
+        selectedPaymentMethod,
+        changeAmount
+      );
       const formattedWhatsapp = whatsapp.replace(/\D/g, '');
       window.open(`https://wa.me/55${formattedWhatsapp}?text=${message}`, '_blank');
-      
+
       // Clear cart after successful order
       clearCart();
-      
+
       toast({
         title: 'Pedido confirmado!',
-        description: `Pedido #${order.id.slice(0, 8)} criado com sucesso. Acompanhe pelo WhatsApp.`,
+        description: `Pedido #${orderId.slice(0, 8)} criado com sucesso. Acompanhe pelo WhatsApp.`,
       });
     } catch (error: any) {
       console.error('Error creating order:', error);
