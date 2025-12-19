@@ -138,6 +138,10 @@ serve(async (req) => {
 
     const isFirstContact = !previousOrders || previousOrders.length === 0;
 
+    // Check if this is an order message (contains typical order patterns)
+    const isOrderMessage = /pedido|🛒|carrinho|total.*R\$|itens?:/i.test(message) ||
+                          /observa[çc][õo]es|entrega|retirada|pagamento/i.test(message);
+
     // Fetch restaurant data for AI context
     const [categoriesResult, productsResult, ordersResult] = await Promise.all([
       supabase
@@ -225,6 +229,28 @@ serve(async (req) => {
       ? `\n\nIMPORTANTE: Este é o PRIMEIRO contato deste cliente. Comece sua resposta com uma mensagem de boas-vindas calorosa, apresentando-se como assistente virtual do ${restaurant.name}.`
       : '';
 
+    // Build order message instruction
+    const orderInstruction = isOrderMessage
+      ? `\n\n🎉 ATENÇÃO: O cliente acabou de ENVIAR UM PEDIDO! Sua resposta DEVE:
+1. Agradecer pelo pedido de forma calorosa e entusiasmada
+2. Confirmar que o pedido foi recebido
+3. Informar que a equipe já está preparando
+4. Mencionar que ele pode acompanhar o status do pedido
+5. Se for entrega, confirmar que logo o pedido estará a caminho
+6. Finalizar desejando bom apetite e agradecendo a preferência
+
+Exemplo de resposta:
+"🎉 *Pedido recebido com sucesso!*
+
+Olá ${customerName}! Obrigado por pedir no ${restaurant.name}! 
+
+Seu pedido já foi registrado e nossa equipe já está preparando com todo carinho! 👨‍🍳
+
+⏱️ Em breve você receberá atualizações sobre o status.
+
+Agradecemos a preferência! Bom apetite! 😋"`
+      : '';
+
     // Build opening hours instruction
     const openingHoursInstruction = !isOpen
       ? `\n\nATENÇÃO: O restaurante está FECHADO no momento. Informe educadamente que estamos fora do horário de funcionamento mas você pode ajudar com informações sobre o cardápio e tirar dúvidas. Mencione o horário de funcionamento: ${schedule}`
@@ -257,7 +283,7 @@ REGRAS:
 5. Seja breve e direto nas respostas (máximo 3-4 frases)
 6. Use emojis com moderação para deixar a conversa mais amigável
 7. Se não souber algo, diga que vai verificar com a equipe
-${welcomeInstruction}${openingHoursInstruction}
+${welcomeInstruction}${orderInstruction}${openingHoursInstruction}
 
 IMPORTANTE: Formate a resposta para WhatsApp (use *negrito* e _itálico_ quando apropriado).`;
 
@@ -269,6 +295,7 @@ IMPORTANTE: Formate a resposta para WhatsApp (use *negrito* e _itálico_ quando 
 
     console.log('Calling AI with context...');
     console.log('Is first contact:', isFirstContact);
+    console.log('Is order message:', isOrderMessage);
     console.log('Is restaurant open:', isOpen);
     
     const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
@@ -328,7 +355,7 @@ IMPORTANTE: Formate a resposta para WhatsApp (use *negrito* e _itálico_ quando 
     }
 
     return new Response(
-      JSON.stringify({ success: true, response: responseText, isFirstContact, isOpen }),
+      JSON.stringify({ success: true, response: responseText, isFirstContact, isOrderMessage, isOpen }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
