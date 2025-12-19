@@ -92,27 +92,56 @@ function formatOrderForPrint(order: Order, restaurantName?: string, config: Prin
 
   lines.push(separator('-', width));
   
+  // Calculate subtotal of items
+  const itemsSubtotal = items.reduce((sum, item) => {
+    const itemPrice = item.unitPrice ?? item.price ?? 0;
+    return sum + (itemPrice * item.quantity);
+  }, 0);
+  
+  // Calculate delivery fee (difference between total and items subtotal)
+  const deliveryFee = Number(order.total) - itemsSubtotal;
+  
+  // Subtotal
+  lines.push(leftRight('SUBTOTAL:', `R$ ${itemsSubtotal.toFixed(2)}`, width));
+  
+  // Delivery fee (only show if > 0, meaning it's a delivery)
+  if (deliveryFee > 0.01) {
+    lines.push(leftRight('TAXA DE ENTREGA:', `R$ ${deliveryFee.toFixed(2)}`, width));
+  }
+  
+  lines.push(separator('-', width));
+  
   // Total
   lines.push(leftRight('TOTAL:', `R$ ${Number(order.total).toFixed(2)}`, width));
   lines.push(separator('=', width));
 
-  // Notes
+  // Payment method (extract from notes if present)
   if (order.notes) {
     lines.push('');
-    lines.push('OBSERVACOES:');
-    // Word wrap notes
-    const words = order.notes.split(' ');
-    let currentLine = '';
-    words.forEach((word) => {
-      if ((currentLine + ' ' + word).length > width) {
+    const paymentMatch = order.notes.match(/Pagamento na entrega: ([^\n]+)/i);
+    if (paymentMatch) {
+      lines.push(centerText('FORMA DE PAGAMENTO', width));
+      lines.push(centerText(paymentMatch[1], width));
+    }
+    
+    // Check for other observations (exclude payment info)
+    const otherNotes = order.notes.replace(/Pagamento na entrega: [^\n]+/gi, '').trim();
+    if (otherNotes) {
+      lines.push('');
+      lines.push('OBSERVACOES:');
+      const words = otherNotes.split(' ');
+      let currentLine = '';
+      words.forEach((word) => {
+        if ((currentLine + ' ' + word).length > width) {
+          lines.push(currentLine);
+          currentLine = word;
+        } else {
+          currentLine = currentLine ? currentLine + ' ' + word : word;
+        }
+      });
+      if (currentLine) {
         lines.push(currentLine);
-        currentLine = word;
-      } else {
-        currentLine = currentLine ? currentLine + ' ' + word : word;
       }
-    });
-    if (currentLine) {
-      lines.push(currentLine);
     }
   }
 
