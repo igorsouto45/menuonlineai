@@ -18,8 +18,11 @@ import {
   Filter,
   LayoutGrid,
   List,
-  Printer
+  Printer,
+  Settings
 } from 'lucide-react';
+import { EvolutionApiStatus } from '@/components/admin/EvolutionApiStatus';
+import { EvolutionApiWizard } from '@/components/admin/EvolutionApiWizard';
 import { 
   DndContext, 
   DragEndEvent, 
@@ -179,12 +182,13 @@ function DroppableColumn({
 }
 
 export default function OrdersPage() {
-  const { restaurant } = useRestaurant();
+  const { restaurant, refetch: refetchRestaurant } = useRestaurant();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [viewMode, setViewMode] = useState<'kanban' | 'list'>('kanban');
   const [activeOrder, setActiveOrder] = useState<Order | null>(null);
+  const [wizardOpen, setWizardOpen] = useState(false);
   const { toast } = useToast();
   const { playNotification } = useNotificationSound();
   const { permission, requestPermission, showNotification, isSupported } = useBrowserNotification();
@@ -451,25 +455,51 @@ export default function OrdersPage() {
           <h1 className="text-3xl font-bold text-foreground">Pedidos</h1>
           <p className="text-muted-foreground mt-1">Arraste os pedidos para atualizar o status</p>
         </div>
-        <div className="flex items-center gap-2">
-          <Button
-            variant={viewMode === 'kanban' ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => setViewMode('kanban')}
-          >
-            <LayoutGrid className="w-4 h-4 mr-1" />
-            Kanban
-          </Button>
-          <Button
-            variant={viewMode === 'list' ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => setViewMode('list')}
-          >
-            <List className="w-4 h-4 mr-1" />
-            Lista
-          </Button>
+        <div className="flex items-center gap-4">
+          {/* Evolution API Status */}
+          <EvolutionApiStatus
+            evolutionApiUrl={(restaurant as any)?.evolution_api_url}
+            evolutionApiKey={(restaurant as any)?.evolution_api_key}
+            evolutionInstanceName={(restaurant as any)?.evolution_instance_name}
+            onSetupClick={() => setWizardOpen(true)}
+          />
+
+          <div className="flex items-center gap-2">
+            <Button
+              variant={viewMode === 'kanban' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setViewMode('kanban')}
+            >
+              <LayoutGrid className="w-4 h-4 mr-1" />
+              Kanban
+            </Button>
+            <Button
+              variant={viewMode === 'list' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setViewMode('list')}
+            >
+              <List className="w-4 h-4 mr-1" />
+              Lista
+            </Button>
+          </div>
         </div>
       </div>
+
+      {/* Evolution API Wizard */}
+      {restaurant && (
+        <EvolutionApiWizard
+          open={wizardOpen}
+          onOpenChange={setWizardOpen}
+          restaurantId={restaurant.id}
+          initialValues={{
+            evolutionApiUrl: (restaurant as any)?.evolution_api_url,
+            evolutionApiKey: (restaurant as any)?.evolution_api_key,
+            evolutionInstanceName: (restaurant as any)?.evolution_instance_name,
+            orderWelcomeMessage: (restaurant as any)?.order_welcome_message,
+          }}
+          onComplete={() => refetchRestaurant()}
+        />
+      )}
 
       {viewMode === 'kanban' ? (
         /* Kanban View */
