@@ -124,8 +124,25 @@ function formatOrderForPrint(order: Order, restaurantName?: string, config: Prin
       lines.push(centerText(paymentMatch[1], width));
     }
     
-    // Check for other observations (exclude payment info)
-    const otherNotes = order.notes.replace(/Pagamento na entrega: [^\n]+/gi, '').trim();
+    // Extract change amount (troco) if present
+    const changeMatch = order.notes.match(/Troco para:?\s*R?\$?\s*([\d.,]+)/i);
+    if (changeMatch) {
+      const changeFor = parseFloat(changeMatch[1].replace(',', '.'));
+      const orderTotal = Number(order.total);
+      const changeAmount = changeFor - orderTotal;
+      
+      if (changeAmount > 0) {
+        lines.push('');
+        lines.push(leftRight('VALOR RECEBIDO:', `R$ ${changeFor.toFixed(2)}`, width));
+        lines.push(leftRight('TROCO:', `R$ ${changeAmount.toFixed(2)}`, width));
+      }
+    }
+    
+    // Check for other observations (exclude payment and change info)
+    const otherNotes = order.notes
+      .replace(/Pagamento na entrega: [^\n]+/gi, '')
+      .replace(/Troco para:?\s*R?\$?\s*[\d.,]+/gi, '')
+      .trim();
     if (otherNotes) {
       lines.push('');
       lines.push('OBSERVACOES:');
