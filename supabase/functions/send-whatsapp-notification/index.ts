@@ -20,6 +20,7 @@ interface OrderNotification {
 }
 
 const statusMessages: Record<string, string> = {
+  pending: '📝 Recebemos seu pedido! Em breve confirmaremos.',
   confirmed: '✅ Seu pedido foi *confirmado*! Estamos preparando com carinho.',
   preparing: '👨‍🍳 Seu pedido está sendo *preparado*!',
   ready: '🎉 Seu pedido está *pronto*! Aguardando entrega/retirada.',
@@ -104,6 +105,11 @@ serve(async (req) => {
         message += `Total: *R$ ${orderTotal.toFixed(2)}*\n`;
       }
       message += `\n${statusMessage}`;
+
+      // Add custom welcome message for confirmed orders
+      if (status === 'confirmed' && customMessage) {
+        message += `\n\n📢 ${customMessage}`;
+      }
 
       // Add review link when delivered
       if (status === 'delivered' && orderId && baseUrl) {
