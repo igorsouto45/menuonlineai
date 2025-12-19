@@ -594,6 +594,7 @@ export type Database = {
           mercado_pago_public_key: string | null
           name: string
           opening_hours: string | null
+          order_welcome_message: string | null
           owner_id: string
           pickup_enabled: boolean | null
           primary_color: string | null
@@ -622,6 +623,7 @@ export type Database = {
           mercado_pago_public_key?: string | null
           name: string
           opening_hours?: string | null
+          order_welcome_message?: string | null
           owner_id: string
           pickup_enabled?: boolean | null
           primary_color?: string | null
@@ -650,6 +652,7 @@ export type Database = {
           mercado_pago_public_key?: string | null
           name?: string
           opening_hours?: string | null
+          order_welcome_message?: string | null
           owner_id?: string
           pickup_enabled?: boolean | null
           primary_color?: string | null

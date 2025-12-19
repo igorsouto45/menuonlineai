@@ -32,6 +32,7 @@ const settingsSchema = z.object({
   evolution_api_url: z.string().optional(),
   evolution_api_key: z.string().optional(),
   evolution_instance_name: z.string().optional(),
+  order_welcome_message: z.string().optional(),
   mercado_pago_enabled: z.boolean(),
   mercado_pago_access_token: z.string().optional(),
   mercado_pago_public_key: z.string().optional(),
@@ -155,6 +156,7 @@ export default function SettingsPage() {
       evolution_api_url: '',
       evolution_api_key: '',
       evolution_instance_name: '',
+      order_welcome_message: '',
       mercado_pago_enabled: false,
       mercado_pago_access_token: '',
       mercado_pago_public_key: '',
@@ -177,6 +179,7 @@ export default function SettingsPage() {
         evolution_api_url: (restaurant as any).evolution_api_url || '',
         evolution_api_key: (restaurant as any).evolution_api_key || '',
         evolution_instance_name: (restaurant as any).evolution_instance_name || '',
+        order_welcome_message: (restaurant as any).order_welcome_message || '',
         mercado_pago_enabled: (restaurant as any).mercado_pago_enabled ?? false,
         mercado_pago_access_token: (restaurant as any).mercado_pago_access_token || '',
         mercado_pago_public_key: (restaurant as any).mercado_pago_public_key || '',
@@ -781,6 +784,36 @@ export default function SettingsPage() {
                   )}
                   {testingConnection ? 'Testando...' : 'Testar Conexão'}
                 </Button>
+
+                {/* Custom Order Welcome Message */}
+                <FormField
+                  control={form.control}
+                  name="order_welcome_message"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Mensagem de Boas-Vindas de Pedidos</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          placeholder="🎉 *Pedido recebido com sucesso!*
+
+Olá {nome}! Obrigado por pedir no {restaurante}!
+
+Seu pedido já foi registrado e nossa equipe já está preparando com todo carinho! 👨‍🍳
+
+⏱️ Em breve você receberá atualizações sobre o status.
+
+Agradecemos a preferência! Bom apetite! 😋"
+                          className="resize-none min-h-[150px]"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        Mensagem enviada quando o cliente faz um pedido via WhatsApp. Use {'{nome}'} para o nome do cliente e {'{restaurante}'} para o nome do restaurante.
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
                 {/* Webhook URL for AI Agent */}
                 <Alert className="bg-muted/50 border-primary/20">

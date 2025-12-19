@@ -225,7 +225,7 @@ export default function OrdersPage() {
     fetchOrders();
   }, [restaurant?.id]);
 
-  // Real-time subscription
+  // Real-time subscription for orders
   useEffect(() => {
     if (!restaurant?.id) return;
 
@@ -271,6 +271,38 @@ export default function OrdersPage() {
 
     return () => {
       supabase.removeChannel(channel);
+    };
+  }, [restaurant?.id, toast, playNotification, showNotification]);
+
+  // Real-time subscription for WhatsApp order notifications
+  useEffect(() => {
+    if (!restaurant?.id) return;
+
+    const whatsappChannel = supabase
+      .channel('whatsapp-orders')
+      .on('broadcast', { event: 'new-whatsapp-order' }, (payload) => {
+        const data = payload.payload;
+        if (data?.restaurantId === restaurant.id) {
+          // Play notification sound
+          playNotification();
+          
+          // Show toast notification
+          toast({
+            title: '📱 Pedido via WhatsApp!',
+            description: `${data.customerName || 'Cliente'} enviou um pedido pelo WhatsApp`,
+          });
+          
+          // Show browser push notification
+          showNotification('📱 Pedido via WhatsApp!', {
+            body: `${data.customerName || 'Cliente'} enviou um pedido pelo WhatsApp`,
+            tag: `whatsapp-order-${Date.now()}`,
+          });
+        }
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(whatsappChannel);
     };
   }, [restaurant?.id, toast, playNotification, showNotification]);
 

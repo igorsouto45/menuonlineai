@@ -229,18 +229,9 @@ serve(async (req) => {
       ? `\n\nIMPORTANTE: Este é o PRIMEIRO contato deste cliente. Comece sua resposta com uma mensagem de boas-vindas calorosa, apresentando-se como assistente virtual do ${restaurant.name}.`
       : '';
 
-    // Build order message instruction
-    const orderInstruction = isOrderMessage
-      ? `\n\n🎉 ATENÇÃO: O cliente acabou de ENVIAR UM PEDIDO! Sua resposta DEVE:
-1. Agradecer pelo pedido de forma calorosa e entusiasmada
-2. Confirmar que o pedido foi recebido
-3. Informar que a equipe já está preparando
-4. Mencionar que ele pode acompanhar o status do pedido
-5. Se for entrega, confirmar que logo o pedido estará a caminho
-6. Finalizar desejando bom apetite e agradecendo a preferência
-
-Exemplo de resposta:
-"🎉 *Pedido recebido com sucesso!*
+    // Build order message instruction using custom message or default
+    const customOrderMessage = (restaurant as any).order_welcome_message;
+    const defaultOrderMessage = `🎉 *Pedido recebido com sucesso!*
 
 Olá ${customerName}! Obrigado por pedir no ${restaurant.name}! 
 
@@ -248,7 +239,17 @@ Seu pedido já foi registrado e nossa equipe já está preparando com todo carin
 
 ⏱️ Em breve você receberá atualizações sobre o status.
 
-Agradecemos a preferência! Bom apetite! 😋"`
+Agradecemos a preferência! Bom apetite! 😋`;
+
+    const orderWelcomeMessage = customOrderMessage 
+      ? customOrderMessage.replace(/\{nome\}/gi, customerName).replace(/\{restaurante\}/gi, restaurant.name)
+      : defaultOrderMessage;
+
+    const orderInstruction = isOrderMessage
+      ? `\n\n🎉 ATENÇÃO: O cliente acabou de ENVIAR UM PEDIDO! Sua resposta DEVE ser EXATAMENTE esta mensagem (ou muito similar):
+"${orderWelcomeMessage}"
+
+NÃO mude esta mensagem, apenas responda com ela.`
       : '';
 
     // Build opening hours instruction
@@ -352,6 +353,25 @@ IMPORTANTE: Formate a resposta para WhatsApp (use *negrito* e _itálico_ quando 
       }
     } else {
       console.error('Evolution API credentials not configured for restaurant');
+    }
+
+    // Send browser notification to restaurant owner if this is an order message
+    if (isOrderMessage) {
+      console.log('Order message detected, sending notification to owner');
+      // Use Supabase realtime broadcast to notify admin panel
+      await supabase
+        .channel('whatsapp-orders')
+        .send({
+          type: 'broadcast',
+          event: 'new-whatsapp-order',
+          payload: {
+            restaurantId: restaurant.id,
+            customerName,
+            customerPhone,
+            message,
+            timestamp: new Date().toISOString(),
+          },
+        });
     }
 
     return new Response(
