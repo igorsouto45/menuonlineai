@@ -78,11 +78,14 @@ export function CashFlowDashboard({ restaurantId }: CashFlowDashboardProps) {
         const dayKey = orderDate.toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit' }).replace('.', '');
 
         if (dailyData[dayKey]) {
-          const items = (order.items as Array<{ name: string; quantity: number; price: number }>) || [];
+          const items = (order.items as Array<{ productName?: string; name?: string; quantity: number; unitPrice?: number; price?: number; subtotal?: number }>) || [];
           items.forEach(item => {
-            const revenue = item.price * item.quantity;
-            const productInfo = productCosts[item.name];
-            const cost = productInfo ? productInfo.cost * item.quantity : 0;
+            const itemPrice = Number(item.unitPrice) || Number(item.price) || 0;
+            const itemQuantity = Number(item.quantity) || 1;
+            const revenue = Number(item.subtotal) || (itemPrice * itemQuantity);
+            const itemName = item.productName || item.name || '';
+            const productInfo = productCosts[itemName];
+            const cost = productInfo ? productInfo.cost * itemQuantity : 0;
 
             dailyData[dayKey].revenue += revenue;
             dailyData[dayKey].cost += cost;
