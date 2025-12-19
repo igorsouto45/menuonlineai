@@ -801,85 +801,53 @@ function CartSheet({
                   <div className="pt-4 space-y-3">
                     <h3 className="font-semibold text-foreground">Forma de pagamento</h3>
                     
-                    {/* Payment Type: Online or On Delivery */}
-                    <div className="grid grid-cols-2 gap-2">
-                      {mercadoPagoEnabled && (
-                        <button
-                          onClick={() => setPaymentType('online')}
-                          className={`p-3 rounded-xl border-2 transition-all flex flex-col items-center gap-1 ${
-                            paymentType === 'online'
-                              ? 'border-primary bg-primary/10'
-                              : 'border-border hover:border-primary/40'
-                          }`}
-                        >
-                          <CreditCard className="w-5 h-5" />
-                          <span className="text-sm font-medium">Pagar Online</span>
-                          <span className="text-xs text-muted-foreground">Mercado Pago</span>
-                        </button>
-                      )}
-                      <button
-                        onClick={() => setPaymentType('on_delivery')}
-                        className={`p-3 rounded-xl border-2 transition-all flex flex-col items-center gap-1 ${
-                          paymentType === 'on_delivery'
-                            ? 'border-primary bg-primary/10'
-                            : 'border-border hover:border-primary/40'
-                        } ${!mercadoPagoEnabled ? 'col-span-2' : ''}`}
-                      >
-                        <Wallet className="w-5 h-5" />
-                        <span className="text-sm font-medium">Pagar na Entrega</span>
-                        <span className="text-xs text-muted-foreground">Crédito, Débito, Pix ou Dinheiro</span>
-                      </button>
-                    </div>
-
-                    {/* Payment Method Selection - only for on_delivery */}
-                    {paymentType === 'on_delivery' && (
-                      <div className="space-y-3">
-                        <p className="text-sm text-muted-foreground">Selecione a forma de pagamento:</p>
-                        <div className="grid grid-cols-2 gap-2">
-                          {paymentMethods.map((method) => (
-                            <button
-                              key={method.value}
-                              onClick={() => {
-                                setSelectedPaymentMethod(method.value);
-                                if (method.value !== 'cash') {
-                                  setChangeFor('');
-                                }
-                              }}
-                              className={`p-3 rounded-xl border-2 transition-all flex items-center justify-center gap-2 ${
-                                selectedPaymentMethod === method.value
-                                  ? 'border-primary bg-primary/10'
-                                  : 'border-border hover:border-primary/40'
-                              }`}
-                            >
-                              {method.icon}
-                              <span className="text-sm font-medium">{method.label}</span>
-                            </button>
-                          ))}
-                        </div>
-                        
-                        {/* Change input - only for cash */}
-                        {selectedPaymentMethod === 'cash' && (
-                          <div className="pt-2">
-                            <label className="text-sm text-muted-foreground mb-2 block">
-                              Precisa de troco? Para quanto?
-                            </label>
-                            <div className="relative">
-                              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">R$</span>
-                              <input
-                                type="number"
-                                value={changeFor}
-                                onChange={(e) => setChangeFor(e.target.value)}
-                                placeholder="0,00"
-                                className="w-full pl-10 p-3 rounded-xl border-2 border-border bg-background text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none"
-                              />
-                            </div>
-                            <p className="text-xs text-muted-foreground mt-1">
-                              Deixe em branco se não precisar de troco
-                            </p>
-                          </div>
-                        )}
+                    {/* Payment Type: On Delivery only (Mercado Pago disabled for now) */}
+                    <div className="space-y-3">
+                      <p className="text-sm text-muted-foreground">Selecione a forma de pagamento:</p>
+                      <div className="grid grid-cols-2 gap-2">
+                        {paymentMethods.map((method) => (
+                          <button
+                            key={method.value}
+                            onClick={() => {
+                              setSelectedPaymentMethod(method.value);
+                              if (method.value !== 'cash') {
+                                setChangeFor('');
+                              }
+                            }}
+                            className={`p-3 rounded-xl border-2 transition-all flex items-center justify-center gap-2 ${
+                              selectedPaymentMethod === method.value
+                                ? 'border-primary bg-primary/10'
+                                : 'border-border hover:border-primary/40'
+                            }`}
+                          >
+                            {method.icon}
+                            <span className="text-sm font-medium">{method.label}</span>
+                          </button>
+                        ))}
                       </div>
-                    )}
+                      
+                      {/* Change input - only for cash */}
+                      {selectedPaymentMethod === 'cash' && (
+                        <div className="pt-2">
+                          <label className="text-sm text-muted-foreground mb-2 block">
+                            Precisa de troco? Para quanto?
+                          </label>
+                          <div className="relative">
+                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">R$</span>
+                            <input
+                              type="number"
+                              value={changeFor}
+                              onChange={(e) => setChangeFor(e.target.value)}
+                              placeholder="0,00"
+                              className="w-full pl-10 p-3 rounded-xl border-2 border-border bg-background text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none"
+                            />
+                          </div>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Deixe em branco se não precisar de troco
+                          </p>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
               )}
@@ -933,29 +901,10 @@ function CartSheet({
                 </div>
                 
                 {user ? (
-                  <div className="space-y-2">
-                    {paymentType === 'online' && mercadoPagoEnabled ? (
-                      <Button 
-                        variant="hero" 
-                        size="xl" 
-                        className="w-full" 
-                        onClick={handleMercadoPagoCheckout}
-                        disabled={processingPayment}
-                      >
-                        {processingPayment ? (
-                          <Loader2 className="w-5 h-5 animate-spin" />
-                        ) : (
-                          <CreditCard className="w-5 h-5" />
-                        )}
-                        {processingPayment ? 'Processando...' : 'Pagar com Mercado Pago'}
-                      </Button>
-                    ) : (
-                      <Button variant="whatsapp" size="xl" className="w-full" onClick={handleSendWhatsApp}>
-                        <MessageCircle className="w-5 h-5" />
-                        Enviar pedido via WhatsApp
-                      </Button>
-                    )}
-                  </div>
+                  <Button variant="whatsapp" size="xl" className="w-full" onClick={handleSendWhatsApp}>
+                    <MessageCircle className="w-5 h-5" />
+                    Enviar pedido via WhatsApp
+                  </Button>
                 ) : (
                   <Button variant="hero" size="xl" className="w-full" onClick={() => setShowAuthModal(true)}>
                     <LogIn className="w-5 h-5" />
