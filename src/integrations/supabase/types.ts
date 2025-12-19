@@ -577,6 +577,7 @@ export type Database = {
         Row: {
           address: string | null
           cover_url: string | null
+          cpf_cnpj: string | null
           created_at: string
           delivery_fee: number | null
           description: string | null
@@ -604,6 +605,7 @@ export type Database = {
         Insert: {
           address?: string | null
           cover_url?: string | null
+          cpf_cnpj?: string | null
           created_at?: string
           delivery_fee?: number | null
           description?: string | null
@@ -631,6 +633,7 @@ export type Database = {
         Update: {
           address?: string | null
           cover_url?: string | null
+          cpf_cnpj?: string | null
           created_at?: string
           delivery_fee?: number | null
           description?: string | null

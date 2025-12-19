@@ -12,7 +12,48 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useRestaurant } from '@/hooks/useRestaurant';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { Store, Sparkles, ArrowRight, Upload, X, Loader2 } from 'lucide-react';
+import { Store, Sparkles, ArrowRight, Upload, X, Loader2, FileText } from 'lucide-react';
+
+// Helper to validate CPF
+const isValidCPF = (cpf: string): boolean => {
+  const cleaned = cpf.replace(/\D/g, '');
+  if (cleaned.length !== 11) return false;
+  if (/^(\d)\1+$/.test(cleaned)) return false;
+  
+  let sum = 0;
+  for (let i = 0; i < 9; i++) sum += parseInt(cleaned[i]) * (10 - i);
+  let remainder = (sum * 10) % 11;
+  if (remainder === 10 || remainder === 11) remainder = 0;
+  if (remainder !== parseInt(cleaned[9])) return false;
+  
+  sum = 0;
+  for (let i = 0; i < 10; i++) sum += parseInt(cleaned[i]) * (11 - i);
+  remainder = (sum * 10) % 11;
+  if (remainder === 10 || remainder === 11) remainder = 0;
+  return remainder === parseInt(cleaned[10]);
+};
+
+// Helper to validate CNPJ
+const isValidCNPJ = (cnpj: string): boolean => {
+  const cleaned = cnpj.replace(/\D/g, '');
+  if (cleaned.length !== 14) return false;
+  if (/^(\d)\1+$/.test(cleaned)) return false;
+  
+  const weights1 = [5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2];
+  const weights2 = [6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2];
+  
+  let sum = 0;
+  for (let i = 0; i < 12; i++) sum += parseInt(cleaned[i]) * weights1[i];
+  let remainder = sum % 11;
+  const digit1 = remainder < 2 ? 0 : 11 - remainder;
+  if (digit1 !== parseInt(cleaned[12])) return false;
+  
+  sum = 0;
+  for (let i = 0; i < 13; i++) sum += parseInt(cleaned[i]) * weights2[i];
+  remainder = sum % 11;
+  const digit2 = remainder < 2 ? 0 : 11 - remainder;
+  return digit2 === parseInt(cleaned[13]);
+};
 
 const onboardingSchema = z.object({
   name: z.string().min(2, 'Nome deve ter pelo menos 2 caracteres').max(100),
@@ -24,6 +65,15 @@ const onboardingSchema = z.object({
     .min(10, 'WhatsApp inválido')
     .max(20)
     .regex(/^[0-9]+$/, 'Apenas números'),
+  cpfCnpj: z.string()
+    .min(11, 'CPF ou CNPJ inválido')
+    .max(18)
+    .refine((val) => {
+      const cleaned = val.replace(/\D/g, '');
+      if (cleaned.length === 11) return isValidCPF(val);
+      if (cleaned.length === 14) return isValidCNPJ(val);
+      return false;
+    }, 'CPF ou CNPJ inválido'),
 });
 
 type OnboardingForm = z.infer<typeof onboardingSchema>;
@@ -50,6 +100,7 @@ export default function OnboardingPage() {
       name: '',
       slug: '',
       whatsapp: '',
+      cpfCnpj: '',
     },
   });
 
@@ -122,6 +173,7 @@ export default function OnboardingPage() {
         name: data.name,
         slug: data.slug,
         whatsapp: data.whatsapp,
+        cpf_cnpj: data.cpfCnpj.replace(/\D/g, ''),
         logo_url: logoUrl,
       });
 
@@ -301,6 +353,47 @@ export default function OnboardingPage() {
                       </FormControl>
                       <FormDescription>
                         Apenas letras minúsculas, números e hífens
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                {/* CPF/CNPJ Field */}
+                <FormField
+                  control={form.control}
+                  name="cpfCnpj"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>CPF ou CNPJ</FormLabel>
+                      <FormControl>
+                        <div className="relative">
+                          <FileText className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                          <Input
+                            placeholder="000.000.000-00 ou 00.000.000/0000-00"
+                            className="pl-10"
+                            {...field}
+                            onChange={(e) => {
+                              let value = e.target.value.replace(/\D/g, '');
+                              if (value.length <= 11) {
+                                // CPF mask
+                                value = value.replace(/(\d{3})(\d)/, '$1.$2');
+                                value = value.replace(/(\d{3})(\d)/, '$1.$2');
+                                value = value.replace(/(\d{3})(\d{1,2})$/, '$1-$2');
+                              } else {
+                                // CNPJ mask
+                                value = value.replace(/^(\d{2})(\d)/, '$1.$2');
+                                value = value.replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3');
+                                value = value.replace(/\.(\d{3})(\d)/, '.$1/$2');
+                                value = value.replace(/(\d{4})(\d)/, '$1-$2');
+                              }
+                              field.onChange(value);
+                            }}
+                          />
+                        </div>
+                      </FormControl>
+                      <FormDescription>
+                        Documento do responsável ou da empresa
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
