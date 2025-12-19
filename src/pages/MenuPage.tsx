@@ -411,7 +411,11 @@ function CartSheet({
   pickupEnabled,
   deliveryAreas,
   restaurantId,
-  restaurantName
+  restaurantName,
+  evolutionApiUrl,
+  evolutionApiKey,
+  evolutionInstanceName,
+  orderWelcomeMessage
 }: { 
   isOpen: boolean; 
   onClose: () => void;
@@ -422,6 +426,10 @@ function CartSheet({
   deliveryAreas: DeliveryArea[];
   restaurantId: string;
   restaurantName: string;
+  evolutionApiUrl?: string | null;
+  evolutionApiKey?: string | null;
+  evolutionInstanceName?: string | null;
+  orderWelcomeMessage?: string | null;
 }) {
   const { items, total, removeItem, updateQuantity, getWhatsAppMessage, clearCart, calculateDeliveryFee, getGrandTotal } = useCart();
   const { session, user, customer, loadCustomerByRestaurant } = useCustomer();
@@ -522,6 +530,30 @@ function CartSheet({
         });
 
       if (orderError) throw orderError;
+
+      // Send welcome message via Evolution API if configured
+      if (evolutionApiUrl && evolutionApiKey && evolutionInstanceName) {
+        try {
+          await supabase.functions.invoke('send-whatsapp-notification', {
+            body: {
+              orderId,
+              customerPhone: customer.whatsapp,
+              customerName: customer.name,
+              status: 'confirmed',
+              restaurantName,
+              orderTotal: grandTotal,
+              evolutionApiUrl,
+              evolutionApiKey,
+              evolutionInstanceName,
+              customMessage: orderWelcomeMessage || undefined,
+              baseUrl: window.location.origin,
+            },
+          });
+        } catch (notifError) {
+          console.error('Failed to send WhatsApp welcome notification:', notifError);
+          // Don't fail the order if notification fails
+        }
+      }
 
       // Send WhatsApp message
       const message = getWhatsAppMessage(
@@ -1335,6 +1367,10 @@ function MenuPageContent() {
         deliveryAreas={deliveryAreas}
         restaurantId={restaurant.id}
         restaurantName={restaurant.name}
+        evolutionApiUrl={(restaurant as any).evolution_api_url}
+        evolutionApiKey={(restaurant as any).evolution_api_key}
+        evolutionInstanceName={(restaurant as any).evolution_instance_name}
+        orderWelcomeMessage={(restaurant as any).order_welcome_message}
       />
     </div>
   );
