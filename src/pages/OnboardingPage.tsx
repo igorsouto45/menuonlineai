@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { z } from 'zod';
@@ -9,9 +9,10 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from '@/components/ui/form';
 import { useAuth } from '@/contexts/AuthContext';
+import { useRestaurant } from '@/hooks/useRestaurant';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { Store, Sparkles, ArrowRight, Upload, X } from 'lucide-react';
+import { Store, Sparkles, ArrowRight, Upload, X, Loader2 } from 'lucide-react';
 
 const onboardingSchema = z.object({
   name: z.string().min(2, 'Nome deve ter pelo menos 2 caracteres').max(100),
@@ -32,8 +33,16 @@ export default function OnboardingPage() {
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const { user } = useAuth();
+  const { hasRestaurant, loading: restaurantLoading } = useRestaurant();
   const navigate = useNavigate();
   const { toast } = useToast();
+
+  // Redirect to admin if user already has a restaurant
+  useEffect(() => {
+    if (!restaurantLoading && hasRestaurant) {
+      navigate('/admin', { replace: true });
+    }
+  }, [hasRestaurant, restaurantLoading, navigate]);
 
   const form = useForm<OnboardingForm>({
     resolver: zodResolver(onboardingSchema),
@@ -147,6 +156,18 @@ export default function OnboardingPage() {
       form.setValue('slug', slug);
     }
   };
+
+  // Show loading while checking restaurant status
+  if (restaurantLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="text-center">
+          <Loader2 className="w-8 h-8 animate-spin text-primary mx-auto mb-4" />
+          <p className="text-muted-foreground">Verificando...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen gradient-warm flex items-center justify-center p-4">

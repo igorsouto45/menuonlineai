@@ -13,14 +13,27 @@ export default function ProtectedRoute({ children, requireRestaurant = true }: P
   const { hasRestaurant, loading: restaurantLoading } = useRestaurant();
   const location = useLocation();
 
+  // Only wait for restaurant loading if we actually need it
   const loading = authLoading || (requireRestaurant && restaurantLoading);
 
-  if (loading) {
+  if (authLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center">
           <Loader2 className="w-8 h-8 animate-spin text-primary mx-auto mb-4" />
           <p className="text-muted-foreground">Carregando...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // If we need restaurant and still loading, show loading
+  if (requireRestaurant && restaurantLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="text-center">
+          <Loader2 className="w-8 h-8 animate-spin text-primary mx-auto mb-4" />
+          <p className="text-muted-foreground">Carregando restaurante...</p>
         </div>
       </div>
     );
