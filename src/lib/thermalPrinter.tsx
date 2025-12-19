@@ -26,10 +26,21 @@ function separator(char: string, width: number): string {
   return char.repeat(width);
 }
 
+interface OrderItem {
+  productName?: string;
+  name?: string;
+  quantity: number;
+  unitPrice?: number;
+  price?: number;
+  subtotal?: number;
+  variation?: string | null;
+  additionals?: string[];
+}
+
 function formatOrderForPrint(order: Order, restaurantName?: string, config: PrinterConfig = defaultConfig): string {
   const { width } = config;
   const lines: string[] = [];
-  const items = (order.items as Array<{ name: string; quantity: number; price: number; variation?: string; additionals?: string[] }>) || [];
+  const items = (order.items as unknown as OrderItem[]) || [];
 
   // Header
   lines.push('');
@@ -63,8 +74,10 @@ function formatOrderForPrint(order: Order, restaurantName?: string, config: Prin
   lines.push(separator('-', width));
   
   items.forEach((item) => {
-    const itemTotal = (item.price * item.quantity).toFixed(2);
-    lines.push(leftRight(`${item.quantity}x ${item.name}`, `R$ ${itemTotal}`, width));
+    const itemName = item.productName || item.name || 'Item';
+    const itemPrice = item.unitPrice ?? item.price ?? 0;
+    const itemTotal = (itemPrice * item.quantity).toFixed(2);
+    lines.push(leftRight(`${item.quantity}x ${itemName}`, `R$ ${itemTotal}`, width));
     
     if (item.variation) {
       lines.push(`   -> ${item.variation}`);
