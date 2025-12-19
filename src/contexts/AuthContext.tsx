@@ -86,11 +86,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       // Check trial status based on restaurant creation date
-      const { data: restaurant } = await supabase
+      const { data: restaurant, error: restaurantError } = await supabase
         .from('restaurants')
         .select('created_at')
         .eq('owner_id', session.user.id)
-        .single();
+        .order('created_at', { ascending: true })
+        .limit(1)
+        .maybeSingle();
+
+      if (restaurantError) {
+        console.error('Error fetching restaurant creation date:', restaurantError);
+      }
 
       let isTrialActive = false;
       let trialEndsAt: string | null = null;
