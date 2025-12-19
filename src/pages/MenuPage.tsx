@@ -465,21 +465,85 @@ function CartSheet({
   const hasFreeDelivery = deliveryMode === 'delivery' && deliveryFee > 0 && actualDeliveryFee === 0;
   const amountForFreeDelivery = freeDeliveryMinimum !== null && deliveryMode === 'delivery' ? freeDeliveryMinimum - total : null;
 
-  const handleSendWhatsApp = () => {
-    if (!user) {
+  const handleSendWhatsApp = async () => {
+    if (!user || !customer) {
       setShowAuthModal(true);
       return;
     }
 
-    const changeAmount = selectedPaymentMethod === 'cash' && changeFor ? parseFloat(changeFor) : null;
-    const message = getWhatsAppMessage(deliveryMode === 'delivery' ? address : undefined, deliveryInfo, selectedPaymentMethod, changeAmount);
-    const formattedWhatsapp = whatsapp.replace(/\D/g, '');
-    window.open(`https://wa.me/55${formattedWhatsapp}?text=${message}`, '_blank');
-    // Não limpa o carrinho para permitir pagamento posterior
-    toast({
-      title: 'Pedido enviado!',
-      description: 'O pedido foi enviado para o WhatsApp. Você ainda pode pagar pelo Mercado Pago.',
-    });
+    if (deliveryMode === 'delivery' && !address.trim()) {
+      toast({
+        title: 'Endereço obrigatório',
+        description: 'Por favor, preencha o endereço de entrega.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    try {
+      // Prepare order items
+      const orderItems = items.map(item => ({
+        productId: item.product.id,
+        productName: item.product.name,
+        quantity: item.quantity,
+        unitPrice: item.selectedVariation?.price || item.product.price,
+        subtotal: item.subtotal,
+        variation: item.selectedVariation?.name || null,
+        additionals: item.selectedAdditionals.map(a => a.name),
+        observation: item.observation || null,
+      }));
+
+      // Create payment method note
+      const paymentMethodLabels: Record<PaymentMethod, string> = {
+        pix: 'Pix',
+        credit: 'Crédito',
+        debit: 'Débito',
+        cash: 'Dinheiro',
+      };
+      const changeAmount = selectedPaymentMethod === 'cash' && changeFor ? parseFloat(changeFor) : null;
+      let paymentNote = `Pagamento na entrega: ${paymentMethodLabels[selectedPaymentMethod]}`;
+      if (changeAmount) {
+        paymentNote += ` - Troco para R$ ${changeAmount.toFixed(2)}`;
+      }
+
+      // Create order in database - directly as confirmed since payment is on delivery
+      const { data: order, error: orderError } = await supabase
+        .from('orders')
+        .insert({
+          restaurant_id: restaurantId,
+          customer_name: customer.name,
+          customer_phone: customer.whatsapp,
+          customer_address: deliveryMode === 'delivery' ? address : 'Retirada no local',
+          items: orderItems,
+          total: grandTotal,
+          status: 'confirmed', // Payment on delivery goes directly to confirmed
+          notes: paymentNote,
+        })
+        .select()
+        .single();
+
+      if (orderError) throw orderError;
+
+      // Send WhatsApp message
+      const message = getWhatsAppMessage(deliveryMode === 'delivery' ? address : undefined, deliveryInfo, selectedPaymentMethod, changeAmount);
+      const formattedWhatsapp = whatsapp.replace(/\D/g, '');
+      window.open(`https://wa.me/55${formattedWhatsapp}?text=${message}`, '_blank');
+      
+      // Clear cart after successful order
+      clearCart();
+      
+      toast({
+        title: 'Pedido confirmado!',
+        description: `Pedido #${order.id.slice(0, 8)} criado com sucesso. Acompanhe pelo WhatsApp.`,
+      });
+    } catch (error: any) {
+      console.error('Error creating order:', error);
+      toast({
+        title: 'Erro ao criar pedido',
+        description: error.message || 'Não foi possível criar o pedido. Tente novamente.',
+        variant: 'destructive',
+      });
+    }
   };
 
   const handleClearCart = () => {
