@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import type { Database } from '@/integrations/supabase/types';
@@ -8,8 +8,7 @@ type Restaurant = Database['public']['Tables']['restaurants']['Row'];
 export function useRestaurant() {
   const [restaurant, setRestaurant] = useState<Restaurant | null>(null);
   const [loading, setLoading] = useState(true);
-  const { user, loading: authLoading } = useAuth();
-  const lastUserId = useRef<string | null>(null);
+  const { user } = useAuth();
 
   const fetchRestaurant = useCallback(async () => {
     if (!user) {
@@ -18,14 +17,7 @@ export function useRestaurant() {
       return;
     }
 
-    // Only fetch if user changed or initial load
-    if (lastUserId.current === user.id && restaurant !== null) {
-      return;
-    }
-
     setLoading(true);
-    lastUserId.current = user.id;
-    
     const { data, error } = await supabase
       .from('restaurants')
       .select('*')
@@ -40,27 +32,11 @@ export function useRestaurant() {
 
     setRestaurant(data ?? null);
     setLoading(false);
-  }, [user, restaurant]);
+  }, [user]);
 
   useEffect(() => {
-    // Wait for auth to finish loading before fetching restaurant
-    if (authLoading) {
-      setLoading(true);
-      return;
-    }
-
-    if (!user) {
-      setRestaurant(null);
-      setLoading(false);
-      lastUserId.current = null;
-      return;
-    }
-
-    // Only fetch if user changed
-    if (lastUserId.current !== user.id) {
-      fetchRestaurant();
-    }
-  }, [user, authLoading, fetchRestaurant]);
+    fetchRestaurant();
+  }, [fetchRestaurant]);
 
   return { restaurant, loading, hasRestaurant: !!restaurant, refetch: fetchRestaurant };
 }
