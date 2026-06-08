@@ -20,11 +20,20 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { QRCodeSVG } from 'qrcode.react';
+import { Badge } from '@/components/ui/badge';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface RestaurantTable {
   id: string;
   table_number: string;
   is_active: boolean;
+  status: 'free' | 'occupied' | 'reserved';
 }
 
 export function TablesManager({ restaurantId, restaurantSlug }: { restaurantId: string; restaurantSlug: string }) {
@@ -32,6 +41,7 @@ export function TablesManager({ restaurantId, restaurantSlug }: { restaurantId: 
   const [newTableNumber, setNewTableNumber] = useState('');
   const [loading, setLoading] = useState(true);
   const [adding, setAdding] = useState(false);
+  const [updating, setUpdating] = useState<string | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -48,7 +58,7 @@ export function TablesManager({ restaurantId, restaurantSlug }: { restaurantId: 
         .order('table_number');
 
       if (error) throw error;
-      setTables(data || []);
+      setTables((data || []) as RestaurantTable[]);
     } catch (error: any) {
       toast({
         title: "Erro ao carregar mesas",
@@ -76,7 +86,7 @@ export function TablesManager({ restaurantId, restaurantSlug }: { restaurantId: 
 
       if (error) throw error;
 
-      setTables([...tables, data].sort((a, b) => a.table_number.localeCompare(b.table_number)));
+      setTables([...tables, data as RestaurantTable].sort((a, b) => a.table_number.localeCompare(b.table_number)));
       setNewTableNumber('');
       toast({
         title: "Mesa adicionada",
@@ -90,6 +100,34 @@ export function TablesManager({ restaurantId, restaurantSlug }: { restaurantId: 
       });
     } finally {
       setAdding(false);
+    }
+  };
+
+  const handleStatusChange = async (tableId: string, newStatus: 'free' | 'occupied' | 'reserved') => {
+    try {
+      setUpdating(tableId);
+      const { error } = await supabase
+        .from('restaurant_tables')
+        .update({ status: newStatus })
+        .eq('id', tableId);
+
+      if (error) throw error;
+
+      setTables(tables.map(t => t.id === tableId ? { ...t, status: newStatus } : t));
+      toast({
+        title: "Status atualizado",
+        description: `Mesa marcada como ${
+          newStatus === 'free' ? 'livre' : newStatus === 'occupied' ? 'ocupada' : 'reservada'
+        }.`,
+      });
+    } catch (error: any) {
+      toast({
+        title: "Erro ao atualizar status",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setUpdating(null);
     }
   };
 
@@ -165,10 +203,19 @@ export function TablesManager({ restaurantId, restaurantSlug }: { restaurantId: 
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold">
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center text-primary font-bold ${
+                      table.status === 'free' ? 'bg-success/10 text-success' : 
+                      table.status === 'occupied' ? 'bg-destructive/10 text-destructive' : 
+                      'bg-warning/10 text-warning'
+                    }`}>
                       {table.table_number}
                     </div>
-                    <span className="font-semibold text-lg">Mesa {table.table_number}</span>
+                    <div className="flex flex-col">
+                      <span className="font-semibold text-lg leading-none">Mesa {table.table_number}</span>
+                      <span className="text-xs text-muted-foreground mt-1">
+                        {table.status === 'free' ? 'Livre' : table.status === 'occupied' ? 'Ocupada' : 'Reservada'}
+                      </span>
+                    </div>
                   </div>
                   <Button 
                     variant="ghost" 
@@ -178,6 +225,23 @@ export function TablesManager({ restaurantId, restaurantSlug }: { restaurantId: 
                   >
                     <Trash2 className="w-4 h-4" />
                   </Button>
+                </div>
+
+                <div className="flex gap-2">
+                  <Select
+                    value={table.status}
+                    onValueChange={(value: any) => handleStatusChange(table.id, value)}
+                    disabled={updating === table.id}
+                  >
+                    <SelectTrigger className="h-9">
+                      <SelectValue placeholder="Status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="free">Livre</SelectItem>
+                      <SelectItem value="occupied">Ocupada</SelectItem>
+                      <SelectItem value="reserved">Reservada</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
 
                 <div className="flex flex-col items-center bg-white p-4 rounded-lg">

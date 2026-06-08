@@ -419,7 +419,8 @@ function CartSheet({
   evolutionInstanceName,
   orderWelcomeMessage,
   tableNumber,
-  dineInEnabled
+  dineInEnabled,
+  tableStatus
 }: { 
   isOpen: boolean; 
   onClose: () => void;
@@ -436,6 +437,7 @@ function CartSheet({
   orderWelcomeMessage?: string | null;
   tableNumber?: string | null;
   dineInEnabled?: boolean;
+  tableStatus?: 'free' | 'occupied' | 'reserved' | null;
 }) {
   const { items, total, removeItem, updateQuantity, getWhatsAppMessage, clearCart, calculateDeliveryFee, getGrandTotal } = useCart();
   const { session, user, customer, loadCustomerByRestaurant } = useCustomer();
@@ -709,14 +711,15 @@ function CartSheet({
                           onClick={() => setDeliveryMode('dine-in')}
                           className={`p-3 rounded-xl border-2 transition-all flex flex-col items-center gap-1 ${
                             deliveryMode === 'dine-in'
-                              ? 'border-primary bg-primary/10'
+                              ? (tableStatus === 'occupied' ? 'border-destructive bg-destructive/10' : 'border-primary bg-primary/10')
                               : 'border-border hover:border-primary/40'
                           }`}
                         >
-                          <TableIcon className="w-5 h-5" />
-                          <span className="text-sm font-medium">Mesa</span>
+                          <TableIcon className={`w-5 h-5 ${tableStatus === 'occupied' ? 'text-destructive' : ''}`} />
+                          <span className={`text-sm font-medium ${tableStatus === 'occupied' ? 'text-destructive' : ''}`}>Mesa</span>
                           <span className="text-xs text-muted-foreground">{tableNumber ? `Nº ${tableNumber}` : 'Local'}</span>
                         </button>
+
                       )}
                       {pickupEnabled && (
                         <button
@@ -894,7 +897,14 @@ function CartSheet({
                     <span className="text-2xl font-bold text-primary">R$ {grandTotal.toFixed(2)}</span>
                   </div>
                 </div>
-                
+                  {tableStatus === 'occupied' && (
+                    <div className="bg-destructive/10 border border-destructive/20 p-3 rounded-xl mb-4 text-center">
+                      <p className="text-sm text-destructive font-medium">
+                        Esta mesa está marcada como ocupada no sistema.
+                      </p>
+                    </div>
+                  )}
+
                 {user ? (
                   <Button variant="whatsapp" size="xl" className="w-full" onClick={handleSendWhatsApp}>
                     <MessageCircle className="w-5 h-5" />
@@ -940,6 +950,7 @@ function MenuPageContent() {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [cartOpen, setCartOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [tableStatus, setTableStatus] = useState<'free' | 'occupied' | 'reserved' | null>(null);
 
   // Get payment status from URL
   const paymentStatus = searchParams.get('payment');
@@ -1013,6 +1024,21 @@ function MenuPageContent() {
           .order('display_order', { ascending: true });
 
         setDeliveryAreas(areasData || []);
+
+        // Fetch table status if table number is present
+        const tableNum = searchParams.get('table');
+        if (tableNum && restaurantData) {
+          const { data: tableData } = await supabase
+            .from('restaurant_tables')
+            .select('status')
+            .eq('restaurant_id', restaurantData.id)
+            .eq('table_number', tableNum)
+            .single();
+          
+          if (tableData) {
+            setTableStatus(tableData.status as any);
+          }
+        }
 
         // Fetch best sellers from orders
         const { data: ordersData } = await supabase
@@ -1159,6 +1185,21 @@ function MenuPageContent() {
     <div className="min-h-screen bg-background pb-40 sm:pb-36">
       {/* Payment Status Indicator */}
       <PaymentStatusIndicator restaurantId={restaurant.id} />
+      
+      {/* Table Status Banner */}
+      {tableStatus && (
+        <div className={`py-2 px-4 text-center text-sm font-medium ${
+          tableStatus === 'free' ? 'bg-success/20 text-success' : 
+          tableStatus === 'occupied' ? 'bg-destructive/20 text-destructive' : 
+          'bg-warning/20 text-warning'
+        }`}>
+          Mesa {searchParams.get('table')}: {
+            tableStatus === 'free' ? 'Disponível' : 
+            tableStatus === 'occupied' ? 'Ocupada' : 
+            'Reservada'
+          }
+        </div>
+      )}
       {/* Header */}
       <div 
         className="gradient-primary"
@@ -1398,6 +1439,7 @@ function MenuPageContent() {
         orderWelcomeMessage={(restaurant as any).order_welcome_message}
         tableNumber={searchParams.get('table')}
         dineInEnabled={restaurant.dine_in_enabled ?? false}
+        tableStatus={tableStatus}
       />
     </div>
   );

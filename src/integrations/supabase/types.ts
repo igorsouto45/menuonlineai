@@ -585,6 +585,7 @@ export type Database = {
           id: string
           is_active: boolean | null
           restaurant_id: string
+          status: string | null
           table_number: string
           updated_at: string | null
         }
@@ -593,6 +594,7 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           restaurant_id: string
+          status?: string | null
           table_number: string
           updated_at?: string | null
         }
@@ -601,6 +603,7 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           restaurant_id?: string
+          status?: string | null
           table_number?: string
           updated_at?: string | null
         }
