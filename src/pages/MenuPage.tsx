@@ -702,7 +702,21 @@ function CartSheet({
                   {/* Delivery Mode Selection */}
                   <div className="pt-4 space-y-3">
                     <h3 className="font-semibold text-foreground">Como deseja receber?</h3>
-                    <div className="grid grid-cols-2 gap-2">
+                    <div className={`grid ${pickupEnabled && dineInEnabled ? 'grid-cols-3' : (pickupEnabled || dineInEnabled ? 'grid-cols-2' : 'grid-cols-1')} gap-2`}>
+                      {dineInEnabled && (
+                        <button
+                          onClick={() => setDeliveryMode('dine-in')}
+                          className={`p-3 rounded-xl border-2 transition-all flex flex-col items-center gap-1 ${
+                            deliveryMode === 'dine-in'
+                              ? 'border-primary bg-primary/10'
+                              : 'border-border hover:border-primary/40'
+                          }`}
+                        >
+                          <TableIcon className="w-5 h-5" />
+                          <span className="text-sm font-medium">Mesa</span>
+                          <span className="text-xs text-muted-foreground">{tableNumber ? `Nº ${tableNumber}` : 'Local'}</span>
+                        </button>
+                      )}
                       {pickupEnabled && (
                         <button
                           onClick={() => setDeliveryMode('pickup')}
@@ -723,12 +737,12 @@ function CartSheet({
                           deliveryMode === 'delivery'
                             ? 'border-primary bg-primary/10'
                             : 'border-border hover:border-primary/40'
-                        } ${!pickupEnabled ? 'col-span-2' : ''}`}
+                        }`}
                       >
                         <Truck className="w-5 h-5" />
                         <span className="text-sm font-medium">Entrega</span>
                         {deliveryAreas.length > 0 ? (
-                          <span className="text-xs text-muted-foreground">Selecione a área</span>
+                          <span className="text-xs text-muted-foreground">Selecione</span>
                         ) : (
                           <span className="text-xs text-muted-foreground">
                             {deliveryFee > 0 ? `R$ ${deliveryFee.toFixed(2)}` : 'Grátis'}
