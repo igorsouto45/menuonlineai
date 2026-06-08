@@ -64,7 +64,9 @@ function formatOrderForPrint(order: Order, restaurantName?: string, config: Prin
   if (order.customer_phone) {
     lines.push(`Telefone: ${order.customer_phone}`);
   }
-  if (order.customer_address) {
+  if (order.table_number) {
+    lines.push(`MESA: ${order.table_number}`);
+  } else if (order.customer_address) {
     lines.push(`Endereco: ${order.customer_address}`);
   }
   lines.push(separator('-', width));
