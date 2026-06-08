@@ -940,6 +940,7 @@ function MenuPageContent() {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [cartOpen, setCartOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [tableStatus, setTableStatus] = useState<'free' | 'occupied' | 'reserved' | null>(null);
 
   // Get payment status from URL
   const paymentStatus = searchParams.get('payment');
