@@ -529,11 +529,13 @@ function CartSheet({
           restaurant_id: restaurantId,
           customer_name: customer.name,
           customer_phone: customer.whatsapp,
-          customer_address: deliveryMode === 'delivery' ? address : 'Retirada no local',
+          customer_address: deliveryMode === 'delivery' ? address : (deliveryMode === 'pickup' ? 'Retirada no local' : `Mesa ${tableNumber}`),
           items: orderItems,
           total: grandTotal,
-          status: 'confirmed', // Payment on delivery goes directly to confirmed
+          status: 'confirmed',
           notes: paymentNote,
+          delivery_mode: deliveryMode,
+          table_number: tableNumber,
         });
 
       if (orderError) throw orderError;
