@@ -468,7 +468,8 @@ function CartSheet({
     mode: deliveryMode,
     deliveryFee, 
     freeDeliveryMinimum,
-    selectedArea: deliveryMode === 'delivery' ? selectedArea : null
+    selectedArea: deliveryMode === 'delivery' ? selectedArea : null,
+    tableNumber: tableNumber
   };
   const actualDeliveryFee = calculateDeliveryFee(deliveryInfo);
   const grandTotal = getGrandTotal(deliveryInfo);
