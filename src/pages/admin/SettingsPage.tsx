@@ -176,6 +176,7 @@ export default function SettingsPage() {
         opening_hours: restaurant.opening_hours || '',
         is_open: restaurant.is_open ?? true,
         pickup_enabled: (restaurant as any).pickup_enabled ?? true,
+        dine_in_enabled: (restaurant as any).dine_in_enabled ?? false,
         delivery_fee: (restaurant as any).delivery_fee || 0,
         free_delivery_minimum: (restaurant as any).free_delivery_minimum || null,
         evolution_api_url: (restaurant as any).evolution_api_url || '',
