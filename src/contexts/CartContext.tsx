@@ -146,7 +146,16 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const getWhatsAppMessage = useCallback(
     (customerAddress?: string, deliveryInfo?: DeliveryInfo, paymentMethod?: PaymentMethod, changeFor?: number | null) => {
       const isPickup = deliveryInfo?.mode === 'pickup';
-      let message = isPickup ? '📦 *Novo Pedido - RETIRADA*\n\n' : '🍕 *Novo Pedido - ENTREGA*\n\n';
+      const isDineIn = deliveryInfo?.mode === 'dine-in';
+      
+      let message = '';
+      if (isDineIn) {
+        message = `🪑 *Novo Pedido - MESA ${deliveryInfo?.tableNumber || '?'}*\n\n`;
+      } else if (isPickup) {
+        message = '📦 *Novo Pedido - RETIRADA*\n\n';
+      } else {
+        message = '🍕 *Novo Pedido - ENTREGA*\n\n';
+      }
 
       items.forEach((item, index) => {
         message += `${index + 1}. *${item.product.name}*`;
