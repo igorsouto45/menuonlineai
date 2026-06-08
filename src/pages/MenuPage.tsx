@@ -32,7 +32,8 @@ import {
   Trash2,
   Banknote,
   Smartphone,
-  Wallet
+  Wallet,
+  Table as TableIcon
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
