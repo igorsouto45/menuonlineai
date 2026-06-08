@@ -1015,6 +1015,21 @@ function MenuPageContent() {
 
         setDeliveryAreas(areasData || []);
 
+        // Fetch table status if table number is present
+        const tableNum = searchParams.get('table');
+        if (tableNum && restaurantData) {
+          const { data: tableData } = await supabase
+            .from('restaurant_tables')
+            .select('status')
+            .eq('restaurant_id', restaurantData.id)
+            .eq('table_number', tableNum)
+            .single();
+          
+          if (tableData) {
+            setTableStatus(tableData.status as any);
+          }
+        }
+
         // Fetch best sellers from orders
         const { data: ordersData } = await supabase
           .from('orders')
