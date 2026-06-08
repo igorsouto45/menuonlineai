@@ -27,6 +27,7 @@ const settingsSchema = z.object({
   opening_hours: z.string().optional(),
   is_open: z.boolean(),
   pickup_enabled: z.boolean(),
+  dine_in_enabled: z.boolean(),
   delivery_fee: z.coerce.number().min(0, 'Taxa não pode ser negativa').optional(),
   free_delivery_minimum: z.coerce.number().min(0, 'Valor não pode ser negativo').nullable().optional(),
   evolution_api_url: z.string().optional(),
