@@ -362,9 +362,12 @@ export default function OrderTrackingPage() {
                   {order.customer_address && (
                     <div className="flex justify-between text-sm">
                       <span className="text-muted-foreground flex items-center gap-1">
-                        <MapPin className="w-3 h-3" /> Endereço:
+                        {order.table_number ? <Clock className="w-3 h-3" /> : <MapPin className="w-3 h-3" />} 
+                        {order.table_number ? 'Mesa:' : 'Endereço:'}
                       </span>
-                      <span className="text-right max-w-[60%]">{order.customer_address}</span>
+                      <span className="text-right max-w-[60%]">
+                        {order.table_number ? `Mesa ${order.table_number}` : order.customer_address}
+                      </span>
                     </div>
                   )}
 
