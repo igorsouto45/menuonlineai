@@ -185,7 +185,9 @@ export function CartProvider({ children }: { children: ReactNode }) {
         const actualDeliveryFee = calculateDeliveryFee(deliveryInfo);
         const grandTotal = total + actualDeliveryFee;
 
-        if (isPickup) {
+        if (isDineIn) {
+          message += `*Forma: CONSUMO NO LOCAL (Mesa ${deliveryInfo.tableNumber})* 🪑\n`;
+        } else if (isPickup) {
           message += `*Forma: RETIRADA NO LOCAL* 📦\n`;
         } else {
           if (deliveryInfo.selectedArea) {
