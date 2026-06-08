@@ -711,14 +711,15 @@ function CartSheet({
                           onClick={() => setDeliveryMode('dine-in')}
                           className={`p-3 rounded-xl border-2 transition-all flex flex-col items-center gap-1 ${
                             deliveryMode === 'dine-in'
-                              ? 'border-primary bg-primary/10'
+                              ? (tableStatus === 'occupied' ? 'border-destructive bg-destructive/10' : 'border-primary bg-primary/10')
                               : 'border-border hover:border-primary/40'
                           }`}
                         >
-                          <TableIcon className="w-5 h-5" />
-                          <span className="text-sm font-medium">Mesa</span>
+                          <TableIcon className={`w-5 h-5 ${tableStatus === 'occupied' ? 'text-destructive' : ''}`} />
+                          <span className={`text-sm font-medium ${tableStatus === 'occupied' ? 'text-destructive' : ''}`}>Mesa</span>
                           <span className="text-xs text-muted-foreground">{tableNumber ? `Nº ${tableNumber}` : 'Local'}</span>
                         </button>
+
                       )}
                       {pickupEnabled && (
                         <button
