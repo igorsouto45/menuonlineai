@@ -1438,6 +1438,7 @@ function MenuPageContent() {
         orderWelcomeMessage={(restaurant as any).order_welcome_message}
         tableNumber={searchParams.get('table')}
         dineInEnabled={restaurant.dine_in_enabled ?? false}
+        tableStatus={tableStatus}
       />
     </div>
   );
