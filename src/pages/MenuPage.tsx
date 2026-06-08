@@ -415,7 +415,9 @@ function CartSheet({
   evolutionApiUrl,
   evolutionApiKey,
   evolutionInstanceName,
-  orderWelcomeMessage
+  orderWelcomeMessage,
+  tableNumber,
+  dineInEnabled
 }: { 
   isOpen: boolean; 
   onClose: () => void;
@@ -430,6 +432,8 @@ function CartSheet({
   evolutionApiKey?: string | null;
   evolutionInstanceName?: string | null;
   orderWelcomeMessage?: string | null;
+  tableNumber?: string | null;
+  dineInEnabled?: boolean;
 }) {
   const { items, total, removeItem, updateQuantity, getWhatsAppMessage, clearCart, calculateDeliveryFee, getGrandTotal } = useCart();
   const { session, user, customer, loadCustomerByRestaurant } = useCustomer();
