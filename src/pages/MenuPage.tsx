@@ -419,7 +419,8 @@ function CartSheet({
   evolutionInstanceName,
   orderWelcomeMessage,
   tableNumber,
-  dineInEnabled
+  dineInEnabled,
+  tableStatus
 }: { 
   isOpen: boolean; 
   onClose: () => void;
@@ -436,6 +437,7 @@ function CartSheet({
   orderWelcomeMessage?: string | null;
   tableNumber?: string | null;
   dineInEnabled?: boolean;
+  tableStatus?: 'free' | 'occupied' | 'reserved' | null;
 }) {
   const { items, total, removeItem, updateQuantity, getWhatsAppMessage, clearCart, calculateDeliveryFee, getGrandTotal } = useCart();
   const { session, user, customer, loadCustomerByRestaurant } = useCustomer();
