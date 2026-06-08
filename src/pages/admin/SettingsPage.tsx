@@ -888,6 +888,19 @@ Agradecemos a preferência! Bom apetite! 😋"
           </div>
         </form>
       </Form>
+
+      {restaurant && (form.watch('dine_in_enabled') || (restaurant as any).dine_in_enabled) && (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, delay: 0.4 }}
+        >
+          <TablesManager 
+            restaurantId={restaurant.id} 
+            restaurantSlug={restaurant.slug} 
+          />
+        </motion.div>
+      )}
     </div>
   );
 }
