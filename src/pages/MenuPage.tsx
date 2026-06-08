@@ -439,10 +439,12 @@ function CartSheet({
   const { session, user, customer, loadCustomerByRestaurant } = useCustomer();
   const { toast } = useToast();
   const [address, setAddress] = useState('');
-  const [deliveryMode, setDeliveryMode] = useState<DeliveryMode>(pickupEnabled ? 'pickup' : 'delivery');
+  const [deliveryMode, setDeliveryMode] = useState<DeliveryMode>(
+    tableNumber ? 'dine-in' : (pickupEnabled ? 'pickup' : 'delivery')
+  );
   const [selectedAreaId, setSelectedAreaId] = useState<string | null>(deliveryAreas.length > 0 ? deliveryAreas[0].id : null);
   const [showAuthModal, setShowAuthModal] = useState(false);
-  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<PaymentMethod>('pix');
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<PaymentMethod>(tableNumber ? 'pix' : 'pix');
   const [changeFor, setChangeFor] = useState<string>('');
 
   // Load customer data when user is logged in
