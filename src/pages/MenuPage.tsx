@@ -913,13 +913,6 @@ function CartSheet({
           </motion.div>
         </motion.div>
       )}
-                    {tableStatus === 'occupied' && (
-                      <div className="bg-destructive/10 border border-destructive/20 p-3 rounded-xl mb-4 text-center">
-                        <p className="text-sm text-destructive font-medium">
-                          Esta mesa está marcada como ocupada no sistema.
-                        </p>
-                      </div>
-                    )}
 
       {/* Customer Auth Modal */}
       <CustomerAuthModal
