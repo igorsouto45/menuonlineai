@@ -203,10 +203,19 @@ export function TablesManager({ restaurantId, restaurantSlug }: { restaurantId: 
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold">
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center text-primary font-bold ${
+                      table.status === 'free' ? 'bg-success/10 text-success' : 
+                      table.status === 'occupied' ? 'bg-destructive/10 text-destructive' : 
+                      'bg-warning/10 text-warning'
+                    }`}>
                       {table.table_number}
                     </div>
-                    <span className="font-semibold text-lg">Mesa {table.table_number}</span>
+                    <div className="flex flex-col">
+                      <span className="font-semibold text-lg leading-none">Mesa {table.table_number}</span>
+                      <span className="text-xs text-muted-foreground mt-1">
+                        {table.status === 'free' ? 'Livre' : table.status === 'occupied' ? 'Ocupada' : 'Reservada'}
+                      </span>
+                    </div>
                   </div>
                   <Button 
                     variant="ghost" 
@@ -216,6 +225,23 @@ export function TablesManager({ restaurantId, restaurantSlug }: { restaurantId: 
                   >
                     <Trash2 className="w-4 h-4" />
                   </Button>
+                </div>
+
+                <div className="flex gap-2">
+                  <Select
+                    value={table.status}
+                    onValueChange={(value: any) => handleStatusChange(table.id, value)}
+                    disabled={updating === table.id}
+                  >
+                    <SelectTrigger className="h-9">
+                      <SelectValue placeholder="Status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="free">Livre</SelectItem>
+                      <SelectItem value="occupied">Ocupada</SelectItem>
+                      <SelectItem value="reserved">Reservada</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
 
                 <div className="flex flex-col items-center bg-white p-4 rounded-lg">
