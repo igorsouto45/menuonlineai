@@ -20,11 +20,20 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { QRCodeSVG } from 'qrcode.react';
+import { Badge } from '@/components/ui/badge';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface RestaurantTable {
   id: string;
   table_number: string;
   is_active: boolean;
+  status: 'free' | 'occupied' | 'reserved';
 }
 
 export function TablesManager({ restaurantId, restaurantSlug }: { restaurantId: string; restaurantSlug: string }) {
