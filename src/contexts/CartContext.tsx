@@ -60,8 +60,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const calculateDeliveryFee = useCallback((deliveryInfo: DeliveryInfo): number => {
     const { mode, deliveryFee, freeDeliveryMinimum, selectedArea } = deliveryInfo;
     
-    // Pickup is always free
-    if (mode === 'pickup') {
+    // Pickup and Dine-in are always free
+    if (mode === 'pickup' || mode === 'dine-in') {
       return 0;
     }
     
