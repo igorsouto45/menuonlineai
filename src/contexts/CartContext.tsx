@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useCallback, ReactNode } from 'react';
 import { CartItem, Product, ProductVariation, ProductAdditional } from '@/lib/types';
 
-export type DeliveryMode = 'delivery' | 'pickup';
+export type DeliveryMode = 'delivery' | 'pickup' | 'dine-in';
 
 interface DeliveryArea {
   id: string;
@@ -14,6 +14,7 @@ interface DeliveryInfo {
   deliveryFee: number;
   freeDeliveryMinimum: number | null;
   selectedArea?: DeliveryArea | null;
+  tableNumber?: string | null;
 }
 
 export type PaymentMethod = 'credit' | 'debit' | 'cash' | 'pix';
@@ -59,8 +60,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const calculateDeliveryFee = useCallback((deliveryInfo: DeliveryInfo): number => {
     const { mode, deliveryFee, freeDeliveryMinimum, selectedArea } = deliveryInfo;
     
-    // Pickup is always free
-    if (mode === 'pickup') {
+    // Pickup and Dine-in are always free
+    if (mode === 'pickup' || mode === 'dine-in') {
       return 0;
     }
     
@@ -145,7 +146,16 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const getWhatsAppMessage = useCallback(
     (customerAddress?: string, deliveryInfo?: DeliveryInfo, paymentMethod?: PaymentMethod, changeFor?: number | null) => {
       const isPickup = deliveryInfo?.mode === 'pickup';
-      let message = isPickup ? '📦 *Novo Pedido - RETIRADA*\n\n' : '🍕 *Novo Pedido - ENTREGA*\n\n';
+      const isDineIn = deliveryInfo?.mode === 'dine-in';
+      
+      let message = '';
+      if (isDineIn) {
+        message = `🪑 *Novo Pedido - MESA ${deliveryInfo?.tableNumber || '?'}*\n\n`;
+      } else if (isPickup) {
+        message = '📦 *Novo Pedido - RETIRADA*\n\n';
+      } else {
+        message = '🍕 *Novo Pedido - ENTREGA*\n\n';
+      }
 
       items.forEach((item, index) => {
         message += `${index + 1}. *${item.product.name}*`;
@@ -175,7 +185,9 @@ export function CartProvider({ children }: { children: ReactNode }) {
         const actualDeliveryFee = calculateDeliveryFee(deliveryInfo);
         const grandTotal = total + actualDeliveryFee;
 
-        if (isPickup) {
+        if (isDineIn) {
+          message += `*Forma: CONSUMO NO LOCAL (Mesa ${deliveryInfo.tableNumber})* 🪑\n`;
+        } else if (isPickup) {
           message += `*Forma: RETIRADA NO LOCAL* 📦\n`;
         } else {
           if (deliveryInfo.selectedArea) {

@@ -58,9 +58,16 @@ function OrderCard({ order, isDragging, restaurantName }: { order: Order; isDrag
         transition-all duration-200`}
     >
       <div className="flex items-center justify-between mb-2">
-        <span className="font-semibold text-sm">
-          #{order.id.slice(0, 8).toUpperCase()}
-        </span>
+        <div className="flex items-center gap-2">
+          <span className="font-semibold text-sm">
+            #{order.id.slice(0, 8).toUpperCase()}
+          </span>
+          {order.table_number && (
+            <Badge className="bg-primary hover:bg-primary/90 text-[10px] h-5 px-1.5 uppercase font-bold">
+              Mesa {order.table_number}
+            </Badge>
+          )}
+        </div>
         <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={handlePrint}>
           <Printer className="w-3 h-3" />
         </Button>

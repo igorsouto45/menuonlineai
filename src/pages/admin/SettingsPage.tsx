@@ -13,10 +13,11 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Switch } from '@/components/ui/switch';
-import { Loader2, Save, Store, Clock, MapPin, Phone, MessageSquare, Bot, Copy, Check, Wifi, WifiOff, Truck, Link, ExternalLink, Package, CreditCard } from 'lucide-react';
+import { Loader2, Save, Store, Clock, MapPin, Phone, MessageSquare, Bot, Copy, Check, Wifi, WifiOff, Truck, Link, ExternalLink, Package, CreditCard, Table as TableIcon } from 'lucide-react';
 import ImageUpload from '@/components/admin/ImageUpload';
 import { DeliveryAreasManager } from '@/components/admin/DeliveryAreasManager';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { TablesManager } from '@/components/admin/TablesManager';
 
 const settingsSchema = z.object({
   name: z.string().min(2, 'Nome deve ter pelo menos 2 caracteres'),
@@ -27,6 +28,7 @@ const settingsSchema = z.object({
   opening_hours: z.string().optional(),
   is_open: z.boolean(),
   pickup_enabled: z.boolean(),
+  dine_in_enabled: z.boolean(),
   delivery_fee: z.coerce.number().min(0, 'Taxa não pode ser negativa').optional(),
   free_delivery_minimum: z.coerce.number().min(0, 'Valor não pode ser negativo').nullable().optional(),
   evolution_api_url: z.string().optional(),
@@ -151,6 +153,7 @@ export default function SettingsPage() {
       opening_hours: '',
       is_open: true,
       pickup_enabled: true,
+      dine_in_enabled: false,
       delivery_fee: 0,
       free_delivery_minimum: null,
       evolution_api_url: '',
@@ -174,6 +177,7 @@ export default function SettingsPage() {
         opening_hours: restaurant.opening_hours || '',
         is_open: restaurant.is_open ?? true,
         pickup_enabled: (restaurant as any).pickup_enabled ?? true,
+        dine_in_enabled: (restaurant as any).dine_in_enabled ?? false,
         delivery_fee: (restaurant as any).delivery_fee || 0,
         free_delivery_minimum: (restaurant as any).free_delivery_minimum || null,
         evolution_api_url: (restaurant as any).evolution_api_url || '',
@@ -482,6 +486,31 @@ export default function SettingsPage() {
                     </FormItem>
                   )}
                 />
+                {/* Dine-in option */}
+                <FormField
+                  control={form.control}
+                  name="dine_in_enabled"
+                  render={({ field }) => (
+                    <FormItem className="flex items-center justify-between rounded-lg border p-4">
+                      <div className="space-y-0.5">
+                        <FormLabel className="text-base flex items-center gap-2">
+                          <TableIcon className="w-4 h-4" />
+                          Consumo no Local (Mesas)
+                        </FormLabel>
+                        <FormDescription>
+                          Permite que clientes façam pedidos das mesas via QR Code
+                        </FormDescription>
+                      </div>
+                      <FormControl>
+                        <Switch
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                        />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+
 
                 {/* Default delivery fee */}
                 <FormField
@@ -859,6 +888,19 @@ Agradecemos a preferência! Bom apetite! 😋"
           </div>
         </form>
       </Form>
+
+      {restaurant && (form.watch('dine_in_enabled') || (restaurant as any).dine_in_enabled) && (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, delay: 0.4 }}
+        >
+          <TablesManager 
+            restaurantId={restaurant.id} 
+            restaurantSlug={restaurant.slug} 
+          />
+        </motion.div>
+      )}
     </div>
   );
 }

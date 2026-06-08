@@ -152,11 +152,13 @@ export type Database = {
           customer_address: string | null
           customer_name: string | null
           customer_phone: string | null
+          delivery_mode: string | null
           id: string
           items: Json
           notes: string | null
           restaurant_id: string
           status: Database["public"]["Enums"]["order_status"] | null
+          table_number: string | null
           total: number
           updated_at: string
         }
@@ -165,11 +167,13 @@ export type Database = {
           customer_address?: string | null
           customer_name?: string | null
           customer_phone?: string | null
+          delivery_mode?: string | null
           id?: string
           items: Json
           notes?: string | null
           restaurant_id: string
           status?: Database["public"]["Enums"]["order_status"] | null
+          table_number?: string | null
           total: number
           updated_at?: string
         }
@@ -178,11 +182,13 @@ export type Database = {
           customer_address?: string | null
           customer_name?: string | null
           customer_phone?: string | null
+          delivery_mode?: string | null
           id?: string
           items?: Json
           notes?: string | null
           restaurant_id?: string
           status?: Database["public"]["Enums"]["order_status"] | null
+          table_number?: string | null
           total?: number
           updated_at?: string
         }
@@ -573,6 +579,41 @@ export type Database = {
           },
         ]
       }
+      restaurant_tables: {
+        Row: {
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          restaurant_id: string
+          table_number: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          restaurant_id: string
+          table_number: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          restaurant_id?: string
+          table_number?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "restaurant_tables_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       restaurants: {
         Row: {
           address: string | null
@@ -581,6 +622,7 @@ export type Database = {
           created_at: string
           delivery_fee: number | null
           description: string | null
+          dine_in_enabled: boolean | null
           evolution_api_key: string | null
           evolution_api_url: string | null
           evolution_instance_name: string | null
@@ -610,6 +652,7 @@ export type Database = {
           created_at?: string
           delivery_fee?: number | null
           description?: string | null
+          dine_in_enabled?: boolean | null
           evolution_api_key?: string | null
           evolution_api_url?: string | null
           evolution_instance_name?: string | null
@@ -639,6 +682,7 @@ export type Database = {
           created_at?: string
           delivery_fee?: number | null
           description?: string | null
+          dine_in_enabled?: boolean | null
           evolution_api_key?: string | null
           evolution_api_url?: string | null
           evolution_instance_name?: string | null

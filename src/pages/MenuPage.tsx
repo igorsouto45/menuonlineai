@@ -32,7 +32,8 @@ import {
   Trash2,
   Banknote,
   Smartphone,
-  Wallet
+  Wallet,
+  Table as TableIcon
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
@@ -58,6 +59,7 @@ interface Restaurant {
   delivery_fee: number | null;
   free_delivery_minimum: number | null;
   pickup_enabled: boolean | null;
+  dine_in_enabled: boolean | null;
   mercado_pago_enabled: boolean | null;
   mercado_pago_public_key: string | null;
 }
@@ -415,7 +417,9 @@ function CartSheet({
   evolutionApiUrl,
   evolutionApiKey,
   evolutionInstanceName,
-  orderWelcomeMessage
+  orderWelcomeMessage,
+  tableNumber,
+  dineInEnabled
 }: { 
   isOpen: boolean; 
   onClose: () => void;
@@ -430,15 +434,19 @@ function CartSheet({
   evolutionApiKey?: string | null;
   evolutionInstanceName?: string | null;
   orderWelcomeMessage?: string | null;
+  tableNumber?: string | null;
+  dineInEnabled?: boolean;
 }) {
   const { items, total, removeItem, updateQuantity, getWhatsAppMessage, clearCart, calculateDeliveryFee, getGrandTotal } = useCart();
   const { session, user, customer, loadCustomerByRestaurant } = useCustomer();
   const { toast } = useToast();
   const [address, setAddress] = useState('');
-  const [deliveryMode, setDeliveryMode] = useState<DeliveryMode>(pickupEnabled ? 'pickup' : 'delivery');
+  const [deliveryMode, setDeliveryMode] = useState<DeliveryMode>(
+    tableNumber ? 'dine-in' : (pickupEnabled ? 'pickup' : 'delivery')
+  );
   const [selectedAreaId, setSelectedAreaId] = useState<string | null>(deliveryAreas.length > 0 ? deliveryAreas[0].id : null);
   const [showAuthModal, setShowAuthModal] = useState(false);
-  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<PaymentMethod>('pix');
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<PaymentMethod>(tableNumber ? 'pix' : 'pix');
   const [changeFor, setChangeFor] = useState<string>('');
 
   // Load customer data when user is logged in
@@ -462,7 +470,8 @@ function CartSheet({
     mode: deliveryMode,
     deliveryFee, 
     freeDeliveryMinimum,
-    selectedArea: deliveryMode === 'delivery' ? selectedArea : null
+    selectedArea: deliveryMode === 'delivery' ? selectedArea : null,
+    tableNumber: tableNumber
   };
   const actualDeliveryFee = calculateDeliveryFee(deliveryInfo);
   const grandTotal = getGrandTotal(deliveryInfo);
@@ -522,11 +531,13 @@ function CartSheet({
           restaurant_id: restaurantId,
           customer_name: customer.name,
           customer_phone: customer.whatsapp,
-          customer_address: deliveryMode === 'delivery' ? address : 'Retirada no local',
+          customer_address: deliveryMode === 'delivery' ? address : (deliveryMode === 'pickup' ? 'Retirada no local' : `Mesa ${tableNumber}`),
           items: orderItems,
           total: grandTotal,
-          status: 'confirmed', // Payment on delivery goes directly to confirmed
+          status: 'confirmed',
           notes: paymentNote,
+          delivery_mode: deliveryMode,
+          table_number: tableNumber,
         });
 
       if (orderError) throw orderError;
@@ -692,7 +703,21 @@ function CartSheet({
                   {/* Delivery Mode Selection */}
                   <div className="pt-4 space-y-3">
                     <h3 className="font-semibold text-foreground">Como deseja receber?</h3>
-                    <div className="grid grid-cols-2 gap-2">
+                    <div className={`grid ${pickupEnabled && dineInEnabled ? 'grid-cols-3' : (pickupEnabled || dineInEnabled ? 'grid-cols-2' : 'grid-cols-1')} gap-2`}>
+                      {dineInEnabled && (
+                        <button
+                          onClick={() => setDeliveryMode('dine-in')}
+                          className={`p-3 rounded-xl border-2 transition-all flex flex-col items-center gap-1 ${
+                            deliveryMode === 'dine-in'
+                              ? 'border-primary bg-primary/10'
+                              : 'border-border hover:border-primary/40'
+                          }`}
+                        >
+                          <TableIcon className="w-5 h-5" />
+                          <span className="text-sm font-medium">Mesa</span>
+                          <span className="text-xs text-muted-foreground">{tableNumber ? `Nº ${tableNumber}` : 'Local'}</span>
+                        </button>
+                      )}
                       {pickupEnabled && (
                         <button
                           onClick={() => setDeliveryMode('pickup')}
@@ -713,12 +738,12 @@ function CartSheet({
                           deliveryMode === 'delivery'
                             ? 'border-primary bg-primary/10'
                             : 'border-border hover:border-primary/40'
-                        } ${!pickupEnabled ? 'col-span-2' : ''}`}
+                        }`}
                       >
                         <Truck className="w-5 h-5" />
                         <span className="text-sm font-medium">Entrega</span>
                         {deliveryAreas.length > 0 ? (
-                          <span className="text-xs text-muted-foreground">Selecione a área</span>
+                          <span className="text-xs text-muted-foreground">Selecione</span>
                         ) : (
                           <span className="text-xs text-muted-foreground">
                             {deliveryFee > 0 ? `R$ ${deliveryFee.toFixed(2)}` : 'Grátis'}
@@ -1371,6 +1396,8 @@ function MenuPageContent() {
         evolutionApiKey={(restaurant as any).evolution_api_key}
         evolutionInstanceName={(restaurant as any).evolution_instance_name}
         orderWelcomeMessage={(restaurant as any).order_welcome_message}
+        tableNumber={searchParams.get('table')}
+        dineInEnabled={restaurant.dine_in_enabled ?? false}
       />
     </div>
   );
