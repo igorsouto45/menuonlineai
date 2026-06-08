@@ -17,6 +17,7 @@ import { Loader2, Save, Store, Clock, MapPin, Phone, MessageSquare, Bot, Copy, C
 import ImageUpload from '@/components/admin/ImageUpload';
 import { DeliveryAreasManager } from '@/components/admin/DeliveryAreasManager';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { TablesManager } from '@/components/admin/TablesManager';
 
 const settingsSchema = z.object({
   name: z.string().min(2, 'Nome deve ter pelo menos 2 caracteres'),
