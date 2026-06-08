@@ -485,6 +485,31 @@ export default function SettingsPage() {
                     </FormItem>
                   )}
                 />
+                {/* Dine-in option */}
+                <FormField
+                  control={form.control}
+                  name="dine_in_enabled"
+                  render={({ field }) => (
+                    <FormItem className="flex items-center justify-between rounded-lg border p-4">
+                      <div className="space-y-0.5">
+                        <FormLabel className="text-base flex items-center gap-2">
+                          <TableIcon className="w-4 h-4" />
+                          Consumo no Local (Mesas)
+                        </FormLabel>
+                        <FormDescription>
+                          Permite que clientes façam pedidos das mesas via QR Code
+                        </FormDescription>
+                      </div>
+                      <FormControl>
+                        <Switch
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                        />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+
 
                 {/* Default delivery fee */}
                 <FormField
