@@ -896,7 +896,14 @@ function CartSheet({
                     <span className="text-2xl font-bold text-primary">R$ {grandTotal.toFixed(2)}</span>
                   </div>
                 </div>
-                
+                  {tableStatus === 'occupied' && (
+                    <div className="bg-destructive/10 border border-destructive/20 p-3 rounded-xl mb-4 text-center">
+                      <p className="text-sm text-destructive font-medium">
+                        Esta mesa está marcada como ocupada no sistema.
+                      </p>
+                    </div>
+                  )}
+
                 {user ? (
                   <Button variant="whatsapp" size="xl" className="w-full" onClick={handleSendWhatsApp}>
                     <MessageCircle className="w-5 h-5" />
