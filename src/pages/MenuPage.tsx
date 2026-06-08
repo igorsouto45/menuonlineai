@@ -1175,6 +1175,21 @@ function MenuPageContent() {
     <div className="min-h-screen bg-background pb-40 sm:pb-36">
       {/* Payment Status Indicator */}
       <PaymentStatusIndicator restaurantId={restaurant.id} />
+      
+      {/* Table Status Banner */}
+      {tableStatus && (
+        <div className={`py-2 px-4 text-center text-sm font-medium ${
+          tableStatus === 'free' ? 'bg-success/20 text-success' : 
+          tableStatus === 'occupied' ? 'bg-destructive/20 text-destructive' : 
+          'bg-warning/20 text-warning'
+        }`}>
+          Mesa {searchParams.get('table')}: {
+            tableStatus === 'free' ? 'Disponível' : 
+            tableStatus === 'occupied' ? 'Ocupada' : 
+            'Reservada'
+          }
+        </div>
+      )}
       {/* Header */}
       <div 
         className="gradient-primary"
