@@ -13,7 +13,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Switch } from '@/components/ui/switch';
-import { Loader2, Save, Store, Clock, MapPin, Phone, MessageSquare, Bot, Copy, Check, Wifi, WifiOff, Truck, Link, ExternalLink, Package, CreditCard } from 'lucide-react';
+import { Loader2, Save, Store, Clock, MapPin, Phone, MessageSquare, Bot, Copy, Check, Wifi, WifiOff, Truck, Link, ExternalLink, Package, CreditCard, Table as TableIcon } from 'lucide-react';
 import ImageUpload from '@/components/admin/ImageUpload';
 import { DeliveryAreasManager } from '@/components/admin/DeliveryAreasManager';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
