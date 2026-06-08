@@ -41,6 +41,7 @@ export function TablesManager({ restaurantId, restaurantSlug }: { restaurantId: 
   const [newTableNumber, setNewTableNumber] = useState('');
   const [loading, setLoading] = useState(true);
   const [adding, setAdding] = useState(false);
+  const [updating, setUpdating] = useState<string | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -57,7 +58,7 @@ export function TablesManager({ restaurantId, restaurantSlug }: { restaurantId: 
         .order('table_number');
 
       if (error) throw error;
-      setTables(data || []);
+      setTables((data || []) as RestaurantTable[]);
     } catch (error: any) {
       toast({
         title: "Erro ao carregar mesas",
