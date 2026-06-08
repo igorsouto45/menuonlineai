@@ -152,6 +152,7 @@ export default function SettingsPage() {
       opening_hours: '',
       is_open: true,
       pickup_enabled: true,
+      dine_in_enabled: false,
       delivery_fee: 0,
       free_delivery_minimum: null,
       evolution_api_url: '',
