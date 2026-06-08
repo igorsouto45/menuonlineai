@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useCallback, ReactNode } from 'react';
 import { CartItem, Product, ProductVariation, ProductAdditional } from '@/lib/types';
 
-export type DeliveryMode = 'delivery' | 'pickup';
+export type DeliveryMode = 'delivery' | 'pickup' | 'dine-in';
 
 interface DeliveryArea {
   id: string;
@@ -14,6 +14,7 @@ interface DeliveryInfo {
   deliveryFee: number;
   freeDeliveryMinimum: number | null;
   selectedArea?: DeliveryArea | null;
+  tableNumber?: string | null;
 }
 
 export type PaymentMethod = 'credit' | 'debit' | 'cash' | 'pix';
