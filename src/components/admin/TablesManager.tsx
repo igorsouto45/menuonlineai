@@ -86,7 +86,7 @@ export function TablesManager({ restaurantId, restaurantSlug }: { restaurantId: 
 
       if (error) throw error;
 
-      setTables([...tables, data].sort((a, b) => a.table_number.localeCompare(b.table_number)));
+      setTables([...tables, data as RestaurantTable].sort((a, b) => a.table_number.localeCompare(b.table_number)));
       setNewTableNumber('');
       toast({
         title: "Mesa adicionada",
@@ -100,6 +100,34 @@ export function TablesManager({ restaurantId, restaurantSlug }: { restaurantId: 
       });
     } finally {
       setAdding(false);
+    }
+  };
+
+  const handleStatusChange = async (tableId: string, newStatus: 'free' | 'occupied' | 'reserved') => {
+    try {
+      setUpdating(tableId);
+      const { error } = await supabase
+        .from('restaurant_tables')
+        .update({ status: newStatus })
+        .eq('id', tableId);
+
+      if (error) throw error;
+
+      setTables(tables.map(t => t.id === tableId ? { ...t, status: newStatus } : t));
+      toast({
+        title: "Status atualizado",
+        description: `Mesa marcada como ${
+          newStatus === 'free' ? 'livre' : newStatus === 'occupied' ? 'ocupada' : 'reservada'
+        }.`,
+      });
+    } catch (error: any) {
+      toast({
+        title: "Erro ao atualizar status",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setUpdating(null);
     }
   };
 
