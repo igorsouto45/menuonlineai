@@ -58,6 +58,7 @@ interface Restaurant {
   delivery_fee: number | null;
   free_delivery_minimum: number | null;
   pickup_enabled: boolean | null;
+  dine_in_enabled: boolean | null;
   mercado_pago_enabled: boolean | null;
   mercado_pago_public_key: string | null;
 }
