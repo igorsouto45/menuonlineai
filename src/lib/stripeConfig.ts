@@ -26,8 +26,8 @@ export const STRIPE_PLANS = {
   pro: {
     name: 'Pro',
     price: 99.97,
-    product_id: 'prod_TcvjFCGuMBn60j',
-    price_id: 'price_1Sffs9AMYs4ogTEfLtIMap5s',
+    product_id: 'prod_UgGZt1zi960lwW',
+    price_id: 'price_1Tgu2CAMYs4ogTEfspctoOLI',
     features: [
       '1 restaurante',
       'Produtos ilimitados',
