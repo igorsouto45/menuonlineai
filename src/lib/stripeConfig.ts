@@ -3,8 +3,8 @@ export const STRIPE_PLANS = {
   basic: {
     name: 'Básico',
     price: 39.97,
-    product_id: 'prod_Tcvij4YuTVtUAN',
-    price_id: 'price_1SffqfAMYs4ogTEf5QHLMr57',
+    product_id: 'prod_UgGYk0BfQmBZtZ',
+    price_id: 'price_1Tgu1qAMYs4ogTEfeIjoXy2F',
     features: [
       '1 restaurante',
       'Até 30 produtos',
