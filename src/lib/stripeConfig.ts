@@ -51,8 +51,8 @@ export const STRIPE_PLANS = {
   premium: {
     name: 'Premium',
     price: 199.97,
-    product_id: 'prod_TcvkEEm1Z6eRIG',
-    price_id: 'price_1SffstAMYs4ogTEflDAdClP1',
+    product_id: 'prod_UgGaBN58P62tsq',
+    price_id: 'price_1Tgu3fAMYs4ogTEfxiLkaPjx',
     features: [
       '1 restaurante',
       'Tudo do PRO',
