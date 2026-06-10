@@ -3,8 +3,8 @@ export const STRIPE_PLANS = {
   basic: {
     name: 'Básico',
     price: 39.97,
-    product_id: 'prod_Tcvij4YuTVtUAN',
-    price_id: 'price_1SffqfAMYs4ogTEf5QHLMr57',
+    product_id: 'prod_UgGYk0BfQmBZtZ',
+    price_id: 'price_1Tgu1qAMYs4ogTEfeIjoXy2F',
     features: [
       '1 restaurante',
       'Até 30 produtos',
@@ -26,8 +26,8 @@ export const STRIPE_PLANS = {
   pro: {
     name: 'Pro',
     price: 99.97,
-    product_id: 'prod_TcvjFCGuMBn60j',
-    price_id: 'price_1Sffs9AMYs4ogTEfLtIMap5s',
+    product_id: 'prod_UgGZt1zi960lwW',
+    price_id: 'price_1Tgu2CAMYs4ogTEfspctoOLI',
     features: [
       '1 restaurante',
       'Produtos ilimitados',
@@ -51,8 +51,8 @@ export const STRIPE_PLANS = {
   premium: {
     name: 'Premium',
     price: 199.97,
-    product_id: 'prod_TcvkEEm1Z6eRIG',
-    price_id: 'price_1SffstAMYs4ogTEflDAdClP1',
+    product_id: 'prod_UgGaBN58P62tsq',
+    price_id: 'price_1Tgu3fAMYs4ogTEfxiLkaPjx',
     features: [
       '1 restaurante',
       'Tudo do PRO',
