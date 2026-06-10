@@ -39,9 +39,7 @@ export function CashFlowDashboard({ restaurantId }: CashFlowDashboardProps) {
     async function loadCashFlowData() {
       // Get products with cost prices
       const { data: productsData } = await supabase
-        .from('products')
-        .select('id, name, price, cost_price')
-        .eq('restaurant_id', restaurantId);
+        .rpc('get_my_products', { p_restaurant_id: restaurantId });
 
       const productCosts: Record<string, { price: number; cost: number }> = {};
       productsData?.forEach(p => {
