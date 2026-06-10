@@ -35,9 +35,6 @@ const settingsSchema = z.object({
   evolution_api_key: z.string().optional(),
   evolution_instance_name: z.string().optional(),
   order_welcome_message: z.string().optional(),
-  mercado_pago_enabled: z.boolean(),
-  mercado_pago_access_token: z.string().optional(),
-  mercado_pago_public_key: z.string().optional(),
 });
 
 type SettingsFormData = z.infer<typeof settingsSchema>;
@@ -160,9 +157,6 @@ export default function SettingsPage() {
       evolution_api_key: '',
       evolution_instance_name: '',
       order_welcome_message: '',
-      mercado_pago_enabled: false,
-      mercado_pago_access_token: '',
-      mercado_pago_public_key: '',
     },
   });
 
@@ -184,9 +178,6 @@ export default function SettingsPage() {
         evolution_api_key: (restaurant as any).evolution_api_key || '',
         evolution_instance_name: (restaurant as any).evolution_instance_name || '',
         order_welcome_message: (restaurant as any).order_welcome_message || '',
-        mercado_pago_enabled: (restaurant as any).mercado_pago_enabled ?? false,
-        mercado_pago_access_token: (restaurant as any).mercado_pago_access_token || '',
-        mercado_pago_public_key: (restaurant as any).mercado_pago_public_key || '',
       });
       setLogoUrl(restaurant.logo_url);
     }
