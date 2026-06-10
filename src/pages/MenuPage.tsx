@@ -976,7 +976,7 @@ function MenuPageContent() {
         // Fetch restaurant
         const { data: restaurantData, error: restaurantError } = await supabase
           .from('restaurants')
-          .select('*')
+          .select('id, owner_id, name, slug, description, logo_url, cover_url, whatsapp, address, opening_hours, is_open, primary_color, secondary_color, font_family, created_at, updated_at, delivery_fee, free_delivery_minimum, pickup_enabled, order_welcome_message, dine_in_enabled')
           .eq('slug', slug)
           .maybeSingle();
 
