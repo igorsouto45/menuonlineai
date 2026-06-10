@@ -2,7 +2,7 @@
 export const STRIPE_PLANS = {
   basic: {
     name: 'Básico',
-    price: 19,
+    price: 39.97,
     product_id: 'prod_Tcvij4YuTVtUAN',
     price_id: 'price_1SffqfAMYs4ogTEf5QHLMr57',
     features: [
@@ -25,7 +25,7 @@ export const STRIPE_PLANS = {
   },
   pro: {
     name: 'Pro',
-    price: 29,
+    price: 99.97,
     product_id: 'prod_TcvjFCGuMBn60j',
     price_id: 'price_1Sffs9AMYs4ogTEfLtIMap5s',
     features: [
@@ -50,7 +50,7 @@ export const STRIPE_PLANS = {
   },
   premium: {
     name: 'Premium',
-    price: 49,
+    price: 199.97,
     product_id: 'prod_TcvkEEm1Z6eRIG',
     price_id: 'price_1SffstAMYs4ogTEflDAdClP1',
     features: [
