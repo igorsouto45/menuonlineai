@@ -634,9 +634,6 @@ export type Database = {
           id: string
           is_open: boolean | null
           logo_url: string | null
-          mercado_pago_access_token: string | null
-          mercado_pago_enabled: boolean | null
-          mercado_pago_public_key: string | null
           name: string
           opening_hours: string | null
           order_welcome_message: string | null
@@ -664,9 +661,6 @@ export type Database = {
           id?: string
           is_open?: boolean | null
           logo_url?: string | null
-          mercado_pago_access_token?: string | null
-          mercado_pago_enabled?: boolean | null
-          mercado_pago_public_key?: string | null
           name: string
           opening_hours?: string | null
           order_welcome_message?: string | null
@@ -694,9 +688,6 @@ export type Database = {
           id?: string
           is_open?: boolean | null
           logo_url?: string | null
-          mercado_pago_access_token?: string | null
-          mercado_pago_enabled?: boolean | null
-          mercado_pago_public_key?: string | null
           name?: string
           opening_hours?: string | null
           order_welcome_message?: string | null
@@ -784,6 +775,68 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_my_products: {
+        Args: { p_restaurant_id: string }
+        Returns: {
+          category_id: string
+          cost_price: number | null
+          created_at: string
+          current_stock: number | null
+          description: string | null
+          featured_order: number | null
+          id: string
+          image_url: string | null
+          is_active: boolean | null
+          is_featured: boolean | null
+          min_stock: number | null
+          name: string
+          price: number
+          restaurant_id: string
+          updated_at: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "products"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      get_my_restaurant: {
+        Args: never
+        Returns: {
+          address: string | null
+          cover_url: string | null
+          cpf_cnpj: string | null
+          created_at: string
+          delivery_fee: number | null
+          description: string | null
+          dine_in_enabled: boolean | null
+          evolution_api_key: string | null
+          evolution_api_url: string | null
+          evolution_instance_name: string | null
+          font_family: string | null
+          free_delivery_minimum: number | null
+          id: string
+          is_open: boolean | null
+          logo_url: string | null
+          name: string
+          opening_hours: string | null
+          order_welcome_message: string | null
+          owner_id: string
+          pickup_enabled: boolean | null
+          primary_color: string | null
+          secondary_color: string | null
+          slug: string
+          updated_at: string
+          whatsapp: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "restaurants"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
