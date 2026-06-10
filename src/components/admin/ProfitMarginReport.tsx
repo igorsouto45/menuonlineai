@@ -32,13 +32,12 @@ export function ProfitMarginReport({ restaurantId }: ProfitMarginReportProps) {
   useEffect(() => {
     async function loadProducts() {
       const { data, error } = await supabase
-        .from('products')
-        .select('id, name, price, cost_price')
-        .eq('restaurant_id', restaurantId)
-        .eq('is_active', true);
+        .rpc('get_my_products', { p_restaurant_id: restaurantId });
 
-      if (!error && data) {
-        const productsWithMargin = data.map(p => {
+      const activeData = (data ?? []).filter((p: any) => p.is_active);
+
+      if (!error && activeData) {
+        const productsWithMargin = activeData.map((p: any) => {
           const price = Number(p.price) || 0;
           const cost = Number(p.cost_price) || 0;
           const margin = price - cost;

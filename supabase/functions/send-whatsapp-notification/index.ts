@@ -1,22 +1,25 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-interface OrderNotification {
+interface RequestBody {
   orderId?: string;
+  restaurantId?: string;
   customerPhone: string;
   customerName?: string;
   status: string;
   restaurantName?: string;
   orderTotal?: number;
   customMessage?: string;
-  // Evolution API credentials from restaurant settings
+  // Legacy: still accepted but ignored if restaurantId is provided
   evolutionApiUrl?: string;
   evolutionApiKey?: string;
   evolutionInstanceName?: string;
+  baseUrl?: string;
 }
 
 const statusMessages: Record<string, string> = {
@@ -29,48 +32,17 @@ const statusMessages: Record<string, string> = {
   cancelled: '❌ Infelizmente seu pedido foi *cancelado*. Entre em contato para mais informações.',
 };
 
-interface RequestBody extends OrderNotification {
-  baseUrl?: string;
-}
-
 serve(async (req) => {
-  // Handle CORS preflight
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const { 
-      orderId, 
-      customerPhone, 
-      customerName, 
-      status, 
-      restaurantName, 
-      orderTotal,
-      customMessage,
-      evolutionApiUrl,
-      evolutionApiKey,
-      evolutionInstanceName,
-      baseUrl
-    }: RequestBody = await req.json();
-
-    // Use credentials from request or fall back to environment variables
-    const rawEvolutionApiUrl = evolutionApiUrl || Deno.env.get('EVOLUTION_API_URL');
-    const EVOLUTION_API_KEY = evolutionApiKey || Deno.env.get('EVOLUTION_API_KEY');
-    const EVOLUTION_INSTANCE_NAME = evolutionInstanceName || Deno.env.get('EVOLUTION_INSTANCE_NAME');
-
-    // Normalize base URL (restaurant settings sometimes include "/manager")
-    const EVOLUTION_API_URL = rawEvolutionApiUrl
-      ? rawEvolutionApiUrl.replace(/\/+$/, '').replace(/\/manager$/, '')
-      : null;
-
-    if (!EVOLUTION_API_URL || !EVOLUTION_API_KEY || !EVOLUTION_INSTANCE_NAME) {
-      console.error('Evolution API credentials not configured');
-      return new Response(
-        JSON.stringify({ error: 'Evolution API not configured. Configure nas configurações do restaurante.' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
+    const body: RequestBody = await req.json();
+    const {
+      orderId, restaurantId, customerPhone, customerName, status,
+      restaurantName, orderTotal, customMessage, baseUrl,
+    } = body;
 
     if (!customerPhone || !status) {
       return new Response(
@@ -79,70 +51,83 @@ serve(async (req) => {
       );
     }
 
-    // Format phone number (remove non-digits and ensure country code)
-    let phone = customerPhone.replace(/\D/g, '');
-    if (!phone.startsWith('55')) {
-      phone = '55' + phone;
+    // Always look up credentials server-side using the service role.
+    // Never trust credentials passed from the client.
+    let rawEvolutionApiUrl: string | null = null;
+    let evolutionApiKey: string | null = null;
+    let evolutionInstanceName: string | null = null;
+    let resolvedRestaurantName = restaurantName ?? null;
+
+    if (restaurantId) {
+      const supabase = createClient(
+        Deno.env.get('SUPABASE_URL') ?? '',
+        Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+        { auth: { persistSession: false } }
+      );
+      const { data: restaurant } = await supabase
+        .from('restaurants')
+        .select('name, evolution_api_url, evolution_api_key, evolution_instance_name')
+        .eq('id', restaurantId)
+        .maybeSingle();
+      if (restaurant) {
+        rawEvolutionApiUrl = restaurant.evolution_api_url;
+        evolutionApiKey = restaurant.evolution_api_key;
+        evolutionInstanceName = restaurant.evolution_instance_name;
+        if (!resolvedRestaurantName) resolvedRestaurantName = restaurant.name;
+      }
     }
 
-    // Build message
+    // Fallback to env vars (legacy)
+    rawEvolutionApiUrl = rawEvolutionApiUrl || Deno.env.get('EVOLUTION_API_URL') || null;
+    evolutionApiKey = evolutionApiKey || Deno.env.get('EVOLUTION_API_KEY') || null;
+    evolutionInstanceName = evolutionInstanceName || Deno.env.get('EVOLUTION_INSTANCE_NAME') || null;
+
+    const EVOLUTION_API_URL = rawEvolutionApiUrl
+      ? rawEvolutionApiUrl.replace(/\/+$/, '').replace(/\/manager$/, '')
+      : null;
+
+    if (!EVOLUTION_API_URL || !evolutionApiKey || !evolutionInstanceName) {
+      return new Response(
+        JSON.stringify({ error: 'Evolution API not configured for this restaurant.' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    let phone = customerPhone.replace(/\D/g, '');
+    if (!phone.startsWith('55')) phone = '55' + phone;
+
     let message = '';
-    
     if (status === 'promotion' && customMessage) {
-      // Custom promotional message
-      message = `🎉 *${restaurantName || 'Promoção Especial'}*\n\n`;
+      message = `🎉 *${resolvedRestaurantName || 'Promoção Especial'}*\n\n`;
       message += `Olá${customerName ? ` ${customerName}` : ''}!\n\n`;
       message += customMessage;
     } else {
-      // Order status message
       const statusMessage = statusMessages[status] || `Status do pedido: ${status}`;
-      message = `🍕 *${restaurantName || 'Restaurante'}*\n\n`;
+      message = `🍕 *${resolvedRestaurantName || 'Restaurante'}*\n\n`;
       message += `Olá${customerName ? ` ${customerName}` : ''}!\n\n`;
-      if (orderId) {
-        message += `Pedido: *#${orderId.slice(0, 8).toUpperCase()}*\n`;
-      }
-      if (orderTotal) {
-        message += `Total: *R$ ${orderTotal.toFixed(2)}*\n`;
-      }
+      if (orderId) message += `Pedido: *#${orderId.slice(0, 8).toUpperCase()}*\n`;
+      if (orderTotal) message += `Total: *R$ ${orderTotal.toFixed(2)}*\n`;
       message += `\n${statusMessage}`;
-
-      // Add custom welcome message for confirmed orders
-      if (status === 'confirmed' && customMessage) {
-        message += `\n\n📢 ${customMessage}`;
-      }
-
-      // Add review link when delivered
+      if (status === 'confirmed' && customMessage) message += `\n\n📢 ${customMessage}`;
       if (status === 'delivered' && orderId && baseUrl) {
         message += `\n\n⭐ *Avalie seu pedido:*\n${baseUrl}/avaliar/${orderId}`;
       }
     }
 
-    console.log(`Sending WhatsApp notification to ${phone} for order ${orderId}`);
-
-    // Send via Evolution API
-    const response = await fetch(`${EVOLUTION_API_URL}/message/sendText/${EVOLUTION_INSTANCE_NAME}`, {
+    const response = await fetch(`${EVOLUTION_API_URL}/message/sendText/${evolutionInstanceName}`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'apikey': EVOLUTION_API_KEY,
-      },
-      body: JSON.stringify({
-        number: phone,
-        text: message,
-      }),
+      headers: { 'Content-Type': 'application/json', 'apikey': evolutionApiKey },
+      body: JSON.stringify({ number: phone, text: message }),
     });
 
     const responseData = await response.json();
-
     if (!response.ok) {
-      console.error('Evolution API error:', responseData);
+      console.error('Evolution API error');
       return new Response(
-        JSON.stringify({ error: 'Failed to send WhatsApp message', details: responseData }),
+        JSON.stringify({ error: 'Failed to send WhatsApp message' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
-
-    console.log('WhatsApp notification sent successfully:', responseData);
 
     return new Response(
       JSON.stringify({ success: true, messageId: responseData.key?.id }),
@@ -150,9 +135,8 @@ serve(async (req) => {
     );
   } catch (error) {
     console.error('Error sending WhatsApp notification:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return new Response(
-      JSON.stringify({ error: 'Internal server error', message: errorMessage }),
+      JSON.stringify({ error: 'Internal server error' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }

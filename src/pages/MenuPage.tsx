@@ -60,8 +60,6 @@ interface Restaurant {
   free_delivery_minimum: number | null;
   pickup_enabled: boolean | null;
   dine_in_enabled: boolean | null;
-  mercado_pago_enabled: boolean | null;
-  mercado_pago_public_key: string | null;
 }
 
 interface Category {
@@ -414,9 +412,6 @@ function CartSheet({
   deliveryAreas,
   restaurantId,
   restaurantName,
-  evolutionApiUrl,
-  evolutionApiKey,
-  evolutionInstanceName,
   orderWelcomeMessage,
   tableNumber,
   dineInEnabled,
@@ -431,9 +426,6 @@ function CartSheet({
   deliveryAreas: DeliveryArea[];
   restaurantId: string;
   restaurantName: string;
-  evolutionApiUrl?: string | null;
-  evolutionApiKey?: string | null;
-  evolutionInstanceName?: string | null;
   orderWelcomeMessage?: string | null;
   tableNumber?: string | null;
   dineInEnabled?: boolean;
@@ -544,28 +536,24 @@ function CartSheet({
 
       if (orderError) throw orderError;
 
-      // Send welcome message via Evolution API if configured
-      if (evolutionApiUrl && evolutionApiKey && evolutionInstanceName) {
-        try {
-          await supabase.functions.invoke('send-whatsapp-notification', {
-            body: {
-              orderId,
-              customerPhone: customer.whatsapp,
-              customerName: customer.name,
-              status: 'confirmed',
-              restaurantName,
-              orderTotal: grandTotal,
-              evolutionApiUrl,
-              evolutionApiKey,
-              evolutionInstanceName,
-              customMessage: orderWelcomeMessage || undefined,
-              baseUrl: window.location.origin,
-            },
-          });
-        } catch (notifError) {
-          console.error('Failed to send WhatsApp welcome notification:', notifError);
-          // Don't fail the order if notification fails
-        }
+      // Send welcome message via Evolution API (credentials looked up server-side)
+      try {
+        await supabase.functions.invoke('send-whatsapp-notification', {
+          body: {
+            orderId,
+            restaurantId,
+            customerPhone: customer.whatsapp,
+            customerName: customer.name,
+            status: 'confirmed',
+            restaurantName,
+            orderTotal: grandTotal,
+            customMessage: orderWelcomeMessage || undefined,
+            baseUrl: window.location.origin,
+          },
+        });
+      } catch (notifError) {
+        console.error('Failed to send WhatsApp welcome notification:', notifError);
+        // Don't fail the order if notification fails
       }
 
       // Send WhatsApp message
@@ -1433,9 +1421,6 @@ function MenuPageContent() {
         deliveryAreas={deliveryAreas}
         restaurantId={restaurant.id}
         restaurantName={restaurant.name}
-        evolutionApiUrl={(restaurant as any).evolution_api_url}
-        evolutionApiKey={(restaurant as any).evolution_api_key}
-        evolutionInstanceName={(restaurant as any).evolution_instance_name}
         orderWelcomeMessage={(restaurant as any).order_welcome_message}
         tableNumber={searchParams.get('table')}
         dineInEnabled={restaurant.dine_in_enabled ?? false}
