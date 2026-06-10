@@ -74,7 +74,7 @@ const idealFor = [
 const plans = [
   {
     name: 'Básico',
-    price: 19,
+    price: 39.97,
     period: '/mês',
     description: 'Para quem quer começar.',
     color: 'success',
@@ -89,7 +89,7 @@ const plans = [
   },
   {
     name: 'Pro',
-    price: 29,
+    price: 99.97,
     period: '/mês',
     description: 'Para quem quer vender mais.',
     color: 'primary',
@@ -105,7 +105,7 @@ const plans = [
   },
   {
     name: 'Premium',
-    price: 49,
+    price: 199.97,
     period: '/mês',
     description: 'Para quem quer escalar.',
     color: 'accent',
