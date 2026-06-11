@@ -20,7 +20,8 @@ import {
   LayoutGrid,
   List,
   Printer,
-  Settings
+  Settings,
+  Table as TableIcon
 } from 'lucide-react';
 import { EvolutionApiStatus } from '@/components/admin/EvolutionApiStatus';
 import { EvolutionApiWizard } from '@/components/admin/EvolutionApiWizard';
