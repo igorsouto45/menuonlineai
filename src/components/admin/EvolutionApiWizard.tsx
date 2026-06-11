@@ -238,6 +238,8 @@ export function EvolutionApiWizard({
     }
   }, [qrOpen, qrConnected]);
 
+  const saveAndComplete = async () => {
+    setSaving(true);
 
     try {
       const { error } = await supabase
