@@ -1,9 +1,9 @@
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, useEffect } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { Loader2 } from "lucide-react";
 import { AuthProvider } from "./contexts/AuthContext";
 import { CartProvider } from "./contexts/CartContext";
@@ -33,6 +33,44 @@ const ReviewsPage = lazy(() => import("./pages/admin/ReviewsPage"));
 const LeadsPage = lazy(() => import("./pages/admin/LeadsPage"));
 const CampaignsPage = lazy(() => import("./pages/admin/CampaignsPage"));
 const SystemAdminPage = lazy(() => import("./pages/admin/SystemAdminPage"));
+
+// Prefetch helpers — load chunks in background after first paint
+const prefetch = (importer: () => Promise<unknown>) => {
+  try {
+    importer();
+  } catch {
+    // silent fail — prefetch is best-effort
+  }
+};
+
+const prefetchAdminRoutes = () => {
+  prefetch(() => import("./components/admin/AdminLayout"));
+  prefetch(() => import("./pages/admin/Dashboard"));
+  prefetch(() => import("./pages/admin/CategoriesPage"));
+  prefetch(() => import("./pages/admin/OrdersPage"));
+  prefetch(() => import("./pages/admin/ProductsPage"));
+  prefetch(() => import("./pages/admin/SettingsPage"));
+};
+
+const Prefetcher = () => {
+  const location = useLocation();
+
+  useEffect(() => {
+    // Wait until landing page is fully painted, then warm the admin chunks
+    if (location.pathname === "/") {
+      const id = setTimeout(() => prefetchAdminRoutes(), 1500);
+      return () => clearTimeout(id);
+    }
+    // If already inside admin, warm sibling routes
+    if (location.pathname.startsWith("/admin")) {
+      const id = setTimeout(() => prefetchAdminRoutes(), 500);
+      return () => clearTimeout(id);
+    }
+  }, [location.pathname]);
+
+  return null;
+};
+
 
 const queryClient = new QueryClient();
 
