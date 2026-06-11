@@ -21,15 +21,14 @@ export function useRestaurant() {
     // Use SECURITY DEFINER RPC so the owner can read their full restaurant
     // record (including credentials), which are otherwise hidden from
     // direct table SELECTs to prevent credential leakage.
-    const { data, error } = await supabase
-      .rpc('get_my_restaurant')
-      .maybeSingle();
+    const { data, error } = await supabase.rpc('get_my_restaurant');
 
     if (error) {
       console.error('Error fetching restaurant:', error);
     }
 
-    setRestaurant((data as Restaurant) ?? null);
+    const first = Array.isArray(data) ? data[0] : data;
+    setRestaurant((first as Restaurant) ?? null);
     setLoading(false);
   }, [user]);
 
