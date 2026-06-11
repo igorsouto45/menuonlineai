@@ -17,12 +17,6 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-  const supabaseClient = createClient(
-    Deno.env.get("SUPABASE_URL") ?? "",
-    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
-    { auth: { persistSession: false } }
-  );
-
   try {
     logStep("Function started");
 
@@ -35,21 +29,24 @@ serve(async (req) => {
     logStep("Authorization header found");
 
     const token = authHeader.replace("Bearer ", "");
-    logStep("Authenticating user with token");
-    
-    const { data: userData, error: userError } = await supabaseClient.auth.getUser(token);
-    if (userError) {
-      logStep("Authentication failed", { 
-        errorMessage: userError.message, 
-        errorCode: userError.code,
-        errorStatus: userError.status 
-      });
-      throw new Error(`Authentication error: ${userError.message || userError.code || 'Unknown error'}`);
+
+    // Use anon key + auth header to validate the JWT via getClaims
+    const userClient = createClient(
+      Deno.env.get("SUPABASE_URL") ?? "",
+      Deno.env.get("SUPABASE_ANON_KEY") ?? "",
+      { global: { headers: { Authorization: authHeader } } }
+    );
+
+    const { data: claimsData, error: claimsError } = await userClient.auth.getClaims(token);
+    if (claimsError || !claimsData?.claims) {
+      logStep("Authentication failed", { errorMessage: claimsError?.message });
+      throw new Error(`Authentication error: ${claimsError?.message || "Invalid token"}`);
     }
-    const user = userData.user;
-    if (!user?.email) {
-      logStep("User data missing", { hasUser: !!user, hasEmail: !!user?.email });
-      throw new Error("User not authenticated or email not available");
+
+    const user = { id: claimsData.claims.sub as string, email: claimsData.claims.email as string };
+    if (!user.email) {
+      logStep("User email missing in claims");
+      throw new Error("User email not available");
     }
     logStep("User authenticated", { userId: user.id, email: user.email });
 
