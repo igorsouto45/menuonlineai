@@ -309,21 +309,21 @@ export function EvolutionApiWizard({
             {currentStep === 2 && (
               <div className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="apiUrl">URL da Evolution API</Label>
+                  <Label htmlFor="apiUrl">URL do Evolution GO</Label>
                   <Input
                     id="apiUrl"
-                    placeholder="https://sua-evolution-api.com"
+                    placeholder="https://pool-evolution-go-008.cloud.pageup.dev.br"
                     value={formData.evolutionApiUrl}
                     onChange={(e) => setFormData({ ...formData, evolutionApiUrl: e.target.value })}
                   />
                   <p className="text-sm text-muted-foreground">
-                    A URL onde sua Evolution API está hospedada (sem barra no final)
+                    URL base do Evolution GO (sem /swagger ou barra final)
                   </p>
                 </div>
 
                 <Alert>
                   <AlertDescription>
-                    Exemplo: <code className="bg-muted px-1 rounded">https://api.seudominio.com</code>
+                    Exemplo: <code className="bg-muted px-1 rounded">https://pool-evolution-go-008.cloud.pageup.dev.br</code>
                   </AlertDescription>
                 </Alert>
               </div>
@@ -332,22 +332,22 @@ export function EvolutionApiWizard({
             {currentStep === 3 && (
               <div className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="apiKey">Chave da API (API Key)</Label>
+                  <Label htmlFor="apiKey">Token da instância (apikey)</Label>
                   <Input
                     id="apiKey"
                     type="password"
-                    placeholder="Sua chave de API"
+                    placeholder="Token gerado ao criar a instância"
                     value={formData.evolutionApiKey}
                     onChange={(e) => setFormData({ ...formData, evolutionApiKey: e.target.value })}
                   />
                   <p className="text-sm text-muted-foreground">
-                    A chave de autenticação da sua Evolution API
+                    No Evolution GO o token (apikey) identifica a instância. Use o token devolvido em <code>POST /instance/create</code>.
                   </p>
                 </div>
 
                 <Alert>
                   <AlertDescription>
-                    Você pode encontrar a API Key no painel da Evolution API ou no arquivo de configuração.
+                    Esse token é enviado no header <code>apikey</code> em todas as chamadas.
                   </AlertDescription>
                 </Alert>
               </div>
@@ -356,7 +356,7 @@ export function EvolutionApiWizard({
             {currentStep === 4 && (
               <div className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="instanceName">Nome da Instância</Label>
+                  <Label htmlFor="instanceName">Nome da Instância (opcional)</Label>
                   <Input
                     id="instanceName"
                     placeholder="minha-instancia"
@@ -364,15 +364,15 @@ export function EvolutionApiWizard({
                     onChange={(e) => setFormData({ ...formData, evolutionInstanceName: e.target.value })}
                   />
                   <p className="text-sm text-muted-foreground">
-                    O nome da instância que você criou na Evolution API
+                    Apenas para sua referência — o token já identifica a instância no Evolution GO.
                   </p>
                 </div>
 
                 <Alert>
                   <AlertDescription>
                     <p className="mb-2">
-                      <strong>Configurar Webhook:</strong> Para receber pedidos via WhatsApp, 
-                      configure o webhook na sua instância:
+                      <strong>Configurar Webhook:</strong> Para receber mensagens, configure o webhook
+                      da sua instância para a URL abaixo:
                     </p>
                     <div className="flex items-center gap-2 bg-muted p-2 rounded text-xs font-mono break-all">
                       <span className="flex-1">{webhookUrl}</span>
