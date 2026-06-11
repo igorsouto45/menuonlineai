@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -9,21 +9,23 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Progress } from '@/components/ui/progress';
-import { 
-  CheckCircle2, 
-  Circle, 
-  Loader2, 
-  ExternalLink, 
-  Copy, 
-  Check, 
-  Wifi, 
+import {
+  CheckCircle2,
+  Circle,
+  Loader2,
+  ExternalLink,
+  Copy,
+  Check,
+  Wifi,
   WifiOff,
   ChevronRight,
   ChevronLeft,
   Smartphone,
   Key,
   Link,
-  MessageSquare
+  MessageSquare,
+  QrCode,
+  RefreshCw,
 } from 'lucide-react';
 
 interface EvolutionApiWizardProps {
@@ -61,6 +63,13 @@ export function EvolutionApiWizard({
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState<'idle' | 'success' | 'error'>('idle');
   const [copied, setCopied] = useState(false);
+  const [qrOpen, setQrOpen] = useState(false);
+  const [qrLoading, setQrLoading] = useState(false);
+  const [qrBase64, setQrBase64] = useState<string | null>(null);
+  const [qrCode, setQrCode] = useState<string | null>(null);
+  const [qrError, setQrError] = useState<string | null>(null);
+  const [qrConnected, setQrConnected] = useState(false);
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const [formData, setFormData] = useState({
     evolutionApiUrl: initialValues?.evolutionApiUrl || '',
@@ -138,6 +147,96 @@ export function EvolutionApiWizard({
       setTesting(false);
     }
   };
+
+  const fetchQrCode = async () => {
+    if (!formData.evolutionApiUrl || !formData.evolutionApiKey) {
+      toast({
+        title: 'Campos incompletos',
+        description: 'Preencha a URL e o token antes de conectar.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    setQrLoading(true);
+    setQrError(null);
+    try {
+      const { data, error } = await supabase.functions.invoke('evolution-get-qrcode', {
+        body: {
+          evolutionApiUrl: formData.evolutionApiUrl,
+          evolutionApiKey: formData.evolutionApiKey,
+          evolutionInstanceName: formData.evolutionInstanceName,
+        },
+      });
+      if (error) throw error;
+      if (data?.alreadyConnected) {
+        setQrConnected(true);
+        setQrBase64(null);
+        setQrCode(null);
+        return;
+      }
+      if (data?.success) {
+        setQrBase64(data.base64 || null);
+        setQrCode(data.code || null);
+        if (!data.base64 && !data.code) {
+          setQrError('Resposta sem QR Code. Verifique a instância.');
+        }
+      } else {
+        setQrError(data?.error || 'Falha ao obter QR Code.');
+      }
+    } catch (err) {
+      console.error(err);
+      setQrError('Erro ao obter QR Code.');
+    } finally {
+      setQrLoading(false);
+    }
+  };
+
+  const checkConnectionStatus = async () => {
+    try {
+      const { data } = await supabase.functions.invoke('test-evolution-connection', {
+        body: {
+          evolutionApiUrl: formData.evolutionApiUrl,
+          evolutionApiKey: formData.evolutionApiKey,
+          evolutionInstanceName: formData.evolutionInstanceName,
+        },
+      });
+      if (data?.success && data?.connected) {
+        setQrConnected(true);
+        setTestResult('success');
+        toast({ title: 'WhatsApp conectado!', description: 'Sua instância está pronta para enviar mensagens.' });
+        if (pollRef.current) {
+          clearInterval(pollRef.current);
+          pollRef.current = null;
+        }
+        setTimeout(() => setQrOpen(false), 1500);
+      }
+    } catch (e) {
+      console.error('poll error', e);
+    }
+  };
+
+  const openQrModal = async () => {
+    setQrOpen(true);
+    setQrConnected(false);
+    setQrBase64(null);
+    setQrCode(null);
+    setQrError(null);
+    await fetchQrCode();
+  };
+
+  useEffect(() => {
+    if (qrOpen && !qrConnected) {
+      pollRef.current = setInterval(() => {
+        checkConnectionStatus();
+      }, 4000);
+      return () => {
+        if (pollRef.current) {
+          clearInterval(pollRef.current);
+          pollRef.current = null;
+        }
+      };
+    }
+  }, [qrOpen, qrConnected]);
 
   const saveAndComplete = async () => {
     setSaving(true);
@@ -450,22 +549,35 @@ export function EvolutionApiWizard({
                         </>
                       )}
 
-                      <Button 
-                        onClick={testConnection} 
-                        disabled={testing}
-                        variant={testResult === 'success' ? 'outline' : 'default'}
-                      >
-                        {testing ? (
-                          <>
-                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                            Testando...
-                          </>
-                        ) : testResult === 'success' ? (
-                          'Testar Novamente'
-                        ) : (
-                          'Testar Conexão'
+                      <div className="flex flex-col sm:flex-row gap-2">
+                        <Button
+                          onClick={testConnection}
+                          disabled={testing}
+                          variant={testResult === 'success' ? 'outline' : 'default'}
+                        >
+                          {testing ? (
+                            <>
+                              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                              Testando...
+                            </>
+                          ) : testResult === 'success' ? (
+                            'Testar Novamente'
+                          ) : (
+                            'Testar Conexão'
+                          )}
+                        </Button>
+                        {testResult !== 'success' && (
+                          <Button
+                            type="button"
+                            variant="secondary"
+                            onClick={openQrModal}
+                            disabled={!formData.evolutionApiUrl || !formData.evolutionApiKey}
+                          >
+                            <QrCode className="w-4 h-4 mr-2" />
+                            Conectar WhatsApp
+                          </Button>
                         )}
-                      </Button>
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
@@ -558,6 +670,76 @@ export function EvolutionApiWizard({
           )}
         </div>
       </DialogContent>
+
+      {/* QR Code Modal */}
+      <Dialog open={qrOpen} onOpenChange={setQrOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <QrCode className="w-5 h-5 text-primary" />
+              Conectar WhatsApp
+            </DialogTitle>
+            <DialogDescription>
+              Abra o WhatsApp no celular → Aparelhos conectados → Conectar um aparelho → escaneie o QR Code abaixo.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="flex flex-col items-center gap-4 py-4">
+            {qrLoading && (
+              <div className="flex flex-col items-center gap-2 py-8">
+                <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                <p className="text-sm text-muted-foreground">Gerando QR Code...</p>
+              </div>
+            )}
+
+            {!qrLoading && qrConnected && (
+              <div className="flex flex-col items-center gap-2 py-6 text-center">
+                <div className="w-16 h-16 rounded-full bg-success/10 flex items-center justify-center">
+                  <CheckCircle2 className="w-8 h-8 text-success" />
+                </div>
+                <h3 className="font-semibold text-success">WhatsApp Conectado!</h3>
+                <p className="text-sm text-muted-foreground">Sua instância está pronta.</p>
+              </div>
+            )}
+
+            {!qrLoading && !qrConnected && qrBase64 && (
+              <div className="bg-white p-3 rounded-lg border">
+                <img src={qrBase64} alt="QR Code WhatsApp" className="w-64 h-64 object-contain" />
+              </div>
+            )}
+
+            {!qrLoading && !qrConnected && !qrBase64 && qrCode && (
+              <div className="space-y-2 text-center">
+                <p className="text-sm text-muted-foreground">Código de pareamento:</p>
+                <code className="block bg-muted px-3 py-2 rounded text-lg font-mono">{qrCode}</code>
+              </div>
+            )}
+
+            {!qrLoading && qrError && (
+              <Alert variant="destructive">
+                <AlertDescription>{qrError}</AlertDescription>
+              </Alert>
+            )}
+
+            {!qrConnected && (
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <Loader2 className="w-3 h-3 animate-spin" />
+                Aguardando conexão...
+              </div>
+            )}
+
+            <div className="flex gap-2 w-full">
+              <Button variant="outline" className="flex-1" onClick={fetchQrCode} disabled={qrLoading}>
+                <RefreshCw className="w-4 h-4 mr-2" />
+                Atualizar QR
+              </Button>
+              <Button className="flex-1" onClick={() => setQrOpen(false)}>
+                Fechar
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </Dialog>
   );
 }
