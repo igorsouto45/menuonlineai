@@ -186,6 +186,7 @@ export default function OrdersPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [tableFilter, setTableFilter] = useState<string>('all');
   const [viewMode, setViewMode] = useState<'kanban' | 'list'>('kanban');
   const [activeOrder, setActiveOrder] = useState<Order | null>(null);
   const [wizardOpen, setWizardOpen] = useState(false);
@@ -420,24 +421,50 @@ export default function OrdersPage() {
     });
   };
 
-  const filteredOrders = statusFilter === 'all' 
-    ? orders 
-    : orders.filter(o => o.status === statusFilter);
+  const tableMatches = (o: Order) => {
+    if (tableFilter === 'all') return true;
+    if (tableFilter === 'tables_only') return !!o.table_number;
+    if (tableFilter === 'no_table') return !o.table_number;
+    return o.table_number === tableFilter;
+  };
+
+  const tableScoped = orders.filter(tableMatches);
+
+  const filteredOrders = statusFilter === 'all'
+    ? tableScoped
+    : tableScoped.filter(o => o.status === statusFilter);
 
   const orderCounts = {
-    all: orders.length,
-    pending: orders.filter(o => o.status === 'pending').length,
-    confirmed: orders.filter(o => o.status === 'confirmed').length,
-    preparing: orders.filter(o => o.status === 'preparing').length,
-    ready: orders.filter(o => o.status === 'ready').length,
-    out_for_delivery: orders.filter(o => o.status === 'out_for_delivery').length,
-    delivered: orders.filter(o => o.status === 'delivered').length,
-    cancelled: orders.filter(o => o.status === 'cancelled').length,
+    all: tableScoped.length,
+    pending: tableScoped.filter(o => o.status === 'pending').length,
+    confirmed: tableScoped.filter(o => o.status === 'confirmed').length,
+    preparing: tableScoped.filter(o => o.status === 'preparing').length,
+    ready: tableScoped.filter(o => o.status === 'ready').length,
+    out_for_delivery: tableScoped.filter(o => o.status === 'out_for_delivery').length,
+    delivered: tableScoped.filter(o => o.status === 'delivered').length,
+    cancelled: tableScoped.filter(o => o.status === 'cancelled').length,
   };
 
+  const uniqueTables = Array.from(new Set(orders.map(o => o.table_number).filter(Boolean))) as string[];
+  uniqueTables.sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+
   const getOrdersByStatus = (status: OrderStatus) => {
-    return orders.filter(o => o.status === status);
+    return tableScoped.filter(o => o.status === status);
   };
+
+  const printFilteredForKitchen = async () => {
+    const toPrint = filteredOrders.filter(o => o.status !== 'cancelled' && o.status !== 'delivered');
+    if (toPrint.length === 0) {
+      toast({ title: 'Nada para imprimir', description: 'Nenhum pedido ativo no filtro atual.' });
+      return;
+    }
+    toast({ title: `Imprimindo ${toPrint.length} pedido(s)...`, description: 'Aguarde, as janelas serão abertas em sequência.' });
+    for (const o of toPrint) {
+      printOrder(o, restaurant?.name);
+      await new Promise(r => setTimeout(r, 500));
+    }
+  };
+
 
   if (loading) {
     return (
