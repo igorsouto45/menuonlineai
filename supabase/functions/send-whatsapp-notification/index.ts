@@ -86,9 +86,9 @@ serve(async (req) => {
       ? rawEvolutionApiUrl.replace(/\/+$/, '').replace(/\/manager$/, '')
       : null;
 
-    if (!EVOLUTION_API_URL || !evolutionApiKey || !evolutionInstanceName) {
+    if (!EVOLUTION_API_URL || !evolutionApiKey) {
       return new Response(
-        JSON.stringify({ error: 'Evolution API not configured for this restaurant.' }),
+        JSON.stringify({ error: 'Evolution GO not configured for this restaurant.' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -114,7 +114,8 @@ serve(async (req) => {
       }
     }
 
-    const response = await fetch(`${EVOLUTION_API_URL}/message/sendText/${evolutionInstanceName}`, {
+    // Evolution GO: POST {url}/send/text  (apikey header identifies the instance)
+    const response = await fetch(`${EVOLUTION_API_URL}/send/text`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'apikey': evolutionApiKey },
       body: JSON.stringify({ number: phone, text: message }),
