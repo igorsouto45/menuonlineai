@@ -57,7 +57,7 @@ function Sidebar({ collapsed, setCollapsed, onLogout }: { collapsed: boolean; se
             <img
               src={menuAiLogo.url}
               alt="MENU AI"
-              className={`${collapsed ? 'h-10 w-10 object-contain object-left' : 'h-11 w-auto'} bg-white rounded-lg p-1`}
+              className={`${collapsed ? 'h-12 w-12 object-contain object-left' : 'h-14 w-auto'} bg-white rounded-lg p-1`}
             />
           </Link>
           <button
