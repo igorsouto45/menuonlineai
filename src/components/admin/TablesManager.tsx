@@ -323,18 +323,45 @@ export function TablesManager({ restaurantId, restaurantSlug, restaurantName }: 
                   </Select>
                 </div>
 
-                <div className="flex flex-col items-center bg-white p-4 rounded-lg">
-                  <QRCodeSVG 
+                <div
+                  className={`flex flex-col items-center p-4 rounded-lg ${
+                    qrLayout === 'vip'
+                      ? 'bg-white border-2 border-yellow-500/60 shadow-lg shadow-yellow-500/10'
+                      : qrLayout === 'counter'
+                      ? 'bg-white border-2 border-foreground/30'
+                      : 'bg-white border border-border'
+                  }`}
+                >
+                  {qrLayout === 'vip' && (
+                    <Badge className="mb-2 bg-yellow-500 hover:bg-yellow-600 text-white text-[10px]">
+                      <Crown className="w-3 h-3 mr-1" /> ÁREA VIP
+                    </Badge>
+                  )}
+                  {qrLayout === 'counter' && (
+                    <Badge variant="outline" className="mb-2 text-[10px] border-foreground/40">
+                      PEÇA E RETIRE
+                    </Badge>
+                  )}
+                  <div
+                    className={`font-extrabold leading-none mb-2 ${
+                      qrLayout === 'large' ? 'text-4xl' : qrLayout === 'vip' ? 'text-3xl text-yellow-600' : 'text-2xl'
+                    } ${qrLayout !== 'vip' ? 'text-primary' : ''}`}
+                  >
+                    {qrLayout === 'vip' ? 'VIP' : qrLayout === 'counter' ? 'Balcão' : 'Mesa'} {table.table_number}
+                  </div>
+                  <QRCodeSVG
                     id={`qr-${table.table_number}`}
-                    value={getTableUrl(table.table_number)} 
-                    size={160}
+                    value={getTableUrl(table.table_number)}
+                    size={qrLayout === 'large' ? 200 : 160}
                     level="H"
                     includeMargin={true}
+                    fgColor={qrLayout === 'vip' ? '#a16207' : '#000000'}
                   />
                   <p className="text-[10px] text-muted-foreground mt-2 break-all text-center">
                     {getTableUrl(table.table_number)}
                   </p>
                 </div>
+
 
                 <div className="flex gap-2">
                   <Button 
