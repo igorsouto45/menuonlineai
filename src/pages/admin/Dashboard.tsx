@@ -38,9 +38,8 @@ import {
   LineChart,
   Line,
 } from 'recharts';
-import * as XLSX from 'xlsx';
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
+// xlsx / jspdf / jspdf-autotable are dynamically imported inside the export
+// handlers to keep them out of the Dashboard's initial chunk.
 import { ProfitMarginReport } from '@/components/admin/ProfitMarginReport';
 import { CashFlowDashboard } from '@/components/admin/CashFlowDashboard';
 
@@ -284,7 +283,8 @@ export default function Dashboard() {
     };
   }, [restaurant?.id, playNotification, toast]);
 
-  const exportToExcel = () => {
+  const exportToExcel = async () => {
+    const XLSX = await import('xlsx');
     const salesData = weeklyData.map(d => ({
       'Dia': d.day,
       'Pedidos': d.orders,
@@ -325,7 +325,11 @@ export default function Dashboard() {
     });
   };
 
-  const exportToPDF = () => {
+  const exportToPDF = async () => {
+    const [{ default: jsPDF }, { default: autoTable }] = await Promise.all([
+      import('jspdf'),
+      import('jspdf-autotable'),
+    ]);
     const doc = new jsPDF();
     
     doc.setFontSize(18);
