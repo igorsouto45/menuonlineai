@@ -42,8 +42,8 @@ interface EvolutionApiWizardProps {
 const steps = [
   { id: 1, title: 'Introdução', icon: Smartphone },
   { id: 2, title: 'URL da API', icon: Link },
-  { id: 3, title: 'Chave da API', icon: Key },
-  { id: 4, title: 'Nome da Instância', icon: Wifi },
+  { id: 3, title: 'Token (apikey)', icon: Key },
+  { id: 4, title: 'Instância', icon: Wifi },
   { id: 5, title: 'Testar Conexão', icon: CheckCircle2 },
   { id: 6, title: 'Mensagem de Boas-Vindas', icon: MessageSquare },
 ];
