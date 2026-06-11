@@ -57,7 +57,7 @@ function Sidebar({ collapsed, setCollapsed, onLogout }: { collapsed: boolean; se
             <img
               src={menuAiLogo.url}
               alt="MENU AI"
-              className={`${collapsed ? 'h-10 w-10 object-contain object-left' : 'h-11 w-auto'} bg-white rounded-lg p-1`}
+              className={`${collapsed ? 'h-12 w-12 object-contain object-left' : 'h-14 w-auto'} bg-white rounded-lg p-1`}
             />
           </Link>
           <button
@@ -135,7 +135,7 @@ function MobileNav({ isOpen, setIsOpen, onLogout }: { isOpen: boolean; setIsOpen
             <div className="flex flex-col h-full p-4">
               <div className="flex items-center justify-between mb-8">
                 <Link to="/admin" className="flex items-center" onClick={() => setIsOpen(false)}>
-                  <img src={menuAiLogo.url} alt="MENU AI" className="h-11 w-auto bg-white rounded-lg p-1" />
+                  <img src={menuAiLogo.url} alt="MENU AI" className="h-14 w-auto bg-white rounded-lg p-1" />
                 </Link>
                 <button
                   onClick={() => setIsOpen(false)}
@@ -245,7 +245,7 @@ export default function AdminLayout() {
       {/* Main Content */}
       <div className={`transition-all duration-300 ${sidebarCollapsed ? 'lg:ml-20' : 'lg:ml-64'}`}>
         {/* Mobile Header */}
-        <header className="lg:hidden sticky top-0 z-30 h-20 bg-card border-b border-border flex items-center justify-between px-4">
+        <header className="lg:hidden sticky top-0 z-30 h-22 bg-card border-b border-border flex items-center justify-between px-4">
           <div className="flex items-center">
             <button
               onClick={() => setMobileNavOpen(true)}
@@ -254,7 +254,7 @@ export default function AdminLayout() {
               <Menu className="w-5 h-5" />
             </button>
             <div className="flex items-center ml-3">
-              <img src={menuAiLogo.url} alt="MENU AI" className="h-14 w-auto bg-white rounded-lg p-1.5" />
+              <img src={menuAiLogo.url} alt="MENU AI" className="h-16 w-auto bg-white rounded-lg p-1.5" />
             </div>
           </div>
           <Link to="/precos" className="flex items-center gap-2">
