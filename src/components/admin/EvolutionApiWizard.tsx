@@ -270,12 +270,12 @@ export function EvolutionApiWizard({
               <div className="space-y-4">
                 <Card>
                   <CardHeader>
-                    <CardTitle className="text-lg">O que é a Evolution API?</CardTitle>
+                    <CardTitle className="text-lg">O que é o Evolution GO?</CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-3 text-sm text-muted-foreground">
                     <p>
-                      A Evolution API permite enviar notificações automáticas pelo WhatsApp 
-                      quando o status do pedido muda.
+                      O Evolution GO é a nova versão (em Go/whatsmeow) da Evolution API. Permite
+                      enviar notificações automáticas pelo WhatsApp quando o status do pedido muda.
                     </p>
                     <p>
                       Com ela configurada, seus clientes receberão mensagens como:
@@ -291,15 +291,15 @@ export function EvolutionApiWizard({
 
                 <Alert>
                   <AlertDescription>
-                    <strong>Pré-requisitos:</strong> Você precisa ter uma instância da Evolution API 
-                    rodando e configurada. 
+                    <strong>Pré-requisitos:</strong> Você precisa de uma instância do Evolution GO
+                    criada e conectada ao WhatsApp (QR Code escaneado).
                     <a 
-                      href="https://doc.evolution-api.com/" 
+                      href="https://pool-evolution-go-008.cloud.pageup.dev.br/swagger/index.html" 
                       target="_blank" 
                       rel="noopener noreferrer"
                       className="text-primary hover:underline ml-1 inline-flex items-center gap-1"
                     >
-                      Ver documentação <ExternalLink className="w-3 h-3" />
+                      Ver documentação (Swagger) <ExternalLink className="w-3 h-3" />
                     </a>
                   </AlertDescription>
                 </Alert>
