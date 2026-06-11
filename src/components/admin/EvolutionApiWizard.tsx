@@ -213,10 +213,10 @@ export function EvolutionApiWizard({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Smartphone className="w-5 h-5 text-primary" />
-            Configurar Evolution API
+            Configurar Evolution GO
           </DialogTitle>
           <DialogDescription>
-            Siga os passos para conectar o WhatsApp ao seu restaurante
+            Siga os passos para conectar o WhatsApp ao seu restaurante via Evolution GO
           </DialogDescription>
         </DialogHeader>
 
