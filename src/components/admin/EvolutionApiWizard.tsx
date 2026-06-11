@@ -771,9 +771,9 @@ export function EvolutionApiWizard({
             )}
 
             <div className="flex gap-2 w-full">
-              <Button variant="outline" className="flex-1" onClick={fetchQrCode} disabled={qrLoading}>
+              <Button variant="outline" className="flex-1" onClick={() => fetchQrCode()} disabled={qrLoading}>
                 <RefreshCw className="w-4 h-4 mr-2" />
-                Atualizar QR
+                {qrSecondsLeft > 0 ? `Atualizar QR (${qrSecondsLeft}s)` : 'Atualizar QR'}
               </Button>
               <Button className="flex-1" onClick={() => setQrOpen(false)}>
                 Fechar
