@@ -33,7 +33,9 @@ import {
   Banknote,
   Smartphone,
   Wallet,
-  Table as TableIcon
+  Table as TableIcon,
+  Moon,
+  Sun
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
@@ -940,6 +942,26 @@ function MenuPageContent() {
   const [cartOpen, setCartOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [tableStatus, setTableStatus] = useState<'free' | 'occupied' | 'reserved' | null>(null);
+  const [isDark, setIsDark] = useState(() => {
+    try {
+      const stored = localStorage.getItem('menu_dark_mode');
+      if (stored !== null) return stored === 'true';
+      return window.matchMedia('(prefers-color-scheme: dark)').matches;
+    } catch {
+      return false;
+    }
+  });
+
+  useEffect(() => {
+    if (isDark) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+    try {
+      localStorage.setItem('menu_dark_mode', String(isDark));
+    } catch {}
+  }, [isDark]);
 
   // Watchdog: if loading takes too long the bundle is likely stale (PWA cache,
   // old service worker, etc). Show a recovery UI instead of an infinite skeleton.
@@ -1283,7 +1305,17 @@ function MenuPageContent() {
                 ● Fechado
               </Badge>
             )}
-            <InstallPWAButton />
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setIsDark(prev => !prev)}
+                className="w-9 h-9 rounded-full bg-primary-foreground/20 backdrop-blur-sm flex items-center justify-center text-primary-foreground hover:bg-primary-foreground/30 transition-colors"
+                title={isDark ? 'Mudar para tema claro' : 'Mudar para tema escuro'}
+                aria-label={isDark ? 'Mudar para tema claro' : 'Mudar para tema escuro'}
+              >
+                {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+              </button>
+              <InstallPWAButton />
+            </div>
           </div>
         </div>
       </div>
