@@ -933,12 +933,40 @@ function MenuPageContent() {
   const [deliveryAreas, setDeliveryAreas] = useState<DeliveryArea[]>([]);
   const [bestSellerIds, setBestSellerIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
+  const [stuck, setStuck] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [cartOpen, setCartOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [tableStatus, setTableStatus] = useState<'free' | 'occupied' | 'reserved' | null>(null);
+
+  // Watchdog: if loading takes too long the bundle is likely stale (PWA cache,
+  // old service worker, etc). Show a recovery UI instead of an infinite skeleton.
+  useEffect(() => {
+    if (!loading) return;
+    const t = setTimeout(() => setStuck(true), 12000);
+    return () => clearTimeout(t);
+  }, [loading]);
+
+  const handleForceRefresh = async () => {
+    try {
+      if ('serviceWorker' in navigator) {
+        const regs = await navigator.serviceWorker.getRegistrations();
+        await Promise.all(regs.map((r) => r.unregister()));
+      }
+      if ('caches' in window) {
+        const keys = await caches.keys();
+        await Promise.all(keys.map((k) => caches.delete(k)));
+      }
+    } catch (e) {
+      console.warn('Cache cleanup failed:', e);
+    }
+    // Bypass HTTP cache + add cache-buster
+    const url = new URL(window.location.href);
+    url.searchParams.set('_v', Date.now().toString());
+    window.location.replace(url.toString());
+  };
 
   // Get payment status from URL
   const paymentStatus = searchParams.get('payment');
