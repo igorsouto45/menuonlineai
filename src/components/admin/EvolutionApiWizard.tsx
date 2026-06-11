@@ -352,9 +352,20 @@ export function EvolutionApiWizard({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
+          <DialogTitle className="flex items-center gap-2 flex-wrap">
             <Smartphone className="w-5 h-5 text-primary" />
             Configurar Evolution GO
+            <WhatsAppStatusBadge
+              status={
+                qrConnected || testResult === 'success'
+                  ? 'connected'
+                  : testing || qrLoading
+                  ? 'connecting'
+                  : testResult === 'error' || qrError
+                  ? 'error'
+                  : 'disconnected'
+              }
+            />
           </DialogTitle>
           <DialogDescription>
             Siga os passos para conectar o WhatsApp ao seu restaurante via Evolution GO
