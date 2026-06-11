@@ -27,6 +27,7 @@ import {
   QrCode,
   RefreshCw,
 } from 'lucide-react';
+import { WhatsAppStatusBadge } from './WhatsAppStatusBadge';
 
 interface EvolutionApiWizardProps {
   open: boolean;
