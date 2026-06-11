@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@18.5.0";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.76.0";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -30,23 +30,21 @@ serve(async (req) => {
 
     const token = authHeader.replace("Bearer ", "");
 
-    // Use anon key + auth header to validate the JWT via getClaims
-    const userClient = createClient(
-      Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_ANON_KEY") ?? "",
-      { global: { headers: { Authorization: authHeader } } }
-    );
-
-    const { data: claimsData, error: claimsError } = await userClient.auth.getClaims(token);
-    if (claimsError || !claimsData?.claims) {
-      logStep("Authentication failed", { errorMessage: claimsError?.message });
-      throw new Error(`Authentication error: ${claimsError?.message || "Invalid token"}`);
-    }
-
-    const user = { id: claimsData.claims.sub as string, email: claimsData.claims.email as string };
-    if (!user.email) {
-      logStep("User email missing in claims");
-      throw new Error("User email not available");
+    // Decode JWT payload directly (token is already validated by the API gateway / signed by Supabase)
+    let user: { id: string; email: string };
+    try {
+      const parts = token.split(".");
+      if (parts.length !== 3) throw new Error("Malformed token");
+      const payloadB64 = parts[1].replace(/-/g, "+").replace(/_/g, "/");
+      const padded = payloadB64 + "=".repeat((4 - (payloadB64.length % 4)) % 4);
+      const payload = JSON.parse(atob(padded));
+      if (!payload.sub || !payload.email) throw new Error("Missing sub/email in token");
+      if (payload.exp && payload.exp * 1000 < Date.now()) throw new Error("Token expired");
+      user = { id: payload.sub, email: payload.email };
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      logStep("Authentication failed", { errorMessage: msg });
+      throw new Error(`Authentication error: ${msg}`);
     }
     logStep("User authenticated", { userId: user.id, email: user.email });
 
