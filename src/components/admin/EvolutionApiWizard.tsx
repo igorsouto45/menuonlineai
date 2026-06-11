@@ -70,6 +70,9 @@ export function EvolutionApiWizard({
   const [qrError, setQrError] = useState<string | null>(null);
   const [qrConnected, setQrConnected] = useState(false);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const qrRefreshRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [qrSecondsLeft, setQrSecondsLeft] = useState<number>(0);
+  const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const [formData, setFormData] = useState({
     evolutionApiUrl: initialValues?.evolutionApiUrl || '',
