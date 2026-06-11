@@ -47,12 +47,14 @@ const layoutOptions: { value: QrLayout; label: string; description: string; icon
   { value: 'vip', label: 'VIP', description: 'Acabamento dourado e decorativo', icon: Crown },
 ];
 
-export function TablesManager({ restaurantId, restaurantSlug }: { restaurantId: string; restaurantSlug: string }) {
+export function TablesManager({ restaurantId, restaurantSlug, restaurantName }: { restaurantId: string; restaurantSlug: string; restaurantName?: string }) {
   const [tables, setTables] = useState<RestaurantTable[]>([]);
   const [newTableNumber, setNewTableNumber] = useState('');
   const [loading, setLoading] = useState(true);
   const [adding, setAdding] = useState(false);
   const [updating, setUpdating] = useState<string | null>(null);
+  const [qrLayout, setQrLayout] = useState<QrLayout>('standard');
+  const [generatingPdf, setGeneratingPdf] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -171,6 +173,31 @@ export function TablesManager({ restaurantId, restaurantSlug }: { restaurantId: 
     const baseUrl = window.location.origin;
     return `${baseUrl}/r/${restaurantSlug}?table=${encodeURIComponent(tableNumber)}`;
   };
+
+  const handleGeneratePdf = async () => {
+    if (tables.length === 0) {
+      toast({ title: 'Nenhuma mesa', description: 'Adicione mesas para gerar o PDF.', variant: 'destructive' });
+      return;
+    }
+    setGeneratingPdf(true);
+    try {
+      // Small wait so React renders the QR SVGs with current layout in the DOM
+      await new Promise((r) => setTimeout(r, 50));
+      await generateTablesQrPdf({
+        restaurantName: restaurantName || 'Cardápio Digital',
+        tables: tables.map(t => ({ tableNumber: t.table_number, url: getTableUrl(t.table_number) })),
+        layout: qrLayout,
+        getSvgElement: (n) => document.getElementById(`qr-${n}`) as unknown as SVGElement | null,
+      });
+      toast({ title: 'PDF gerado!', description: `${tables.length} mesa(s) prontas para impressão.` });
+    } catch (err: any) {
+      console.error(err);
+      toast({ title: 'Erro ao gerar PDF', description: err?.message || 'Tente novamente.', variant: 'destructive' });
+    } finally {
+      setGeneratingPdf(false);
+    }
+  };
+
 
   if (loading) {
     return (
