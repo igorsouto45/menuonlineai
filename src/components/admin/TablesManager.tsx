@@ -220,7 +220,7 @@ export function TablesManager({ restaurantId, restaurantSlug, restaurantName }: 
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex gap-2 mb-6">
+          <div className="flex gap-2 mb-4">
             <Input
               placeholder="Número ou nome da mesa (ex: 01, VIP, Balcão)"
               value={newTableNumber}
@@ -232,6 +232,47 @@ export function TablesManager({ restaurantId, restaurantSlug, restaurantName }: 
               Adicionar
             </Button>
           </div>
+
+          {/* Layout selector + PDF button */}
+          {tables.length > 0 && (
+            <div className="flex flex-col sm:flex-row gap-2 mb-6 p-3 rounded-lg bg-muted/30 border border-border">
+              <div className="flex-1 min-w-[200px]">
+                <label className="text-xs text-muted-foreground mb-1 block">Layout do QR Code</label>
+                <Select value={qrLayout} onValueChange={(v) => setQrLayout(v as QrLayout)}>
+                  <SelectTrigger className="h-9">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {layoutOptions.map((opt) => {
+                      const Icon = opt.icon;
+                      return (
+                        <SelectItem key={opt.value} value={opt.value}>
+                          <div className="flex items-center gap-2">
+                            <Icon className="w-3.5 h-3.5" />
+                            <span className="font-medium">{opt.label}</span>
+                            <span className="text-xs text-muted-foreground hidden sm:inline">— {opt.description}</span>
+                          </div>
+                        </SelectItem>
+                      );
+                    })}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex items-end">
+                <Button
+                  onClick={handleGeneratePdf}
+                  disabled={generatingPdf}
+                  className="w-full sm:w-auto"
+                >
+                  {generatingPdf
+                    ? <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    : <FileText className="w-4 h-4 mr-2" />}
+                  Baixar PDF ({tables.length} mesa{tables.length === 1 ? '' : 's'})
+                </Button>
+              </div>
+            </div>
+          )}
+
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {tables.map((table) => (
