@@ -183,7 +183,7 @@ export function EvolutionApiWizard({
       case 3:
         return !!formData.evolutionApiKey;
       case 4:
-        return !!formData.evolutionInstanceName;
+        return true; // instance name is optional in Evolution GO (token identifies the instance)
       case 5:
         return testResult === 'success';
       case 6:
