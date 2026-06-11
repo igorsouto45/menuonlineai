@@ -154,9 +154,9 @@ serve(async (req) => {
 
           console.log(`Sending message ${i + 1}/${sends.length} to ${formattedPhone}`);
 
-          // Send via Evolution API
+          // Send via Evolution GO
           const response = await fetch(
-            `${restaurant.evolution_api_url}/message/sendText/${restaurant.evolution_instance_name}`,
+            `${evolutionBaseUrl}/send/text`,
             {
               method: 'POST',
               headers: {
