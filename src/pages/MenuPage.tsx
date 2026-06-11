@@ -1185,6 +1185,26 @@ function MenuPageContent() {
   };
 
   if (loading) {
+    if (stuck) {
+      return (
+        <div className="min-h-screen bg-background flex flex-col items-center justify-center p-6 text-center">
+          <div className="max-w-md">
+            <h1 className="text-2xl font-bold text-foreground mb-2">Atualização disponível</h1>
+            <p className="text-muted-foreground mb-6">
+              Detectamos uma versão desatualizada do cardápio salva no seu navegador.
+              Recarregue para baixar a versão mais recente.
+            </p>
+            <Button onClick={handleForceRefresh} size="lg" className="gap-2">
+              <Loader2 className="w-4 h-4" />
+              Recarregar cardápio
+            </Button>
+            <p className="text-xs text-muted-foreground mt-4">
+              Se o problema persistir, tente fechar e reabrir o navegador.
+            </p>
+          </div>
+        </div>
+      );
+    }
     return <MenuSkeleton />;
   }
 
