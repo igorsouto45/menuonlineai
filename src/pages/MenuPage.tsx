@@ -35,7 +35,8 @@ import {
   Wallet,
   Table as TableIcon,
   Moon,
-  Sun
+  Sun,
+  QrCode
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
