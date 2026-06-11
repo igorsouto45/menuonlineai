@@ -69,10 +69,10 @@ serve(async (req) => {
           .eq('id', campaign.id);
       }
 
-      // Get the restaurant's Evolution API credentials
+      // Get the restaurant's Evolution GO credentials (URL + apikey/token)
       const restaurant = campaign.restaurants;
-      if (!restaurant?.evolution_api_url || !restaurant?.evolution_api_key || !restaurant?.evolution_instance_name) {
-        console.error(`Restaurant ${restaurant?.id} missing Evolution API credentials`);
+      if (!restaurant?.evolution_api_url || !restaurant?.evolution_api_key) {
+        console.error(`Restaurant ${restaurant?.id} missing Evolution GO credentials`);
         await supabase
           .from('promotion_campaigns')
           .update({ 
@@ -82,6 +82,7 @@ serve(async (req) => {
           .eq('id', campaign.id);
         continue;
       }
+      const evolutionBaseUrl = String(restaurant.evolution_api_url).replace(/\/+$/, '').replace(/\/manager$/, '');
 
       // Get pending sends for this campaign
       let { data: sends } = await supabase
