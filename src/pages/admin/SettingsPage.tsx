@@ -149,6 +149,94 @@ export default function SettingsPage() {
     }
   };
 
+  const fetchWaStatus = async (opts?: { retry?: number }) => {
+    const retry = opts?.retry ?? 0;
+    const values = form.getValues();
+    if (!values.evolution_api_url || !values.evolution_api_key) {
+      setWaStatus('disconnected');
+      setWaStatusDetail('não configurado');
+      return;
+    }
+    setWaStatus((prev) => (prev === 'connected' ? prev : 'connecting'));
+    try {
+      const { data, error } = await supabase.functions.invoke('test-evolution-connection', {
+        body: {
+          evolutionApiUrl: values.evolution_api_url,
+          evolutionApiKey: values.evolution_api_key,
+          evolutionInstanceName: values.evolution_instance_name,
+        },
+      });
+      if (error) throw error;
+      if (data?.success) {
+        setWaStatus(data.connected ? 'connected' : 'disconnected');
+        setWaStatusDetail(data.state || (data.connected ? 'open' : 'desconectado'));
+      } else {
+        setWaStatus('error');
+        setWaStatusDetail(data?.error || 'falha');
+      }
+    } catch (e) {
+      console.error('fetchWaStatus error', e);
+      if (retry < 2) {
+        setTimeout(() => fetchWaStatus({ retry: retry + 1 }), (retry + 1) * 2000);
+        return;
+      }
+      setWaStatus('error');
+      setWaStatusDetail('erro de rede');
+    }
+  };
+
+  const disconnectWhatsApp = async () => {
+    const values = form.getValues();
+    if (!confirm('Tem certeza que deseja desconectar o WhatsApp? Você precisará escanear o QR Code novamente.')) return;
+    setDisconnecting(true);
+    try {
+      // Logout from Evolution GO (best-effort)
+      try {
+        await supabase.functions.invoke('evolution-disconnect', {
+          body: {
+            evolutionApiUrl: values.evolution_api_url,
+            evolutionApiKey: values.evolution_api_key,
+            evolutionInstanceName: values.evolution_instance_name,
+          },
+        });
+      } catch (e) {
+        console.warn('Evolution logout failed (continuing to clear local config)', e);
+      }
+
+      // Clear DB fields
+      if (restaurant?.id) {
+        const { error } = await supabase
+          .from('restaurants')
+          .update({
+            evolution_api_url: null,
+            evolution_api_key: null,
+            evolution_instance_name: null,
+          })
+          .eq('id', restaurant.id);
+        if (error) throw error;
+      }
+
+      form.setValue('evolution_api_url', '');
+      form.setValue('evolution_api_key', '');
+      form.setValue('evolution_instance_name', '');
+      setWaStatus('disconnected');
+      setWaStatusDetail('desconectado');
+      setConnectionStatus('idle');
+      await refetch();
+      toast({ title: 'WhatsApp desconectado', description: 'Credenciais removidas com sucesso.' });
+    } catch (err) {
+      console.error('disconnect error', err);
+      toast({
+        title: 'Erro ao desconectar',
+        description: 'Não foi possível remover as credenciais.',
+        variant: 'destructive',
+      });
+    } finally {
+      setDisconnecting(false);
+    }
+  };
+
+
   const form = useForm<SettingsFormData>({
     resolver: zodResolver(settingsSchema),
     defaultValues: {
