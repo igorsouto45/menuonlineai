@@ -2,14 +2,17 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { 
-  Table as TableIcon, 
-  Plus, 
-  Trash2, 
-  QrCode, 
+import {
+  Table as TableIcon,
+  Plus,
+  Trash2,
+  QrCode,
   Download,
   Loader2,
-  ExternalLink
+  ExternalLink,
+  FileText,
+  Crown,
+  Store
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import {
@@ -28,6 +31,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { generateTablesQrPdf, type QrLayout } from '@/lib/tableQrPdf';
 
 interface RestaurantTable {
   id: string;
@@ -35,6 +39,13 @@ interface RestaurantTable {
   is_active: boolean;
   status: 'free' | 'occupied' | 'reserved';
 }
+
+const layoutOptions: { value: QrLayout; label: string; description: string; icon: any }[] = [
+  { value: 'standard', label: 'Padrão', description: 'Layout balanceado para a maioria das mesas', icon: TableIcon },
+  { value: 'large', label: 'Grande', description: 'QR maior, ideal para mesas afastadas', icon: QrCode },
+  { value: 'counter', label: 'Balcão', description: 'Foco em peça e retire', icon: Store },
+  { value: 'vip', label: 'VIP', description: 'Acabamento dourado e decorativo', icon: Crown },
+];
 
 export function TablesManager({ restaurantId, restaurantSlug }: { restaurantId: string; restaurantSlug: string }) {
   const [tables, setTables] = useState<RestaurantTable[]>([]);
