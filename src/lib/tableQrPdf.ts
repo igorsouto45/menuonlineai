@@ -38,21 +38,6 @@ const svgToPngDataUrl = (svg: SVGElement, size = 1000): Promise<string> =>
     }
   });
 
-const loadLogoDataUrl = async (): Promise<string | null> => {
-  try {
-    const res = await fetch('/pwa-192x192.png');
-    const blob = await res.blob();
-    return await new Promise((resolve, reject) => {
-      const r = new FileReader();
-      r.onloadend = () => resolve(typeof r.result === 'string' ? r.result : null);
-      r.onerror = () => reject(r.error);
-      r.readAsDataURL(blob);
-    });
-  } catch {
-    return null;
-  }
-};
-
 const layoutMeta: Record<QrLayout, { label: string; accent: [number, number, number]; banner?: string; subtitle: string }> = {
   standard: {
     label: 'Mesa',
@@ -85,7 +70,6 @@ export async function generateTablesQrPdf(opts: GeneratePdfOptions) {
   const pageW = 210;
   const pageH = 297;
   const meta = layoutMeta[opts.layout];
-  const logoDataUrl = await loadLogoDataUrl();
 
   for (let i = 0; i < opts.tables.length; i++) {
     const item = opts.tables[i];
@@ -112,15 +96,8 @@ export async function generateTablesQrPdf(opts: GeneratePdfOptions) {
       doc.text(meta.banner, pageW / 2, 12, { align: 'center' });
     }
 
-    // === Brand logo header ===
-    const logoY = meta.banner ? 22 : 14;
-    if (logoDataUrl) {
-      const logoSize = 16;
-      doc.addImage(logoDataUrl, 'PNG', (pageW - logoSize) / 2, logoY, logoSize, logoSize);
-    }
-
     // === Restaurant name ===
-    const topY = (meta.banner ? 32 : 24) + 14;
+    const topY = meta.banner ? 32 : 24;
     doc.setTextColor(80, 80, 80);
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(13);
@@ -164,14 +141,11 @@ export async function generateTablesQrPdf(opts: GeneratePdfOptions) {
       doc.text(s, pageW / 2, qrY + qrSize + 30 + idx * 6, { align: 'center' });
     });
 
-    // === Footer with brand logo ===
-    if (logoDataUrl) {
-      doc.addImage(logoDataUrl, 'PNG', pageW / 2 - 4, pageH - 22, 8, 8);
-    }
+    // === Footer ===
     doc.setFontSize(8);
     doc.setTextColor(160, 160, 160);
-    doc.text(item.url, pageW / 2, pageH - 12, { align: 'center' });
-    doc.text(`MENU AI • ${opts.restaurantName}`, pageW / 2, pageH - 7, { align: 'center' });
+    doc.text(item.url, pageW / 2, pageH - 14, { align: 'center' });
+    doc.text(`Pedido digital • ${opts.restaurantName}`, pageW / 2, pageH - 8, { align: 'center' });
 
     // === Corner ornaments for VIP ===
     if (opts.layout === 'vip') {

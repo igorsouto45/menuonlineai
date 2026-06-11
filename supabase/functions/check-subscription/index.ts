@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@18.5.0";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.76.0";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -17,6 +17,12 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  const supabaseClient = createClient(
+    Deno.env.get("SUPABASE_URL") ?? "",
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+    { auth: { persistSession: false } }
+  );
+
   try {
     logStep("Function started");
 
@@ -29,22 +35,21 @@ serve(async (req) => {
     logStep("Authorization header found");
 
     const token = authHeader.replace("Bearer ", "");
-
-    // Decode JWT payload directly (token is already validated by the API gateway / signed by Supabase)
-    let user: { id: string; email: string };
-    try {
-      const parts = token.split(".");
-      if (parts.length !== 3) throw new Error("Malformed token");
-      const payloadB64 = parts[1].replace(/-/g, "+").replace(/_/g, "/");
-      const padded = payloadB64 + "=".repeat((4 - (payloadB64.length % 4)) % 4);
-      const payload = JSON.parse(atob(padded));
-      if (!payload.sub || !payload.email) throw new Error("Missing sub/email in token");
-      if (payload.exp && payload.exp * 1000 < Date.now()) throw new Error("Token expired");
-      user = { id: payload.sub, email: payload.email };
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : String(e);
-      logStep("Authentication failed", { errorMessage: msg });
-      throw new Error(`Authentication error: ${msg}`);
+    logStep("Authenticating user with token");
+    
+    const { data: userData, error: userError } = await supabaseClient.auth.getUser(token);
+    if (userError) {
+      logStep("Authentication failed", { 
+        errorMessage: userError.message, 
+        errorCode: userError.code,
+        errorStatus: userError.status 
+      });
+      throw new Error(`Authentication error: ${userError.message || userError.code || 'Unknown error'}`);
+    }
+    const user = userData.user;
+    if (!user?.email) {
+      logStep("User data missing", { hasUser: !!user, hasEmail: !!user?.email });
+      throw new Error("User not authenticated or email not available");
     }
     logStep("User authenticated", { userId: user.id, email: user.email });
 
