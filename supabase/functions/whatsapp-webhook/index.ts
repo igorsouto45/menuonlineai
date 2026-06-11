@@ -347,10 +347,11 @@ REGRAS DE SEGURANÇA (NÃO QUEBRE NUNCA):
 
     console.log('AI response:', responseText);
 
-    // Send response via Evolution API
+    // Send response via Evolution GO
     if (restaurant.evolution_api_url && restaurant.evolution_api_key) {
+      const evoBase = String(restaurant.evolution_api_url).replace(/\/+$/, '').replace(/\/manager$/, '');
       const sendResponse = await fetch(
-        `${restaurant.evolution_api_url}/message/sendText/${restaurant.evolution_instance_name}`,
+        `${evoBase}/send/text`,
         {
           method: 'POST',
           headers: {
