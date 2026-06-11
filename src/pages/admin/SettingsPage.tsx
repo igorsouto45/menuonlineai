@@ -752,9 +752,10 @@ export default function SettingsPage() {
           >
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
+                <CardTitle className="flex items-center gap-2 flex-wrap">
                   <MessageSquare className="w-5 h-5 text-primary" />
-                  Evolution API (WhatsApp)
+                  <span>Evolution API (WhatsApp)</span>
+                  <WhatsAppStatusBadge status={waStatus} detail={waStatusDetail} />
                 </CardTitle>
                 <CardDescription>
                   Configure a API para notificações automáticas de pedidos via WhatsApp
@@ -806,25 +807,45 @@ export default function SettingsPage() {
                   )}
                 />
 
-                {/* Test Connection Button */}
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={testEvolutionConnection}
-                  disabled={testingConnection}
-                  className="w-full"
-                >
-                  {testingConnection ? (
-                    <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                  ) : connectionStatus === 'success' ? (
-                    <Wifi className="w-4 h-4 mr-2 text-green-500" />
-                  ) : connectionStatus === 'error' ? (
-                    <WifiOff className="w-4 h-4 mr-2 text-destructive" />
-                  ) : (
-                    <Wifi className="w-4 h-4 mr-2" />
+                {/* Test Connection + Disconnect buttons */}
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={testEvolutionConnection}
+                    disabled={testingConnection}
+                    className="flex-1"
+                  >
+                    {testingConnection ? (
+                      <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                    ) : connectionStatus === 'success' ? (
+                      <Wifi className="w-4 h-4 mr-2 text-success" />
+                    ) : connectionStatus === 'error' ? (
+                      <WifiOff className="w-4 h-4 mr-2 text-destructive" />
+                    ) : (
+                      <Wifi className="w-4 h-4 mr-2" />
+                    )}
+                    {testingConnection ? 'Testando...' : 'Testar Conexão'}
+                  </Button>
+
+                  {(waStatus === 'connected' || (restaurant as any)?.evolution_api_key) && (
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      onClick={disconnectWhatsApp}
+                      disabled={disconnecting}
+                      className="flex-1"
+                    >
+                      {disconnecting ? (
+                        <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                      ) : (
+                        <WifiOff className="w-4 h-4 mr-2" />
+                      )}
+                      Desconectar WhatsApp
+                    </Button>
                   )}
-                  {testingConnection ? 'Testando...' : 'Testar Conexão'}
-                </Button>
+                </div>
+
 
                 {/* Custom Order Welcome Message */}
                 <FormField
