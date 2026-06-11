@@ -245,7 +245,7 @@ export default function AdminLayout() {
       {/* Main Content */}
       <div className={`transition-all duration-300 ${sidebarCollapsed ? 'lg:ml-20' : 'lg:ml-64'}`}>
         {/* Mobile Header */}
-        <header className="lg:hidden sticky top-0 z-30 h-16 bg-card border-b border-border flex items-center justify-between px-4">
+        <header className="lg:hidden sticky top-0 z-30 h-20 bg-card border-b border-border flex items-center justify-between px-4">
           <div className="flex items-center">
             <button
               onClick={() => setMobileNavOpen(true)}
@@ -253,8 +253,8 @@ export default function AdminLayout() {
             >
               <Menu className="w-5 h-5" />
             </button>
-            <div className="flex items-center ml-4">
-              <img src={menuAiLogo.url} alt="MENU AI" className="h-9 w-auto bg-white rounded-lg p-1" />
+            <div className="flex items-center ml-3">
+              <img src={menuAiLogo.url} alt="MENU AI" className="h-14 w-auto bg-white rounded-lg p-1.5" />
             </div>
           </div>
           <Link to="/precos" className="flex items-center gap-2">
