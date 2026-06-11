@@ -278,6 +278,13 @@ export default function SettingsPage() {
         order_welcome_message: (restaurant as any).order_welcome_message || '',
       });
       setLogoUrl(restaurant.logo_url);
+      // Auto-check WhatsApp status when restaurant config loads
+      if ((restaurant as any).evolution_api_url && (restaurant as any).evolution_api_key) {
+        setTimeout(() => fetchWaStatus(), 100);
+      } else {
+        setWaStatus('disconnected');
+        setWaStatusDetail('não configurado');
+      }
     }
   }, [restaurant, form]);
 
