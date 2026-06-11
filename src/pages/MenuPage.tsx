@@ -1305,7 +1305,17 @@ function MenuPageContent() {
                 ● Fechado
               </Badge>
             )}
-            <InstallPWAButton />
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setIsDark(prev => !prev)}
+                className="w-9 h-9 rounded-full bg-primary-foreground/20 backdrop-blur-sm flex items-center justify-center text-primary-foreground hover:bg-primary-foreground/30 transition-colors"
+                title={isDark ? 'Mudar para tema claro' : 'Mudar para tema escuro'}
+                aria-label={isDark ? 'Mudar para tema claro' : 'Mudar para tema escuro'}
+              >
+                {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+              </button>
+              <InstallPWAButton />
+            </div>
           </div>
         </div>
       </div>
