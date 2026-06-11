@@ -27,6 +27,7 @@ import {
   QrCode,
   RefreshCw,
 } from 'lucide-react';
+import { WhatsAppStatusBadge } from './WhatsAppStatusBadge';
 
 interface EvolutionApiWizardProps {
   open: boolean;
@@ -70,6 +71,9 @@ export function EvolutionApiWizard({
   const [qrError, setQrError] = useState<string | null>(null);
   const [qrConnected, setQrConnected] = useState(false);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const qrRefreshRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [qrSecondsLeft, setQrSecondsLeft] = useState<number>(0);
+  const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const [formData, setFormData] = useState({
     evolutionApiUrl: initialValues?.evolutionApiUrl || '',
@@ -148,7 +152,27 @@ export function EvolutionApiWizard({
     }
   };
 
-  const fetchQrCode = async () => {
+  const QR_TTL_SECONDS = 40; // Evolution QR typically expires ~40s
+
+  const clearQrTimers = () => {
+    if (qrRefreshRef.current) { clearInterval(qrRefreshRef.current); qrRefreshRef.current = null; }
+    if (countdownRef.current) { clearInterval(countdownRef.current); countdownRef.current = null; }
+  };
+
+  const startQrTimers = () => {
+    clearQrTimers();
+    setQrSecondsLeft(QR_TTL_SECONDS);
+    countdownRef.current = setInterval(() => {
+      setQrSecondsLeft((s) => (s > 0 ? s - 1 : 0));
+    }, 1000);
+    qrRefreshRef.current = setInterval(() => {
+      // Auto-regenerate QR when it expires
+      fetchQrCode({ silent: true });
+    }, QR_TTL_SECONDS * 1000);
+  };
+
+  const fetchQrCode = async (opts?: { silent?: boolean; retry?: number }) => {
+    const retry = opts?.retry ?? 0;
     if (!formData.evolutionApiUrl || !formData.evolutionApiKey) {
       toast({
         title: 'Campos incompletos',
@@ -157,7 +181,7 @@ export function EvolutionApiWizard({
       });
       return;
     }
-    setQrLoading(true);
+    if (!opts?.silent) setQrLoading(true);
     setQrError(null);
     try {
       const { data, error } = await supabase.functions.invoke('evolution-get-qrcode', {
@@ -172,46 +196,62 @@ export function EvolutionApiWizard({
         setQrConnected(true);
         setQrBase64(null);
         setQrCode(null);
+        clearQrTimers();
         return;
       }
       if (data?.success) {
         setQrBase64(data.base64 || null);
         setQrCode(data.code || null);
         if (!data.base64 && !data.code) {
-          setQrError('Resposta sem QR Code. Verifique a instância.');
+          setQrError('Resposta sem QR Code. Verifique a instância no Evolution GO.');
+        } else {
+          startQrTimers();
         }
       } else {
-        setQrError(data?.error || 'Falha ao obter QR Code.');
+        throw new Error(data?.error || 'Falha ao obter QR Code.');
       }
-    } catch (err) {
-      console.error(err);
-      setQrError('Erro ao obter QR Code.');
+    } catch (err: any) {
+      console.error('fetchQrCode error', err);
+      // Auto-retry up to 2 times with exponential backoff
+      if (retry < 2) {
+        const delay = (retry + 1) * 1500;
+        setQrError(`Falha ao gerar QR. Tentando novamente em ${Math.round(delay / 1000)}s... (tentativa ${retry + 2}/3)`);
+        setTimeout(() => fetchQrCode({ ...opts, retry: retry + 1 }), delay);
+        return;
+      }
+      const msg = err?.message || 'Erro ao obter QR Code.';
+      setQrError(`${msg} Verifique a URL, o token e se a instância existe no Evolution GO.`);
+      if (!opts?.silent) {
+        toast({ title: 'Erro ao gerar QR Code', description: msg, variant: 'destructive' });
+      }
     } finally {
-      setQrLoading(false);
+      if (!opts?.silent) setQrLoading(false);
     }
   };
 
-  const checkConnectionStatus = async () => {
+  const checkConnectionStatus = async (opts?: { retry?: number }) => {
+    const retry = opts?.retry ?? 0;
     try {
-      const { data } = await supabase.functions.invoke('test-evolution-connection', {
+      const { data, error } = await supabase.functions.invoke('test-evolution-connection', {
         body: {
           evolutionApiUrl: formData.evolutionApiUrl,
           evolutionApiKey: formData.evolutionApiKey,
           evolutionInstanceName: formData.evolutionInstanceName,
         },
       });
+      if (error) throw error;
       if (data?.success && data?.connected) {
         setQrConnected(true);
         setTestResult('success');
         toast({ title: 'WhatsApp conectado!', description: 'Sua instância está pronta para enviar mensagens.' });
-        if (pollRef.current) {
-          clearInterval(pollRef.current);
-          pollRef.current = null;
-        }
+        if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; }
+        clearQrTimers();
         setTimeout(() => setQrOpen(false), 1500);
       }
     } catch (e) {
       console.error('poll error', e);
+      // Retry once on transient error
+      if (retry < 1) setTimeout(() => checkConnectionStatus({ retry: retry + 1 }), 2000);
     }
   };
 
@@ -230,13 +270,16 @@ export function EvolutionApiWizard({
         checkConnectionStatus();
       }, 4000);
       return () => {
-        if (pollRef.current) {
-          clearInterval(pollRef.current);
-          pollRef.current = null;
-        }
+        if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; }
       };
     }
   }, [qrOpen, qrConnected]);
+
+  useEffect(() => {
+    if (!qrOpen) clearQrTimers();
+    return () => clearQrTimers();
+  }, [qrOpen]);
+
 
   const saveAndComplete = async () => {
     setSaving(true);
@@ -310,9 +353,20 @@ export function EvolutionApiWizard({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
+          <DialogTitle className="flex items-center gap-2 flex-wrap">
             <Smartphone className="w-5 h-5 text-primary" />
             Configurar Evolution GO
+            <WhatsAppStatusBadge
+              status={
+                qrConnected || testResult === 'success'
+                  ? 'connected'
+                  : testing || qrLoading
+                  ? 'connecting'
+                  : testResult === 'error' || qrError
+                  ? 'error'
+                  : 'disconnected'
+              }
+            />
           </DialogTitle>
           <DialogDescription>
             Siga os passos para conectar o WhatsApp ao seu restaurante via Evolution GO
@@ -729,9 +783,9 @@ export function EvolutionApiWizard({
             )}
 
             <div className="flex gap-2 w-full">
-              <Button variant="outline" className="flex-1" onClick={fetchQrCode} disabled={qrLoading}>
+              <Button variant="outline" className="flex-1" onClick={() => fetchQrCode()} disabled={qrLoading}>
                 <RefreshCw className="w-4 h-4 mr-2" />
-                Atualizar QR
+                {qrSecondsLeft > 0 ? `Atualizar QR (${qrSecondsLeft}s)` : 'Atualizar QR'}
               </Button>
               <Button className="flex-1" onClick={() => setQrOpen(false)}>
                 Fechar

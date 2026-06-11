@@ -18,6 +18,7 @@ import ImageUpload from '@/components/admin/ImageUpload';
 import { DeliveryAreasManager } from '@/components/admin/DeliveryAreasManager';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { TablesManager } from '@/components/admin/TablesManager';
+import { WhatsAppStatusBadge, WhatsAppStatus } from '@/components/admin/WhatsAppStatusBadge';
 
 const settingsSchema = z.object({
   name: z.string().min(2, 'Nome deve ter pelo menos 2 caracteres'),
@@ -48,6 +49,9 @@ export default function SettingsPage() {
   const [slugCopied, setSlugCopied] = useState(false);
   const [testingConnection, setTestingConnection] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState<'idle' | 'success' | 'error'>('idle');
+  const [waStatus, setWaStatus] = useState<WhatsAppStatus>('unknown');
+  const [waStatusDetail, setWaStatusDetail] = useState<string>('');
+  const [disconnecting, setDisconnecting] = useState(false);
 
   const webhookUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/whatsapp-webhook`;
 
@@ -89,13 +93,16 @@ export default function SettingsPage() {
 
       if (data.success) {
         setConnectionStatus('success');
+        setWaStatus(data.connected ? 'connected' : 'disconnected');
+        setWaStatusDetail(data.state || (data.connected ? 'open' : 'desconectado'));
         toast({
           title: data.connected ? 'Conexão estabelecida!' : 'Instância encontrada',
           description: data.message,
-          variant: data.connected ? 'default' : 'default',
         });
       } else {
         setConnectionStatus('error');
+        setWaStatus('error');
+        setWaStatusDetail(data.error || 'falha');
         toast({
           title: 'Falha na conexão',
           description: data.error || 'Não foi possível conectar à Evolution API.',
@@ -105,6 +112,9 @@ export default function SettingsPage() {
     } catch (err) {
       console.error('Error testing connection:', err);
       setConnectionStatus('error');
+      setWaStatus('error');
+      setWaStatusDetail('erro de rede');
+
 
       let description = 'Verifique as credenciais e tente novamente.';
 
@@ -138,6 +148,94 @@ export default function SettingsPage() {
       setTestingConnection(false);
     }
   };
+
+  const fetchWaStatus = async (opts?: { retry?: number }) => {
+    const retry = opts?.retry ?? 0;
+    const values = form.getValues();
+    if (!values.evolution_api_url || !values.evolution_api_key) {
+      setWaStatus('disconnected');
+      setWaStatusDetail('não configurado');
+      return;
+    }
+    setWaStatus((prev) => (prev === 'connected' ? prev : 'connecting'));
+    try {
+      const { data, error } = await supabase.functions.invoke('test-evolution-connection', {
+        body: {
+          evolutionApiUrl: values.evolution_api_url,
+          evolutionApiKey: values.evolution_api_key,
+          evolutionInstanceName: values.evolution_instance_name,
+        },
+      });
+      if (error) throw error;
+      if (data?.success) {
+        setWaStatus(data.connected ? 'connected' : 'disconnected');
+        setWaStatusDetail(data.state || (data.connected ? 'open' : 'desconectado'));
+      } else {
+        setWaStatus('error');
+        setWaStatusDetail(data?.error || 'falha');
+      }
+    } catch (e) {
+      console.error('fetchWaStatus error', e);
+      if (retry < 2) {
+        setTimeout(() => fetchWaStatus({ retry: retry + 1 }), (retry + 1) * 2000);
+        return;
+      }
+      setWaStatus('error');
+      setWaStatusDetail('erro de rede');
+    }
+  };
+
+  const disconnectWhatsApp = async () => {
+    const values = form.getValues();
+    if (!confirm('Tem certeza que deseja desconectar o WhatsApp? Você precisará escanear o QR Code novamente.')) return;
+    setDisconnecting(true);
+    try {
+      // Logout from Evolution GO (best-effort)
+      try {
+        await supabase.functions.invoke('evolution-disconnect', {
+          body: {
+            evolutionApiUrl: values.evolution_api_url,
+            evolutionApiKey: values.evolution_api_key,
+            evolutionInstanceName: values.evolution_instance_name,
+          },
+        });
+      } catch (e) {
+        console.warn('Evolution logout failed (continuing to clear local config)', e);
+      }
+
+      // Clear DB fields
+      if (restaurant?.id) {
+        const { error } = await supabase
+          .from('restaurants')
+          .update({
+            evolution_api_url: null,
+            evolution_api_key: null,
+            evolution_instance_name: null,
+          })
+          .eq('id', restaurant.id);
+        if (error) throw error;
+      }
+
+      form.setValue('evolution_api_url', '');
+      form.setValue('evolution_api_key', '');
+      form.setValue('evolution_instance_name', '');
+      setWaStatus('disconnected');
+      setWaStatusDetail('desconectado');
+      setConnectionStatus('idle');
+      await refetch();
+      toast({ title: 'WhatsApp desconectado', description: 'Credenciais removidas com sucesso.' });
+    } catch (err) {
+      console.error('disconnect error', err);
+      toast({
+        title: 'Erro ao desconectar',
+        description: 'Não foi possível remover as credenciais.',
+        variant: 'destructive',
+      });
+    } finally {
+      setDisconnecting(false);
+    }
+  };
+
 
   const form = useForm<SettingsFormData>({
     resolver: zodResolver(settingsSchema),
@@ -180,6 +278,13 @@ export default function SettingsPage() {
         order_welcome_message: (restaurant as any).order_welcome_message || '',
       });
       setLogoUrl(restaurant.logo_url);
+      // Auto-check WhatsApp status when restaurant config loads
+      if ((restaurant as any).evolution_api_url && (restaurant as any).evolution_api_key) {
+        setTimeout(() => fetchWaStatus(), 100);
+      } else {
+        setWaStatus('disconnected');
+        setWaStatusDetail('não configurado');
+      }
     }
   }, [restaurant, form]);
 
@@ -647,9 +752,10 @@ export default function SettingsPage() {
           >
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
+                <CardTitle className="flex items-center gap-2 flex-wrap">
                   <MessageSquare className="w-5 h-5 text-primary" />
-                  Evolution API (WhatsApp)
+                  <span>Evolution API (WhatsApp)</span>
+                  <WhatsAppStatusBadge status={waStatus} detail={waStatusDetail} />
                 </CardTitle>
                 <CardDescription>
                   Configure a API para notificações automáticas de pedidos via WhatsApp
@@ -701,25 +807,45 @@ export default function SettingsPage() {
                   )}
                 />
 
-                {/* Test Connection Button */}
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={testEvolutionConnection}
-                  disabled={testingConnection}
-                  className="w-full"
-                >
-                  {testingConnection ? (
-                    <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                  ) : connectionStatus === 'success' ? (
-                    <Wifi className="w-4 h-4 mr-2 text-green-500" />
-                  ) : connectionStatus === 'error' ? (
-                    <WifiOff className="w-4 h-4 mr-2 text-destructive" />
-                  ) : (
-                    <Wifi className="w-4 h-4 mr-2" />
+                {/* Test Connection + Disconnect buttons */}
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={testEvolutionConnection}
+                    disabled={testingConnection}
+                    className="flex-1"
+                  >
+                    {testingConnection ? (
+                      <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                    ) : connectionStatus === 'success' ? (
+                      <Wifi className="w-4 h-4 mr-2 text-success" />
+                    ) : connectionStatus === 'error' ? (
+                      <WifiOff className="w-4 h-4 mr-2 text-destructive" />
+                    ) : (
+                      <Wifi className="w-4 h-4 mr-2" />
+                    )}
+                    {testingConnection ? 'Testando...' : 'Testar Conexão'}
+                  </Button>
+
+                  {(waStatus === 'connected' || (restaurant as any)?.evolution_api_key) && (
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      onClick={disconnectWhatsApp}
+                      disabled={disconnecting}
+                      className="flex-1"
+                    >
+                      {disconnecting ? (
+                        <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                      ) : (
+                        <WifiOff className="w-4 h-4 mr-2" />
+                      )}
+                      Desconectar WhatsApp
+                    </Button>
                   )}
-                  {testingConnection ? 'Testando...' : 'Testar Conexão'}
-                </Button>
+                </div>
+
 
                 {/* Custom Order Welcome Message */}
                 <FormField
