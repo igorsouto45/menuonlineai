@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
+import { QRCodeSVG } from 'qrcode.react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useCart, CartProvider, DeliveryMode, PaymentMethod } from '@/contexts/CartContext';
@@ -35,7 +36,8 @@ import {
   Wallet,
   Table as TableIcon,
   Moon,
-  Sun
+  Sun,
+  QrCode
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
@@ -940,6 +942,7 @@ function MenuPageContent() {
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [cartOpen, setCartOpen] = useState(false);
+  const [qrOpen, setQrOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [tableStatus, setTableStatus] = useState<'free' | 'occupied' | 'reserved' | null>(null);
   const [isDark, setIsDark] = useState(() => {
@@ -1307,6 +1310,14 @@ function MenuPageContent() {
             )}
             <div className="flex items-center gap-2">
               <button
+                onClick={() => setQrOpen(true)}
+                className="w-9 h-9 rounded-full bg-primary-foreground/20 backdrop-blur-sm flex items-center justify-center text-primary-foreground hover:bg-primary-foreground/30 transition-colors"
+                title="Compartilhar cardápio"
+                aria-label="Compartilhar cardápio"
+              >
+                <QrCode className="w-4 h-4" />
+              </button>
+              <button
                 onClick={() => setIsDark(prev => !prev)}
                 className="w-9 h-9 rounded-full bg-primary-foreground/20 backdrop-blur-sm flex items-center justify-center text-primary-foreground hover:bg-primary-foreground/30 transition-colors"
                 title={isDark ? 'Mudar para tema claro' : 'Mudar para tema escuro'}
@@ -1506,6 +1517,64 @@ function MenuPageContent() {
         dineInEnabled={restaurant.dine_in_enabled ?? false}
         tableStatus={tableStatus}
       />
+
+      {/* QR Code Modal */}
+      <AnimatePresence>
+        {qrOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/60 backdrop-blur-md p-4"
+            onClick={() => setQrOpen(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+              className="bg-card rounded-3xl p-6 sm:p-8 shadow-2xl max-w-sm w-full text-center"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-bold text-foreground">Compartilhar Cardápio</h2>
+                <button
+                  onClick={() => setQrOpen(false)}
+                  className="w-10 h-10 rounded-full hover:bg-muted flex items-center justify-center transition-colors"
+                >
+                  <X className="w-5 h-5 text-foreground" />
+                </button>
+              </div>
+              <p className="text-sm text-muted-foreground mb-6">
+                Aponte a câmera do celular para acessar o cardápio
+              </p>
+              <div className="flex justify-center mb-6">
+                <div className="p-4 bg-white rounded-2xl">
+                  <QRCodeSVG
+                    value={window.location.href}
+                    size={200}
+                    level="H"
+                    includeMargin={true}
+                  />
+                </div>
+              </div>
+              <div className="text-xs text-muted-foreground break-all mb-4">
+                {window.location.href}
+              </div>
+              <Button
+                variant="hero"
+                className="w-full"
+                onClick={() => {
+                  navigator.clipboard.writeText(window.location.href);
+                  toast({ title: 'Link copiado!', description: 'O link do cardápio foi copiado para a área de transferência.' });
+                }}
+              >
+                Copiar link
+              </Button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
