@@ -18,6 +18,7 @@ import ImageUpload from '@/components/admin/ImageUpload';
 import { DeliveryAreasManager } from '@/components/admin/DeliveryAreasManager';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { TablesManager } from '@/components/admin/TablesManager';
+import { WhatsAppStatusBadge, WhatsAppStatus } from '@/components/admin/WhatsAppStatusBadge';
 
 const settingsSchema = z.object({
   name: z.string().min(2, 'Nome deve ter pelo menos 2 caracteres'),
@@ -48,6 +49,9 @@ export default function SettingsPage() {
   const [slugCopied, setSlugCopied] = useState(false);
   const [testingConnection, setTestingConnection] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState<'idle' | 'success' | 'error'>('idle');
+  const [waStatus, setWaStatus] = useState<WhatsAppStatus>('unknown');
+  const [waStatusDetail, setWaStatusDetail] = useState<string>('');
+  const [disconnecting, setDisconnecting] = useState(false);
 
   const webhookUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/whatsapp-webhook`;
 
