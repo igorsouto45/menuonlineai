@@ -19,19 +19,22 @@ function normalizeEvolutionUrl(rawUrl: string) {
 }
 
 function parseState(data: any): string {
+  const d = data?.data ?? data;
   return String(
-    data?.state ??
-      data?.status ??
-      data?.connectionStatus ??
-      data?.instance?.state ??
-      data?.instance?.status ??
-      data?.instance?.connectionStatus ??
+    d?.state ??
+      d?.status ??
+      d?.connectionStatus ??
+      d?.instance?.state ??
+      d?.instance?.status ??
+      d?.instance?.connectionStatus ??
       "",
   ).toLowerCase();
 }
 
 function isConnectedState(state: string, data: any): boolean {
-  if (data?.connected === true) return true;
+  const d = data?.data ?? data;
+  if (d?.connected === true || d?.Connected === true) return true;
+  if (d?.loggedIn === true || d?.LoggedIn === true) return true;
   return [
     "open",
     "connected",
