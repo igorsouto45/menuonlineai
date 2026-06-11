@@ -355,7 +355,14 @@ export function TablesManager({ restaurantId, restaurantSlug, restaurantName }: 
                     size={qrLayout === 'large' ? 200 : 160}
                     level="H"
                     includeMargin={true}
-                    fgColor={qrLayout === 'vip' ? '#a16207' : '#000000'}
+                    fgColor={qrLayout === 'vip' ? '#a16207' : '#1a1f2e'}
+                    bgColor="#ffffff"
+                    imageSettings={{
+                      src: '/pwa-192x192.png',
+                      height: qrLayout === 'large' ? 40 : 32,
+                      width: qrLayout === 'large' ? 40 : 32,
+                      excavate: true,
+                    }}
                   />
                   <p className="text-[10px] text-muted-foreground mt-2 break-all text-center">
                     {getTableUrl(table.table_number)}

@@ -141,11 +141,9 @@ export default function AuthPage() {
           transition={{ duration: 0.5 }}
           className="w-full max-w-md"
         >
-          <Link to="/" className="flex items-center gap-2 mb-8">
-            <div className="h-10 w-10 rounded-xl gradient-primary flex items-center justify-center">
-              <span className="text-primary-foreground font-bold text-xl">M</span>
-            </div>
-            <span className="font-bold text-2xl text-foreground">MENU AI</span>
+          <Link to="/" className="flex items-center mb-8">
+            <img src="/pwa-192x192.png" alt="MENU AI" className="h-12 w-12 rounded-xl" />
+            <span className="font-bold text-2xl text-foreground ml-3">MENU AI</span>
           </Link>
 
           <h1 className="text-3xl font-bold text-foreground mb-2">
