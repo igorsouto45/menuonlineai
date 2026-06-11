@@ -2,14 +2,17 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { 
-  Table as TableIcon, 
-  Plus, 
-  Trash2, 
-  QrCode, 
+import {
+  Table as TableIcon,
+  Plus,
+  Trash2,
+  QrCode,
   Download,
   Loader2,
-  ExternalLink
+  ExternalLink,
+  FileText,
+  Crown,
+  Store
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import {
@@ -28,6 +31,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { generateTablesQrPdf, type QrLayout } from '@/lib/tableQrPdf';
 
 interface RestaurantTable {
   id: string;
@@ -36,12 +40,21 @@ interface RestaurantTable {
   status: 'free' | 'occupied' | 'reserved';
 }
 
-export function TablesManager({ restaurantId, restaurantSlug }: { restaurantId: string; restaurantSlug: string }) {
+const layoutOptions: { value: QrLayout; label: string; description: string; icon: any }[] = [
+  { value: 'standard', label: 'Padrão', description: 'Layout balanceado para a maioria das mesas', icon: TableIcon },
+  { value: 'large', label: 'Grande', description: 'QR maior, ideal para mesas afastadas', icon: QrCode },
+  { value: 'counter', label: 'Balcão', description: 'Foco em peça e retire', icon: Store },
+  { value: 'vip', label: 'VIP', description: 'Acabamento dourado e decorativo', icon: Crown },
+];
+
+export function TablesManager({ restaurantId, restaurantSlug, restaurantName }: { restaurantId: string; restaurantSlug: string; restaurantName?: string }) {
   const [tables, setTables] = useState<RestaurantTable[]>([]);
   const [newTableNumber, setNewTableNumber] = useState('');
   const [loading, setLoading] = useState(true);
   const [adding, setAdding] = useState(false);
   const [updating, setUpdating] = useState<string | null>(null);
+  const [qrLayout, setQrLayout] = useState<QrLayout>('standard');
+  const [generatingPdf, setGeneratingPdf] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -161,6 +174,31 @@ export function TablesManager({ restaurantId, restaurantSlug }: { restaurantId: 
     return `${baseUrl}/r/${restaurantSlug}?table=${encodeURIComponent(tableNumber)}`;
   };
 
+  const handleGeneratePdf = async () => {
+    if (tables.length === 0) {
+      toast({ title: 'Nenhuma mesa', description: 'Adicione mesas para gerar o PDF.', variant: 'destructive' });
+      return;
+    }
+    setGeneratingPdf(true);
+    try {
+      // Small wait so React renders the QR SVGs with current layout in the DOM
+      await new Promise((r) => setTimeout(r, 50));
+      await generateTablesQrPdf({
+        restaurantName: restaurantName || 'Cardápio Digital',
+        tables: tables.map(t => ({ tableNumber: t.table_number, url: getTableUrl(t.table_number) })),
+        layout: qrLayout,
+        getSvgElement: (n) => document.getElementById(`qr-${n}`) as unknown as SVGElement | null,
+      });
+      toast({ title: 'PDF gerado!', description: `${tables.length} mesa(s) prontas para impressão.` });
+    } catch (err: any) {
+      console.error(err);
+      toast({ title: 'Erro ao gerar PDF', description: err?.message || 'Tente novamente.', variant: 'destructive' });
+    } finally {
+      setGeneratingPdf(false);
+    }
+  };
+
+
   if (loading) {
     return (
       <div className="flex items-center justify-center p-8">
@@ -182,7 +220,7 @@ export function TablesManager({ restaurantId, restaurantSlug }: { restaurantId: 
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex gap-2 mb-6">
+          <div className="flex gap-2 mb-4">
             <Input
               placeholder="Número ou nome da mesa (ex: 01, VIP, Balcão)"
               value={newTableNumber}
@@ -194,6 +232,47 @@ export function TablesManager({ restaurantId, restaurantSlug }: { restaurantId: 
               Adicionar
             </Button>
           </div>
+
+          {/* Layout selector + PDF button */}
+          {tables.length > 0 && (
+            <div className="flex flex-col sm:flex-row gap-2 mb-6 p-3 rounded-lg bg-muted/30 border border-border">
+              <div className="flex-1 min-w-[200px]">
+                <label className="text-xs text-muted-foreground mb-1 block">Layout do QR Code</label>
+                <Select value={qrLayout} onValueChange={(v) => setQrLayout(v as QrLayout)}>
+                  <SelectTrigger className="h-9">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {layoutOptions.map((opt) => {
+                      const Icon = opt.icon;
+                      return (
+                        <SelectItem key={opt.value} value={opt.value}>
+                          <div className="flex items-center gap-2">
+                            <Icon className="w-3.5 h-3.5" />
+                            <span className="font-medium">{opt.label}</span>
+                            <span className="text-xs text-muted-foreground hidden sm:inline">— {opt.description}</span>
+                          </div>
+                        </SelectItem>
+                      );
+                    })}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex items-end">
+                <Button
+                  onClick={handleGeneratePdf}
+                  disabled={generatingPdf}
+                  className="w-full sm:w-auto"
+                >
+                  {generatingPdf
+                    ? <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    : <FileText className="w-4 h-4 mr-2" />}
+                  Baixar PDF ({tables.length} mesa{tables.length === 1 ? '' : 's'})
+                </Button>
+              </div>
+            </div>
+          )}
+
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {tables.map((table) => (
@@ -244,18 +323,45 @@ export function TablesManager({ restaurantId, restaurantSlug }: { restaurantId: 
                   </Select>
                 </div>
 
-                <div className="flex flex-col items-center bg-white p-4 rounded-lg">
-                  <QRCodeSVG 
+                <div
+                  className={`flex flex-col items-center p-4 rounded-lg ${
+                    qrLayout === 'vip'
+                      ? 'bg-white border-2 border-yellow-500/60 shadow-lg shadow-yellow-500/10'
+                      : qrLayout === 'counter'
+                      ? 'bg-white border-2 border-foreground/30'
+                      : 'bg-white border border-border'
+                  }`}
+                >
+                  {qrLayout === 'vip' && (
+                    <Badge className="mb-2 bg-yellow-500 hover:bg-yellow-600 text-white text-[10px]">
+                      <Crown className="w-3 h-3 mr-1" /> ÁREA VIP
+                    </Badge>
+                  )}
+                  {qrLayout === 'counter' && (
+                    <Badge variant="outline" className="mb-2 text-[10px] border-foreground/40">
+                      PEÇA E RETIRE
+                    </Badge>
+                  )}
+                  <div
+                    className={`font-extrabold leading-none mb-2 ${
+                      qrLayout === 'large' ? 'text-4xl' : qrLayout === 'vip' ? 'text-3xl text-yellow-600' : 'text-2xl'
+                    } ${qrLayout !== 'vip' ? 'text-primary' : ''}`}
+                  >
+                    {qrLayout === 'vip' ? 'VIP' : qrLayout === 'counter' ? 'Balcão' : 'Mesa'} {table.table_number}
+                  </div>
+                  <QRCodeSVG
                     id={`qr-${table.table_number}`}
-                    value={getTableUrl(table.table_number)} 
-                    size={160}
+                    value={getTableUrl(table.table_number)}
+                    size={qrLayout === 'large' ? 200 : 160}
                     level="H"
                     includeMargin={true}
+                    fgColor={qrLayout === 'vip' ? '#a16207' : '#000000'}
                   />
                   <p className="text-[10px] text-muted-foreground mt-2 break-all text-center">
                     {getTableUrl(table.table_number)}
                   </p>
                 </div>
+
 
                 <div className="flex gap-2">
                   <Button 

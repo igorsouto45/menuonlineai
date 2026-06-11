@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { 
   ClipboardList, 
   Clock, 
@@ -19,7 +20,8 @@ import {
   LayoutGrid,
   List,
   Printer,
-  Settings
+  Settings,
+  Table as TableIcon
 } from 'lucide-react';
 import { EvolutionApiStatus } from '@/components/admin/EvolutionApiStatus';
 import { EvolutionApiWizard } from '@/components/admin/EvolutionApiWizard';
@@ -186,6 +188,7 @@ export default function OrdersPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [tableFilter, setTableFilter] = useState<string>('all');
   const [viewMode, setViewMode] = useState<'kanban' | 'list'>('kanban');
   const [activeOrder, setActiveOrder] = useState<Order | null>(null);
   const [wizardOpen, setWizardOpen] = useState(false);
@@ -420,24 +423,50 @@ export default function OrdersPage() {
     });
   };
 
-  const filteredOrders = statusFilter === 'all' 
-    ? orders 
-    : orders.filter(o => o.status === statusFilter);
+  const tableMatches = (o: Order) => {
+    if (tableFilter === 'all') return true;
+    if (tableFilter === 'tables_only') return !!o.table_number;
+    if (tableFilter === 'no_table') return !o.table_number;
+    return o.table_number === tableFilter;
+  };
+
+  const tableScoped = orders.filter(tableMatches);
+
+  const filteredOrders = statusFilter === 'all'
+    ? tableScoped
+    : tableScoped.filter(o => o.status === statusFilter);
 
   const orderCounts = {
-    all: orders.length,
-    pending: orders.filter(o => o.status === 'pending').length,
-    confirmed: orders.filter(o => o.status === 'confirmed').length,
-    preparing: orders.filter(o => o.status === 'preparing').length,
-    ready: orders.filter(o => o.status === 'ready').length,
-    out_for_delivery: orders.filter(o => o.status === 'out_for_delivery').length,
-    delivered: orders.filter(o => o.status === 'delivered').length,
-    cancelled: orders.filter(o => o.status === 'cancelled').length,
+    all: tableScoped.length,
+    pending: tableScoped.filter(o => o.status === 'pending').length,
+    confirmed: tableScoped.filter(o => o.status === 'confirmed').length,
+    preparing: tableScoped.filter(o => o.status === 'preparing').length,
+    ready: tableScoped.filter(o => o.status === 'ready').length,
+    out_for_delivery: tableScoped.filter(o => o.status === 'out_for_delivery').length,
+    delivered: tableScoped.filter(o => o.status === 'delivered').length,
+    cancelled: tableScoped.filter(o => o.status === 'cancelled').length,
   };
 
+  const uniqueTables = Array.from(new Set(orders.map(o => o.table_number).filter(Boolean))) as string[];
+  uniqueTables.sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+
   const getOrdersByStatus = (status: OrderStatus) => {
-    return orders.filter(o => o.status === status);
+    return tableScoped.filter(o => o.status === status);
   };
+
+  const printFilteredForKitchen = async () => {
+    const toPrint = filteredOrders.filter(o => o.status !== 'cancelled' && o.status !== 'delivered');
+    if (toPrint.length === 0) {
+      toast({ title: 'Nada para imprimir', description: 'Nenhum pedido ativo no filtro atual.' });
+      return;
+    }
+    toast({ title: `Imprimindo ${toPrint.length} pedido(s)...`, description: 'Aguarde, as janelas serão abertas em sequência.' });
+    for (const o of toPrint) {
+      printOrder(o, restaurant?.name);
+      await new Promise(r => setTimeout(r, 500));
+    }
+  };
+
 
   if (loading) {
     return (
@@ -484,6 +513,40 @@ export default function OrdersPage() {
           </div>
         </div>
       </div>
+
+      {/* Table filter + Print-for-kitchen toolbar */}
+      <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center p-3 rounded-lg border border-border bg-card">
+        <div className="flex items-center gap-2 flex-1 flex-wrap">
+          <TableIcon className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+          <label className="text-sm font-medium whitespace-nowrap">Mesa:</label>
+          <Select value={tableFilter} onValueChange={setTableFilter}>
+            <SelectTrigger className="h-9 max-w-[260px]">
+              <SelectValue placeholder="Todas" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos os pedidos</SelectItem>
+              <SelectItem value="tables_only">Apenas mesas (todas)</SelectItem>
+              <SelectItem value="no_table">Sem mesa (delivery/retirada)</SelectItem>
+              {uniqueTables.map(t => (
+                <SelectItem key={t} value={t}>Mesa {t}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {tableFilter !== 'all' && (
+            <Badge variant="secondary" className="ml-1">{filteredOrders.length} pedido(s)</Badge>
+          )}
+        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={printFilteredForKitchen}
+          disabled={filteredOrders.length === 0}
+        >
+          <Printer className="w-4 h-4 mr-2" />
+          Imprimir cozinha ({filteredOrders.filter(o => o.status !== 'cancelled' && o.status !== 'delivered').length})
+        </Button>
+      </div>
+
 
       {/* Evolution API Wizard */}
       {restaurant && (
