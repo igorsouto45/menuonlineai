@@ -8,177 +8,97 @@ const corsHeaders = {
 interface TestConnectionRequest {
   evolutionApiUrl: string;
   evolutionApiKey: string;
-  evolutionInstanceName: string;
-}
-
-function redactSensitive(text: string) {
-  return text
-    .replace(/"token"\s*:\s*"[^"]+"/gi, '"token":"***"')
-    .replace(/"apiKey"\s*:\s*"[^"]+"/gi, '"apiKey":"***"');
+  evolutionInstanceName?: string;
 }
 
 function normalizeEvolutionUrl(rawUrl: string) {
   let cleanUrl = rawUrl.trim().replace(/\/+$/, "");
-  if (cleanUrl.endsWith("/manager")) {
-    cleanUrl = cleanUrl.replace("/manager", "");
-  }
+  if (cleanUrl.endsWith("/manager")) cleanUrl = cleanUrl.replace("/manager", "");
+  if (cleanUrl.endsWith("/swagger/index.html")) cleanUrl = cleanUrl.replace("/swagger/index.html", "");
   return cleanUrl;
 }
 
-function getInstanceName(i: any) {
-  return (
-    i?.instance?.instanceName ||
-    i?.instanceName ||
-    i?.instance?.name ||
-    i?.name ||
-    ""
-  );
-}
-
-function getConnectionState(i: any) {
-  return (
-    i?.instance?.state ||
-    i?.state ||
-    i?.instance?.connectionStatus ||
-    i?.connectionStatus ||
-    "unknown"
-  );
-}
-
 serve(async (req) => {
-  // Handle CORS preflight
-  if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
-  }
+  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
     const body = (await req.json()) as Partial<TestConnectionRequest>;
     const evolutionApiUrl = typeof body.evolutionApiUrl === "string" ? body.evolutionApiUrl.trim() : "";
     const evolutionApiKey = typeof body.evolutionApiKey === "string" ? body.evolutionApiKey.trim() : "";
-    const evolutionInstanceName = typeof body.evolutionInstanceName === "string" ? body.evolutionInstanceName.trim() : "";
 
-    if (!evolutionApiUrl || !evolutionApiKey || !evolutionInstanceName) {
+    if (!evolutionApiUrl || !evolutionApiKey) {
       return new Response(
-        JSON.stringify({
-          success: false,
-          error: "Preencha todos os campos da Evolution API",
-        }),
+        JSON.stringify({ success: false, error: "Preencha a URL e a chave (token) do Evolution GO." }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
 
     const cleanUrl = normalizeEvolutionUrl(evolutionApiUrl);
+    console.log(`Testing Evolution GO at ${cleanUrl}`);
 
-    console.log(`Testing connection to ${cleanUrl} with instance ${evolutionInstanceName}`);
-    console.log(`Clean URL: ${cleanUrl}`);
-
-    const response = await fetch(
-      `${cleanUrl}/instance/fetchInstances?instanceName=${encodeURIComponent(evolutionInstanceName)}`,
-      {
-        method: "GET",
-        headers: {
-          apikey: evolutionApiKey,
-        },
-      },
-    );
+    const response = await fetch(`${cleanUrl}/instance/status`, {
+      method: "GET",
+      headers: { apikey: evolutionApiKey, Accept: "application/json" },
+    });
 
     const contentType = response.headers.get("content-type") || "";
     const responseText = await response.text();
+    console.log("Status:", response.status, "CT:", contentType);
 
-    console.log("Response status:", response.status);
-    console.log("Content-Type:", contentType);
-    console.log("Response preview:", redactSensitive(responseText).substring(0, 400));
-
-    // Detect HTML error pages
-    if (
-      contentType.includes("text/html") ||
-      responseText.trim().startsWith("<!") ||
-      responseText.trim().toLowerCase().startsWith("<html")
-    ) {
+    if (contentType.includes("text/html") || responseText.trim().startsWith("<")) {
       return new Response(
         JSON.stringify({
           success: false,
-          error:
-            "URL da Evolution API inválida. Verifique se a URL está correta (não use /manager no final).",
-          details: `A API retornou uma página HTML ao invés de JSON. URL testada: ${cleanUrl}`,
+          error: "URL inválida. Use a URL base do Evolution GO (sem /swagger ou /manager).",
         }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
 
-    let data: any;
-    try {
-      data = JSON.parse(responseText);
-    } catch {
+    let data: any = {};
+    try { data = JSON.parse(responseText); } catch { /* keep raw */ }
+
+    if (response.status === 401 || response.status === 403) {
       return new Response(
-        JSON.stringify({
-          success: false,
-          error: "Resposta inválida da Evolution API",
-          details: `Não foi possível interpretar a resposta: ${responseText.substring(0, 200)}`,
-        }),
+        JSON.stringify({ success: false, error: "Token (apikey) inválido para esta instância." }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
-
-    console.log("Evolution API response:", JSON.stringify(data, null, 2));
 
     if (!response.ok) {
       return new Response(
-        JSON.stringify({
-          success: false,
-          error: data?.message || "Falha na conexão com a Evolution API",
-          details: data,
-        }),
+        JSON.stringify({ success: false, error: data?.error || data?.message || "Falha ao consultar o Evolution GO." }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
 
-    const instances = Array.isArray(data) ? data : [data];
-    const targetName = evolutionInstanceName.toLowerCase();
-
-    const instance = instances.find((i: any) => {
-      const name = getInstanceName(i);
-      return name && name.toLowerCase() === targetName;
-    });
-
-    if (!instance) {
-      return new Response(
-        JSON.stringify({
-          success: false,
-          error: `Instância "${evolutionInstanceName}" não encontrada`,
-          availableInstances: instances
-            .map((i: any) => getInstanceName(i))
-            .filter(Boolean),
-        }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-      );
-    }
-
-    const rawState = getConnectionState(instance);
-    const connectionState = typeof rawState === "string" ? rawState.toLowerCase() : "unknown";
-    const isConnected = connectionState === "open" || connectionState === "connected";
+    // Evolution GO status response is flexible; check common fields.
+    const rawState = String(
+      data?.status ?? data?.state ?? data?.connectionStatus ?? data?.instance?.state ?? data?.instance?.status ?? "",
+    ).toLowerCase();
+    const isConnected =
+      data?.connected === true ||
+      rawState === "open" ||
+      rawState === "connected" ||
+      rawState === "authenticated" ||
+      rawState === "loggedin" ||
+      rawState === "logged_in";
 
     return new Response(
       JSON.stringify({
         success: true,
         connected: isConnected,
-        state: connectionState,
-        instanceName: evolutionInstanceName,
+        state: rawState || "unknown",
         message: isConnected
-          ? "✅ Conexão estabelecida com sucesso!"
-          : `⚠️ Instância encontrada mas não conectada (estado: ${connectionState})`,
+          ? "✅ Evolution GO conectado!"
+          : `⚠️ Instância acessível mas WhatsApp não conectado (estado: ${rawState || "desconhecido"}). Escaneie o QR Code.`,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   } catch (error) {
-    console.error("Error testing connection:", error);
-    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    console.error("Error testing Evolution GO connection:", error);
     return new Response(
-      JSON.stringify({
-        success: false,
-        error: "Erro ao testar conexão",
-        details: errorMessage,
-      }),
+      JSON.stringify({ success: false, error: "Erro ao testar conexão", details: String(error) }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   }
