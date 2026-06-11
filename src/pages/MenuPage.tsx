@@ -1310,6 +1310,14 @@ function MenuPageContent() {
             )}
             <div className="flex items-center gap-2">
               <button
+                onClick={() => setQrOpen(true)}
+                className="w-9 h-9 rounded-full bg-primary-foreground/20 backdrop-blur-sm flex items-center justify-center text-primary-foreground hover:bg-primary-foreground/30 transition-colors"
+                title="Compartilhar cardápio"
+                aria-label="Compartilhar cardápio"
+              >
+                <QrCode className="w-4 h-4" />
+              </button>
+              <button
                 onClick={() => setIsDark(prev => !prev)}
                 className="w-9 h-9 rounded-full bg-primary-foreground/20 backdrop-blur-sm flex items-center justify-center text-primary-foreground hover:bg-primary-foreground/30 transition-colors"
                 title={isDark ? 'Mudar para tema claro' : 'Mudar para tema escuro'}
