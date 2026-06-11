@@ -942,6 +942,7 @@ function MenuPageContent() {
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [cartOpen, setCartOpen] = useState(false);
+  const [qrOpen, setQrOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [tableStatus, setTableStatus] = useState<'free' | 'occupied' | 'reserved' | null>(null);
   const [isDark, setIsDark] = useState(() => {
