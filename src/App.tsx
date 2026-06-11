@@ -33,6 +33,7 @@ const ReviewsPage = lazy(() => import("./pages/admin/ReviewsPage"));
 const LeadsPage = lazy(() => import("./pages/admin/LeadsPage"));
 const CampaignsPage = lazy(() => import("./pages/admin/CampaignsPage"));
 const SystemAdminPage = lazy(() => import("./pages/admin/SystemAdminPage"));
+const TableHistoryPage = lazy(() => import("./pages/admin/TableHistoryPage"));
 
 // Prefetch helpers — load chunks in background after first paint
 const prefetch = (importer: () => Promise<unknown>) => {
@@ -134,6 +135,7 @@ const App = () => (
                     <Route path="categories" element={<CategoriesPage />} />
                     <Route path="products" element={<ProductsPage />} />
                     <Route path="orders" element={<OrdersPage />} />
+                    <Route path="tables-history" element={<TableHistoryPage />} />
                     <Route path="reviews" element={<ReviewsPage />} />
                     <Route path="leads" element={<LeadsPage />} />
                     <Route path="campaigns" element={<CampaignsPage />} />
