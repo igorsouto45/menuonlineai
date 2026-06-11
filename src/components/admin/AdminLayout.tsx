@@ -25,6 +25,7 @@ import {
   Crown,
   Table as TableIcon
 } from 'lucide-react';
+import menuAiLogo from '@/assets/menu-ai-logo.png.asset.json';
 
 const navItems = [
   { icon: LayoutDashboard, label: 'Dashboard', path: '/admin' },
@@ -52,13 +53,12 @@ function Sidebar({ collapsed, setCollapsed, onLogout }: { collapsed: boolean; se
       <div className="flex flex-col h-full p-4">
         {/* Logo */}
         <div className="flex items-center justify-between mb-8">
-          <Link to="/admin" className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-xl gradient-primary flex items-center justify-center flex-shrink-0">
-              <span className="text-primary-foreground font-bold text-lg">M</span>
-            </div>
-            {!collapsed && (
-              <span className="font-bold text-lg text-sidebar-foreground">MENU AI</span>
-            )}
+          <Link to="/admin" className="flex items-center">
+            <img
+              src={menuAiLogo.url}
+              alt="MENU AI"
+              className={`${collapsed ? 'h-8 w-8 object-contain object-left' : 'h-9 w-auto'} bg-white rounded-lg p-1`}
+            />
           </Link>
           <button
             onClick={() => setCollapsed(!collapsed)}
@@ -134,11 +134,8 @@ function MobileNav({ isOpen, setIsOpen, onLogout }: { isOpen: boolean; setIsOpen
           >
             <div className="flex flex-col h-full p-4">
               <div className="flex items-center justify-between mb-8">
-                <Link to="/admin" className="flex items-center gap-3" onClick={() => setIsOpen(false)}>
-                  <div className="h-10 w-10 rounded-xl gradient-primary flex items-center justify-center">
-                    <span className="text-primary-foreground font-bold text-lg">M</span>
-                  </div>
-                  <span className="font-bold text-lg text-sidebar-foreground">MENU AI</span>
+                <Link to="/admin" className="flex items-center" onClick={() => setIsOpen(false)}>
+                  <img src={menuAiLogo.url} alt="MENU AI" className="h-9 w-auto bg-white rounded-lg p-1" />
                 </Link>
                 <button
                   onClick={() => setIsOpen(false)}
@@ -256,11 +253,8 @@ export default function AdminLayout() {
             >
               <Menu className="w-5 h-5" />
             </button>
-            <div className="flex items-center gap-2 ml-4">
-              <div className="h-8 w-8 rounded-lg gradient-primary flex items-center justify-center">
-                <span className="text-primary-foreground font-bold">M</span>
-              </div>
-              <span className="font-bold text-foreground">MENU AI</span>
+            <div className="flex items-center ml-4">
+              <img src={menuAiLogo.url} alt="MENU AI" className="h-8 w-auto" />
             </div>
           </div>
           <Link to="/precos" className="flex items-center gap-2">

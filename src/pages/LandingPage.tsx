@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import menuAiLogo from '@/assets/menu-ai-logo.png.asset.json';
 import { Button } from '@/components/ui/button';
 import { 
   Smartphone, 
@@ -127,11 +128,8 @@ export default function LandingPage() {
       {/* Header */}
       <header className="fixed top-0 left-0 right-0 z-50 glass border-b border-border/50">
         <nav className="container flex h-16 items-center justify-between" aria-label="Navegação principal">
-          <Link to="/" className="flex items-center gap-2" aria-label="MENU AI - Início">
-            <div className="h-9 w-9 rounded-xl gradient-primary flex items-center justify-center">
-              <span className="text-primary-foreground font-bold text-lg">M</span>
-            </div>
-            <span className="font-bold text-xl text-foreground">MENU AI</span>
+          <Link to="/" className="flex items-center" aria-label="MENU AI - Início">
+            <img src={menuAiLogo.url} alt="MENU AI" className="h-9 w-auto" />
           </Link>
           <div className="hidden md:flex items-center gap-6">
             <a href="#funcionalidades" className="text-muted-foreground hover:text-foreground transition-colors">
@@ -435,11 +433,8 @@ export default function LandingPage() {
       <footer className="py-12 px-4 border-t border-border" role="contentinfo">
         <div className="container">
           <div className="flex flex-col md:flex-row items-center justify-between gap-6">
-            <div className="flex items-center gap-2">
-              <div className="h-8 w-8 rounded-lg gradient-primary flex items-center justify-center" aria-hidden="true">
-                <span className="text-primary-foreground font-bold">M</span>
-              </div>
-              <span className="font-bold text-lg text-foreground">MENU AI</span>
+            <div className="flex items-center">
+              <img src={menuAiLogo.url} alt="MENU AI" className="h-8 w-auto" />
             </div>
             <p className="text-muted-foreground text-sm">
               © 2024 MENU AI - Sistema de cardápio digital para restaurantes. Todos os direitos reservados.
