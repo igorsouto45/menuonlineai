@@ -33,7 +33,9 @@ import {
   Banknote,
   Smartphone,
   Wallet,
-  Table as TableIcon
+  Table as TableIcon,
+  Moon,
+  Sun
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
