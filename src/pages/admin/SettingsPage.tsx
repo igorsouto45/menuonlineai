@@ -928,9 +928,10 @@ Agradecemos a preferência! Bom apetite! 😋"
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3, delay: 0.4 }}
         >
-          <TablesManager 
-            restaurantId={restaurant.id} 
-            restaurantSlug={restaurant.slug} 
+          <TablesManager
+            restaurantId={restaurant.id}
+            restaurantSlug={restaurant.slug}
+            restaurantName={restaurant.name}
           />
         </motion.div>
       )}
