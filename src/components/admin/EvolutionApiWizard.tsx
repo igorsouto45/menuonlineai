@@ -670,6 +670,76 @@ export function EvolutionApiWizard({
           )}
         </div>
       </DialogContent>
+
+      {/* QR Code Modal */}
+      <Dialog open={qrOpen} onOpenChange={setQrOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <QrCode className="w-5 h-5 text-primary" />
+              Conectar WhatsApp
+            </DialogTitle>
+            <DialogDescription>
+              Abra o WhatsApp no celular → Aparelhos conectados → Conectar um aparelho → escaneie o QR Code abaixo.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="flex flex-col items-center gap-4 py-4">
+            {qrLoading && (
+              <div className="flex flex-col items-center gap-2 py-8">
+                <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                <p className="text-sm text-muted-foreground">Gerando QR Code...</p>
+              </div>
+            )}
+
+            {!qrLoading && qrConnected && (
+              <div className="flex flex-col items-center gap-2 py-6 text-center">
+                <div className="w-16 h-16 rounded-full bg-success/10 flex items-center justify-center">
+                  <CheckCircle2 className="w-8 h-8 text-success" />
+                </div>
+                <h3 className="font-semibold text-success">WhatsApp Conectado!</h3>
+                <p className="text-sm text-muted-foreground">Sua instância está pronta.</p>
+              </div>
+            )}
+
+            {!qrLoading && !qrConnected && qrBase64 && (
+              <div className="bg-white p-3 rounded-lg border">
+                <img src={qrBase64} alt="QR Code WhatsApp" className="w-64 h-64 object-contain" />
+              </div>
+            )}
+
+            {!qrLoading && !qrConnected && !qrBase64 && qrCode && (
+              <div className="space-y-2 text-center">
+                <p className="text-sm text-muted-foreground">Código de pareamento:</p>
+                <code className="block bg-muted px-3 py-2 rounded text-lg font-mono">{qrCode}</code>
+              </div>
+            )}
+
+            {!qrLoading && qrError && (
+              <Alert variant="destructive">
+                <AlertDescription>{qrError}</AlertDescription>
+              </Alert>
+            )}
+
+            {!qrConnected && (
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <Loader2 className="w-3 h-3 animate-spin" />
+                Aguardando conexão...
+              </div>
+            )}
+
+            <div className="flex gap-2 w-full">
+              <Button variant="outline" className="flex-1" onClick={fetchQrCode} disabled={qrLoading}>
+                <RefreshCw className="w-4 h-4 mr-2" />
+                Atualizar QR
+              </Button>
+              <Button className="flex-1" onClick={() => setQrOpen(false)}>
+                Fechar
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </Dialog>
   );
 }
