@@ -93,13 +93,16 @@ export default function SettingsPage() {
 
       if (data.success) {
         setConnectionStatus('success');
+        setWaStatus(data.connected ? 'connected' : 'disconnected');
+        setWaStatusDetail(data.state || (data.connected ? 'open' : 'desconectado'));
         toast({
           title: data.connected ? 'Conexão estabelecida!' : 'Instância encontrada',
           description: data.message,
-          variant: data.connected ? 'default' : 'default',
         });
       } else {
         setConnectionStatus('error');
+        setWaStatus('error');
+        setWaStatusDetail(data.error || 'falha');
         toast({
           title: 'Falha na conexão',
           description: data.error || 'Não foi possível conectar à Evolution API.',
@@ -109,6 +112,9 @@ export default function SettingsPage() {
     } catch (err) {
       console.error('Error testing connection:', err);
       setConnectionStatus('error');
+      setWaStatus('error');
+      setWaStatusDetail('erro de rede');
+
 
       let description = 'Verifique as credenciais e tente novamente.';
 
