@@ -89,6 +89,7 @@ const App = () => (
             <Toaster />
             <Sonner />
             <BrowserRouter>
+              <Prefetcher />
               <Suspense fallback={<PageFallback />}>
                 <Routes>
                   <Route path="/" element={<LandingPage />} />
