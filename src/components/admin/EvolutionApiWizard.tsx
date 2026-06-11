@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -9,21 +9,23 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Progress } from '@/components/ui/progress';
-import { 
-  CheckCircle2, 
-  Circle, 
-  Loader2, 
-  ExternalLink, 
-  Copy, 
-  Check, 
-  Wifi, 
+import {
+  CheckCircle2,
+  Circle,
+  Loader2,
+  ExternalLink,
+  Copy,
+  Check,
+  Wifi,
   WifiOff,
   ChevronRight,
   ChevronLeft,
   Smartphone,
   Key,
   Link,
-  MessageSquare
+  MessageSquare,
+  QrCode,
+  RefreshCw,
 } from 'lucide-react';
 
 interface EvolutionApiWizardProps {
@@ -61,6 +63,13 @@ export function EvolutionApiWizard({
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState<'idle' | 'success' | 'error'>('idle');
   const [copied, setCopied] = useState(false);
+  const [qrOpen, setQrOpen] = useState(false);
+  const [qrLoading, setQrLoading] = useState(false);
+  const [qrBase64, setQrBase64] = useState<string | null>(null);
+  const [qrCode, setQrCode] = useState<string | null>(null);
+  const [qrError, setQrError] = useState<string | null>(null);
+  const [qrConnected, setQrConnected] = useState(false);
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const [formData, setFormData] = useState({
     evolutionApiUrl: initialValues?.evolutionApiUrl || '',
