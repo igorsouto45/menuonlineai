@@ -57,7 +57,7 @@ function Sidebar({ collapsed, setCollapsed, onLogout }: { collapsed: boolean; se
             <img
               src={menuAiLogo.url}
               alt="MENU AI"
-              className={`${collapsed ? 'h-8 w-8 object-contain object-left' : 'h-9 w-auto'} bg-white rounded-lg p-1`}
+              className={`${collapsed ? 'h-10 w-10 object-contain object-left' : 'h-11 w-auto'} bg-white rounded-lg p-1`}
             />
           </Link>
           <button
@@ -135,7 +135,7 @@ function MobileNav({ isOpen, setIsOpen, onLogout }: { isOpen: boolean; setIsOpen
             <div className="flex flex-col h-full p-4">
               <div className="flex items-center justify-between mb-8">
                 <Link to="/admin" className="flex items-center" onClick={() => setIsOpen(false)}>
-                  <img src={menuAiLogo.url} alt="MENU AI" className="h-9 w-auto bg-white rounded-lg p-1" />
+                  <img src={menuAiLogo.url} alt="MENU AI" className="h-11 w-auto bg-white rounded-lg p-1" />
                 </Link>
                 <button
                   onClick={() => setIsOpen(false)}
@@ -254,7 +254,7 @@ export default function AdminLayout() {
               <Menu className="w-5 h-5" />
             </button>
             <div className="flex items-center ml-4">
-              <img src={menuAiLogo.url} alt="MENU AI" className="h-8 w-auto" />
+              <img src={menuAiLogo.url} alt="MENU AI" className="h-9 w-auto bg-white rounded-lg p-1" />
             </div>
           </div>
           <Link to="/precos" className="flex items-center gap-2">
