@@ -82,10 +82,10 @@ export function EvolutionApiWizard({
   };
 
   const testConnection = async () => {
-    if (!formData.evolutionApiUrl || !formData.evolutionApiKey || !formData.evolutionInstanceName) {
+    if (!formData.evolutionApiUrl || !formData.evolutionApiKey) {
       toast({
         title: 'Campos incompletos',
-        description: 'Preencha todos os campos antes de testar.',
+        description: 'Preencha a URL e o token (apikey) antes de testar.',
         variant: 'destructive',
       });
       return;
