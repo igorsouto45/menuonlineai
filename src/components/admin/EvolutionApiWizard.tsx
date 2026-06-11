@@ -549,22 +549,35 @@ export function EvolutionApiWizard({
                         </>
                       )}
 
-                      <Button 
-                        onClick={testConnection} 
-                        disabled={testing}
-                        variant={testResult === 'success' ? 'outline' : 'default'}
-                      >
-                        {testing ? (
-                          <>
-                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                            Testando...
-                          </>
-                        ) : testResult === 'success' ? (
-                          'Testar Novamente'
-                        ) : (
-                          'Testar Conexão'
+                      <div className="flex flex-col sm:flex-row gap-2">
+                        <Button
+                          onClick={testConnection}
+                          disabled={testing}
+                          variant={testResult === 'success' ? 'outline' : 'default'}
+                        >
+                          {testing ? (
+                            <>
+                              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                              Testando...
+                            </>
+                          ) : testResult === 'success' ? (
+                            'Testar Novamente'
+                          ) : (
+                            'Testar Conexão'
+                          )}
+                        </Button>
+                        {testResult !== 'success' && (
+                          <Button
+                            type="button"
+                            variant="secondary"
+                            onClick={openQrModal}
+                            disabled={!formData.evolutionApiUrl || !formData.evolutionApiKey}
+                          >
+                            <QrCode className="w-4 h-4 mr-2" />
+                            Conectar WhatsApp
+                          </Button>
                         )}
-                      </Button>
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
