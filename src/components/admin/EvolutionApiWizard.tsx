@@ -148,8 +148,96 @@ export function EvolutionApiWizard({
     }
   };
 
-  const saveAndComplete = async () => {
-    setSaving(true);
+  const fetchQrCode = async () => {
+    if (!formData.evolutionApiUrl || !formData.evolutionApiKey) {
+      toast({
+        title: 'Campos incompletos',
+        description: 'Preencha a URL e o token antes de conectar.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    setQrLoading(true);
+    setQrError(null);
+    try {
+      const { data, error } = await supabase.functions.invoke('evolution-get-qrcode', {
+        body: {
+          evolutionApiUrl: formData.evolutionApiUrl,
+          evolutionApiKey: formData.evolutionApiKey,
+          evolutionInstanceName: formData.evolutionInstanceName,
+        },
+      });
+      if (error) throw error;
+      if (data?.alreadyConnected) {
+        setQrConnected(true);
+        setQrBase64(null);
+        setQrCode(null);
+        return;
+      }
+      if (data?.success) {
+        setQrBase64(data.base64 || null);
+        setQrCode(data.code || null);
+        if (!data.base64 && !data.code) {
+          setQrError('Resposta sem QR Code. Verifique a instância.');
+        }
+      } else {
+        setQrError(data?.error || 'Falha ao obter QR Code.');
+      }
+    } catch (err) {
+      console.error(err);
+      setQrError('Erro ao obter QR Code.');
+    } finally {
+      setQrLoading(false);
+    }
+  };
+
+  const checkConnectionStatus = async () => {
+    try {
+      const { data } = await supabase.functions.invoke('test-evolution-connection', {
+        body: {
+          evolutionApiUrl: formData.evolutionApiUrl,
+          evolutionApiKey: formData.evolutionApiKey,
+          evolutionInstanceName: formData.evolutionInstanceName,
+        },
+      });
+      if (data?.success && data?.connected) {
+        setQrConnected(true);
+        setTestResult('success');
+        toast({ title: 'WhatsApp conectado!', description: 'Sua instância está pronta para enviar mensagens.' });
+        if (pollRef.current) {
+          clearInterval(pollRef.current);
+          pollRef.current = null;
+        }
+        setTimeout(() => setQrOpen(false), 1500);
+      }
+    } catch (e) {
+      console.error('poll error', e);
+    }
+  };
+
+  const openQrModal = async () => {
+    setQrOpen(true);
+    setQrConnected(false);
+    setQrBase64(null);
+    setQrCode(null);
+    setQrError(null);
+    await fetchQrCode();
+  };
+
+  useEffect(() => {
+    if (qrOpen && !qrConnected) {
+      pollRef.current = setInterval(() => {
+        checkConnectionStatus();
+      }, 4000);
+      return () => {
+        if (pollRef.current) {
+          clearInterval(pollRef.current);
+          pollRef.current = null;
+        }
+      };
+    }
+  }, [qrOpen, qrConnected]);
+
 
     try {
       const { error } = await supabase
