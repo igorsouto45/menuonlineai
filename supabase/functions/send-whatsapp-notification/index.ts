@@ -86,9 +86,9 @@ serve(async (req) => {
       ? rawEvolutionApiUrl.replace(/\/+$/, '').replace(/\/manager$/, '')
       : null;
 
-    if (!EVOLUTION_API_URL || !evolutionApiKey || !evolutionInstanceName) {
+    if (!EVOLUTION_API_URL || !evolutionApiKey) {
       return new Response(
-        JSON.stringify({ error: 'Evolution API not configured for this restaurant.' }),
+        JSON.stringify({ error: 'Evolution GO not configured for this restaurant.' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
