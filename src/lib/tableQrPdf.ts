@@ -38,6 +38,21 @@ const svgToPngDataUrl = (svg: SVGElement, size = 1000): Promise<string> =>
     }
   });
 
+const loadLogoDataUrl = async (): Promise<string | null> => {
+  try {
+    const res = await fetch('/pwa-192x192.png');
+    const blob = await res.blob();
+    return await new Promise((resolve, reject) => {
+      const r = new FileReader();
+      r.onloadend = () => resolve(typeof r.result === 'string' ? r.result : null);
+      r.onerror = () => reject(r.error);
+      r.readAsDataURL(blob);
+    });
+  } catch {
+    return null;
+  }
+};
+
 const layoutMeta: Record<QrLayout, { label: string; accent: [number, number, number]; banner?: string; subtitle: string }> = {
   standard: {
     label: 'Mesa',
@@ -70,6 +85,7 @@ export async function generateTablesQrPdf(opts: GeneratePdfOptions) {
   const pageW = 210;
   const pageH = 297;
   const meta = layoutMeta[opts.layout];
+  const logoDataUrl = await loadLogoDataUrl();
 
   for (let i = 0; i < opts.tables.length; i++) {
     const item = opts.tables[i];
