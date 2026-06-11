@@ -513,6 +513,40 @@ export default function OrdersPage() {
         </div>
       </div>
 
+      {/* Table filter + Print-for-kitchen toolbar */}
+      <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center p-3 rounded-lg border border-border bg-card">
+        <div className="flex items-center gap-2 flex-1 flex-wrap">
+          <TableIcon className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+          <label className="text-sm font-medium whitespace-nowrap">Mesa:</label>
+          <Select value={tableFilter} onValueChange={setTableFilter}>
+            <SelectTrigger className="h-9 max-w-[260px]">
+              <SelectValue placeholder="Todas" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos os pedidos</SelectItem>
+              <SelectItem value="tables_only">Apenas mesas (todas)</SelectItem>
+              <SelectItem value="no_table">Sem mesa (delivery/retirada)</SelectItem>
+              {uniqueTables.map(t => (
+                <SelectItem key={t} value={t}>Mesa {t}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {tableFilter !== 'all' && (
+            <Badge variant="secondary" className="ml-1">{filteredOrders.length} pedido(s)</Badge>
+          )}
+        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={printFilteredForKitchen}
+          disabled={filteredOrders.length === 0}
+        >
+          <Printer className="w-4 h-4 mr-2" />
+          Imprimir cozinha ({filteredOrders.filter(o => o.status !== 'cancelled' && o.status !== 'delivered').length})
+        </Button>
+      </div>
+
+
       {/* Evolution API Wizard */}
       {restaurant && (
         <EvolutionApiWizard
