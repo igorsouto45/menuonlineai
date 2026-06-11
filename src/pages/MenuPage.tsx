@@ -942,6 +942,26 @@ function MenuPageContent() {
   const [cartOpen, setCartOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [tableStatus, setTableStatus] = useState<'free' | 'occupied' | 'reserved' | null>(null);
+  const [isDark, setIsDark] = useState(() => {
+    try {
+      const stored = localStorage.getItem('menu_dark_mode');
+      if (stored !== null) return stored === 'true';
+      return window.matchMedia('(prefers-color-scheme: dark)').matches;
+    } catch {
+      return false;
+    }
+  });
+
+  useEffect(() => {
+    if (isDark) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+    try {
+      localStorage.setItem('menu_dark_mode', String(isDark));
+    } catch {}
+  }, [isDark]);
 
   // Watchdog: if loading takes too long the bundle is likely stale (PWA cache,
   // old service worker, etc). Show a recovery UI instead of an infinite skeleton.
