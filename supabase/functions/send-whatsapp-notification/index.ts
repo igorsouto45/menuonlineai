@@ -114,7 +114,8 @@ serve(async (req) => {
       }
     }
 
-    const response = await fetch(`${EVOLUTION_API_URL}/message/sendText/${evolutionInstanceName}`, {
+    // Evolution GO: POST {url}/send/text  (apikey header identifies the instance)
+    const response = await fetch(`${EVOLUTION_API_URL}/send/text`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'apikey': evolutionApiKey },
       body: JSON.stringify({ number: phone, text: message }),
