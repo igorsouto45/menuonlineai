@@ -450,8 +450,16 @@ export default function OrdersPage() {
   const uniqueTables = Array.from(new Set(orders.map(o => o.table_number).filter(Boolean))) as string[];
   uniqueTables.sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
 
+  const isToday = (dateStr: string) => {
+    const d = new Date(dateStr);
+    const now = new Date();
+    return d.getFullYear() === now.getFullYear()
+      && d.getMonth() === now.getMonth()
+      && d.getDate() === now.getDate();
+  };
+
   const getOrdersByStatus = (status: OrderStatus) => {
-    return tableScoped.filter(o => o.status === status);
+    return tableScoped.filter(o => o.status === status && isToday(o.created_at));
   };
 
   const printFilteredForKitchen = async () => {
