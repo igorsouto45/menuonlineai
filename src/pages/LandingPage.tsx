@@ -143,7 +143,7 @@ export default function LandingPage() {
             <a href="#precos" className="text-muted-foreground hover:text-foreground transition-colors">
               Preços
             </a>
-            <Link to="/demo" className="text-muted-foreground hover:text-foreground transition-colors">
+            <Link to="/burger-demo" className="text-muted-foreground hover:text-foreground transition-colors">
               Ver Demo
             </Link>
           </div>
@@ -186,7 +186,7 @@ export default function LandingPage() {
                       <ChevronRight className="w-5 h-5" />
                     </Button>
                   </Link>
-                  <Link to="/demo">
+                  <Link to="/burger-demo">
                     <Button variant="outline" size="xl" className="w-full sm:w-auto">
                       Ver cardápio de exemplo
                     </Button>
