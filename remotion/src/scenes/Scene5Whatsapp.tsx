@@ -17,6 +17,7 @@ const Bubble = ({ delay, text, side }: { delay: number; text: string; side: "lef
       borderBottomRightRadius: isUser ? 6 : 28,
       borderBottomLeftRadius: isUser ? 28 : 6,
       fontSize: 32, fontWeight: 500,
+      whiteSpace: "pre-line",
       opacity: a,
       transform: `translateY(${interpolate(a, [0, 1], [20, 0])}px)`,
       boxShadow: "0 10px 25px rgba(0,0,0,0.25)",
