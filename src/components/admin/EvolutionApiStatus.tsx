@@ -3,8 +3,9 @@ import { supabase } from '@/integrations/supabase/client';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { Wifi, WifiOff, Loader2, Settings, AlertCircle } from 'lucide-react';
+import { Wifi, WifiOff, Loader2, Settings, AlertCircle, RefreshCw } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
 
 interface EvolutionApiStatusProps {
   evolutionApiUrl?: string | null;
@@ -37,11 +38,22 @@ export function EvolutionApiStatus({
     checkConnection();
   }, [evolutionApiUrl, evolutionApiKey, evolutionInstanceName]);
 
-  const checkConnection = async () => {
-    if (!isConfigured) return;
+  const checkConnection = async (opts?: { withToast?: boolean }) => {
+    const withToast = opts?.withToast ?? false;
+
+    if (!isConfigured) {
+      if (withToast) {
+        toast.error('Evolution API não configurada', {
+          description: 'Preencha URL, chave e instância nas configurações.',
+        });
+      }
+      return;
+    }
 
     setStatus('checking');
     setStatusMessage('Verificando conexão...');
+
+    const toastId = withToast ? toast.loading('Testando conexão com a Evolution API...') : undefined;
 
     try {
       const { data, error } = await supabase.functions.invoke('test-evolution-connection', {
@@ -57,17 +69,41 @@ export function EvolutionApiStatus({
       if (data.success && data.connected) {
         setStatus('connected');
         setStatusMessage('WhatsApp conectado');
+        if (withToast) {
+          toast.success('WhatsApp conectado ✅', {
+            id: toastId,
+            description: data.message || `Instância "${evolutionInstanceName}" está online.`,
+          });
+        }
       } else if (data.success) {
         setStatus('disconnected');
         setStatusMessage(data.message || 'Instância encontrada, mas não conectada');
+        if (withToast) {
+          toast.warning('WhatsApp desconectado ⚠️', {
+            id: toastId,
+            description: data.message || 'Escaneie o QR Code para conectar.',
+          });
+        }
       } else {
         setStatus('disconnected');
         setStatusMessage(data.error || 'Falha na conexão');
+        if (withToast) {
+          toast.error('Falha na conexão', {
+            id: toastId,
+            description: data.error || 'Verifique URL, chave e nome da instância.',
+          });
+        }
       }
     } catch (err) {
       console.error('Error checking Evolution connection:', err);
       setStatus('disconnected');
       setStatusMessage('Erro ao verificar conexão');
+      if (withToast) {
+        toast.error('Erro ao verificar conexão', {
+          id: toastId,
+          description: err instanceof Error ? err.message : 'Tente novamente em instantes.',
+        });
+      }
     }
   };
 
@@ -161,6 +197,18 @@ export function EvolutionApiStatus({
         >
           <Settings className="w-3.5 h-3.5" />
           <span>Configurar WhatsApp</span>
+        </Button>
+      )}
+
+      {isConfigured && status !== 'checking' && (
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => checkConnection({ withToast: true })}
+          className="flex items-center gap-1.5"
+        >
+          <RefreshCw className="w-3.5 h-3.5" />
+          <span>Testar conexão</span>
         </Button>
       )}
     </div>
