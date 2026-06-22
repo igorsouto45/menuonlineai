@@ -40,6 +40,7 @@ import {
   QrCode
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { isRestaurantOpenNow } from '@/lib/openingHours';
 
 interface DeliveryArea {
   id: string;
@@ -1299,15 +1300,19 @@ function MenuPageContent() {
             </div>
           </div>
           <div className="flex items-center justify-between mt-3 sm:mt-4">
-            {restaurant.is_open ? (
-              <Badge variant="secondary" className="bg-success/20 text-success border-success/30 text-xs">
-                ● Aberto agora
-              </Badge>
-            ) : (
-              <Badge variant="secondary" className="bg-destructive/20 text-destructive border-destructive/30 text-xs">
-                ● Fechado
-              </Badge>
-            )}
+            {(() => {
+              const auto = isRestaurantOpenNow(restaurant.opening_hours);
+              const open = restaurant.is_open && auto.isOpen;
+              return open ? (
+                <Badge variant="secondary" className="bg-success/20 text-success border-success/30 text-xs">
+                  ● Aberto agora
+                </Badge>
+              ) : (
+                <Badge variant="secondary" className="bg-destructive/20 text-destructive border-destructive/30 text-xs">
+                  ● Loja fechada {auto.hasSchedule && !auto.isOpen ? '— fora do horário' : ''}
+                </Badge>
+              );
+            })()}
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setQrOpen(true)}
@@ -1330,6 +1335,26 @@ function MenuPageContent() {
           </div>
         </div>
       </div>
+
+      {/* Closed Store Banner */}
+      {(() => {
+        const auto = isRestaurantOpenNow(restaurant.opening_hours);
+        const closed = !restaurant.is_open || !auto.isOpen;
+        if (!closed) return null;
+        return (
+          <div className="container px-4 pt-3 sm:pt-4">
+            <div className="rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive flex items-center gap-2">
+              <Clock className="w-4 h-4 flex-shrink-0" />
+              <span>
+                <strong>Loja fechada no momento.</strong>{' '}
+                {restaurant.opening_hours
+                  ? `Você pode navegar pelo cardápio. Horário: ${restaurant.opening_hours.replace(/\n/g, ' • ')}`
+                  : 'Você pode navegar pelo cardápio e voltar mais tarde.'}
+              </span>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Search Bar */}
       <div className="container px-4 py-3 sm:py-4 -mt-2">
