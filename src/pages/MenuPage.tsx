@@ -1300,15 +1300,19 @@ function MenuPageContent() {
             </div>
           </div>
           <div className="flex items-center justify-between mt-3 sm:mt-4">
-            {restaurant.is_open ? (
-              <Badge variant="secondary" className="bg-success/20 text-success border-success/30 text-xs">
-                ● Aberto agora
-              </Badge>
-            ) : (
-              <Badge variant="secondary" className="bg-destructive/20 text-destructive border-destructive/30 text-xs">
-                ● Fechado
-              </Badge>
-            )}
+            {(() => {
+              const auto = isRestaurantOpenNow(restaurant.opening_hours);
+              const open = restaurant.is_open && auto.isOpen;
+              return open ? (
+                <Badge variant="secondary" className="bg-success/20 text-success border-success/30 text-xs">
+                  ● Aberto agora
+                </Badge>
+              ) : (
+                <Badge variant="secondary" className="bg-destructive/20 text-destructive border-destructive/30 text-xs">
+                  ● Loja fechada {auto.hasSchedule && !auto.isOpen ? '— fora do horário' : ''}
+                </Badge>
+              );
+            })()}
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setQrOpen(true)}
