@@ -314,15 +314,18 @@ export default function OrdersPage() {
   }, [restaurant?.id, toast, playNotification, showNotification]);
 
   const sendWhatsAppNotification = async (order: Order, newStatus: OrderStatus) => {
-    if (!order.customer_phone) return;
+    if (!order.customer_phone || !restaurant?.id) return;
 
-    // Get Evolution API credentials from restaurant
     const evolutionApiUrl = (restaurant as any)?.evolution_api_url;
     const evolutionApiKey = (restaurant as any)?.evolution_api_key;
     const evolutionInstanceName = (restaurant as any)?.evolution_instance_name;
 
     if (!evolutionApiUrl || !evolutionApiKey || !evolutionInstanceName) {
-      console.log('Evolution API not configured for this restaurant');
+      toast({
+        title: 'WhatsApp não configurado',
+        description: 'Configure a Evolution API em Configurações para avisar o cliente automaticamente.',
+        variant: 'destructive',
+      });
       return;
     }
 
@@ -330,25 +333,28 @@ export default function OrdersPage() {
       const { error } = await supabase.functions.invoke('send-whatsapp-notification', {
         body: {
           orderId: order.id,
+          restaurantId: restaurant.id,
           customerPhone: order.customer_phone,
           customerName: order.customer_name,
           status: newStatus,
-          restaurantName: restaurant?.name,
           orderTotal: order.total,
-          evolutionApiUrl,
-          evolutionApiKey,
-          evolutionInstanceName,
           baseUrl: window.location.origin,
         },
       });
 
-      if (error) {
-        throw error;
-      }
+      if (error) throw error;
 
-      console.log('WhatsApp notification sent');
+      toast({
+        title: '📱 Cliente notificado',
+        description: `Mensagem de "${statusConfig[newStatus].label}" enviada para ${order.customer_name} no WhatsApp.`,
+      });
     } catch (error) {
       console.error('Failed to send WhatsApp notification:', error);
+      toast({
+        title: 'Falha ao notificar cliente',
+        description: 'Não foi possível enviar mensagem no WhatsApp. Verifique a conexão da Evolution API.',
+        variant: 'destructive',
+      });
     }
   };
 
