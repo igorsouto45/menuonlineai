@@ -3,8 +3,9 @@ import { supabase } from '@/integrations/supabase/client';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { Wifi, WifiOff, Loader2, Settings, AlertCircle } from 'lucide-react';
+import { Wifi, WifiOff, Loader2, Settings, AlertCircle, RefreshCw } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
 
 interface EvolutionApiStatusProps {
   evolutionApiUrl?: string | null;
