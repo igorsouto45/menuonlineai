@@ -199,6 +199,18 @@ export function EvolutionApiStatus({
           <span>Configurar WhatsApp</span>
         </Button>
       )}
+
+      {isConfigured && status !== 'checking' && (
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => checkConnection({ withToast: true })}
+          className="flex items-center gap-1.5"
+        >
+          <RefreshCw className="w-3.5 h-3.5" />
+          <span>Testar conexão</span>
+        </Button>
+      )}
     </div>
   );
 }
