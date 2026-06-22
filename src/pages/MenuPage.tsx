@@ -1336,6 +1336,26 @@ function MenuPageContent() {
         </div>
       </div>
 
+      {/* Closed Store Banner */}
+      {(() => {
+        const auto = isRestaurantOpenNow(restaurant.opening_hours);
+        const closed = !restaurant.is_open || !auto.isOpen;
+        if (!closed) return null;
+        return (
+          <div className="container px-4 pt-3 sm:pt-4">
+            <div className="rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive flex items-center gap-2">
+              <Clock className="w-4 h-4 flex-shrink-0" />
+              <span>
+                <strong>Loja fechada no momento.</strong>{' '}
+                {restaurant.opening_hours
+                  ? `Você pode navegar pelo cardápio. Horário: ${restaurant.opening_hours.replace(/\n/g, ' • ')}`
+                  : 'Você pode navegar pelo cardápio e voltar mais tarde.'}
+              </span>
+            </div>
+          </div>
+        );
+      })()}
+
       {/* Search Bar */}
       <div className="container px-4 py-3 sm:py-4 -mt-2">
         <ProductSearch 
