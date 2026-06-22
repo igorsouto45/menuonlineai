@@ -40,6 +40,7 @@ import {
   QrCode
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { isRestaurantOpenNow } from '@/lib/openingHours';
 
 interface DeliveryArea {
   id: string;
