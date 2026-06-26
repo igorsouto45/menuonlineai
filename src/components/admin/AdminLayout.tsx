@@ -257,19 +257,11 @@ export default function AdminLayout() {
       <div className={`transition-all duration-300 ${sidebarCollapsed ? 'lg:ml-20' : 'lg:ml-64'}`}>
         {/* Mobile Header */}
         <header className="lg:hidden sticky top-0 z-30 h-16 bg-card border-b border-border flex items-center justify-between px-4">
-          <div className="flex items-center">
-            <button
-              onClick={() => setMobileNavOpen(true)}
-              className="w-10 h-10 rounded-lg hover:bg-muted flex items-center justify-center text-foreground"
-            >
-              <Menu className="w-5 h-5" />
-            </button>
-            <div className="flex items-center gap-2 ml-4">
-              <div className="h-8 w-8 rounded-lg gradient-primary flex items-center justify-center">
-                <span className="text-primary-foreground font-bold">M</span>
-              </div>
-              <span className="font-bold text-foreground">MENU AI</span>
+          <div className="flex items-center gap-2">
+            <div className="h-8 w-8 rounded-lg gradient-primary flex items-center justify-center">
+              <span className="text-primary-foreground font-bold">M</span>
             </div>
+            <span className="font-bold text-foreground">MENU AI</span>
           </div>
           <Link to="/precos" className="flex items-center gap-2">
             <div className="relative">
@@ -299,10 +291,41 @@ export default function AdminLayout() {
         </header>
 
         {/* Page Content */}
-        <main className="p-4 md:p-6 lg:p-8">
+        <main className="p-4 md:p-6 lg:p-8 pb-24 lg:pb-8">
           <Outlet />
         </main>
       </div>
+
+      {/* Mobile Bottom Navigation */}
+      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-card border-t border-border pb-[env(safe-area-inset-bottom)]">
+        <div className="grid grid-cols-5 h-16">
+          {bottomNavItems.map((item) => {
+            const isActive = location.pathname === item.path;
+            return (
+              <Link
+                key={item.path}
+                to={item.path}
+                className={`flex flex-col items-center justify-center gap-1 transition-colors ${
+                  isActive ? 'text-primary' : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                <item.icon className="w-5 h-5" />
+                <span className="text-[10px] font-medium">{item.label}</span>
+              </Link>
+            );
+          })}
+          <button
+            onClick={() => setMobileNavOpen(true)}
+            className={`flex flex-col items-center justify-center gap-1 transition-colors ${
+              mobileNavOpen ? 'text-primary' : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            <MoreHorizontal className="w-5 h-5" />
+            <span className="text-[10px] font-medium">Mais</span>
+          </button>
+        </div>
+      </nav>
     </div>
   );
 }
+
