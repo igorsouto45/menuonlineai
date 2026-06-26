@@ -74,6 +74,54 @@ export function EvolutionApiWizard({
   const qrRefreshRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [qrSecondsLeft, setQrSecondsLeft] = useState<number>(0);
   const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [creatingInstance, setCreatingInstance] = useState(false);
+
+  const createInstance = async () => {
+    if (!formData.evolutionApiUrl || !formData.evolutionApiKey || !formData.evolutionInstanceName) {
+      toast({ title: 'Campos incompletos', description: 'Preencha URL, API Key global e nome da instância.', variant: 'destructive' });
+      return;
+    }
+    setCreatingInstance(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('evolution-create-instance', {
+        body: {
+          evolutionApiUrl: formData.evolutionApiUrl,
+          evolutionApiKey: formData.evolutionApiKey,
+          evolutionInstanceName: formData.evolutionInstanceName,
+        },
+      });
+      if (error) throw error;
+      if (!data?.success) throw new Error(data?.error || 'Falha ao criar instância.');
+
+      // If Evolution returned a per-instance token, replace the global key with it
+      if (data.instanceApiKey && typeof data.instanceApiKey === 'string') {
+        setFormData((prev) => ({ ...prev, evolutionApiKey: data.instanceApiKey }));
+        toast({ title: 'Instância criada!', description: 'Token da instância salvo. Escaneie o QR Code para conectar.' });
+      } else if (data.alreadyExists) {
+        toast({ title: 'Instância já existia', description: 'Use o token original (apikey) da instância no passo 3.' });
+      } else {
+        toast({ title: 'Instância criada!', description: 'Escaneie o QR Code para conectar.' });
+      }
+
+      // Open QR modal — if base64 already came back, preload it
+      setQrOpen(true);
+      setQrConnected(false);
+      setQrError(null);
+      if (data.base64) {
+        setQrBase64(data.base64);
+        setQrCode(data.code || null);
+        startQrTimers();
+      } else {
+        await fetchQrCode();
+      }
+    } catch (err: any) {
+      console.error('createInstance error', err);
+      toast({ title: 'Erro ao criar instância', description: err?.message || 'Tente novamente.', variant: 'destructive' });
+    } finally {
+      setCreatingInstance(false);
+    }
+  };
+
 
   const [formData, setFormData] = useState({
     evolutionApiUrl: initialValues?.evolutionApiUrl || '',
