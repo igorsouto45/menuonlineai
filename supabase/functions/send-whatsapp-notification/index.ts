@@ -240,7 +240,8 @@ serve(async (req) => {
     const headers = { 'Content-Type': 'application/json', 'Accept': 'application/json', 'apikey': evolutionApiKey };
 
     try {
-      const statusEndpoint = `${EVOLUTION_API_URL}/instance/connectionState/${encodeURIComponent(instance)}`;
+      const encodedInstance = encodeURIComponent(instance);
+      const statusEndpoint = `${EVOLUTION_API_URL}/instance/connectionState/${encodedInstance}`;
       const statusResponse = await fetch(statusEndpoint, { method: 'GET', headers });
       const statusData = await parseEvolutionResponse(statusResponse);
 
@@ -259,7 +260,7 @@ serve(async (req) => {
       console.warn('Could not pre-check Evolution connection state:', getErrorMessage(statusErr));
     }
 
-    const endpoint = `${EVOLUTION_API_URL}/message/sendText/${instance}`;
+    const endpoint = `${EVOLUTION_API_URL}/message/sendText/${encodeURIComponent(instance)}`;
     console.log(`Sending to ${endpoint}`);
     let response: Response;
     try {
