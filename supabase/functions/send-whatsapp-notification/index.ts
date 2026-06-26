@@ -22,14 +22,79 @@ interface RequestBody {
   baseUrl?: string;
 }
 
+type ErrorType =
+  | 'CONFIGURATION_ERROR'
+  | 'EVOLUTION_AUTH_ERROR'
+  | 'EVOLUTION_INSTANCE_NOT_FOUND'
+  | 'EVOLUTION_CONNECTION_ERROR'
+  | 'EVOLUTION_RATE_LIMIT'
+  | 'EVOLUTION_BAD_NUMBER'
+  | 'EVOLUTION_API_ERROR'
+  | 'INTERNAL_ERROR';
+
 interface NotificationResponse {
   success: boolean;
   messageId?: string;
   error?: string;
-  errorType?: 'CONFIGURATION_ERROR' | 'EVOLUTION_CONNECTION_ERROR' | 'EVOLUTION_API_ERROR' | 'INTERNAL_ERROR';
+  errorType?: ErrorType;
+  hint?: string;
   fallback?: boolean;
   statusCode?: number;
   detail?: unknown;
+}
+
+// Maps common Evolution API failures to actionable, user-friendly Portuguese messages.
+function classifyEvolutionError(
+  status: number,
+  message: string,
+): { errorType: ErrorType; error: string; hint: string } {
+  const m = message.toLowerCase();
+
+  if (status === 401 || status === 403 || /unauthorized|invalid\s*(api)?\s*key|apikey|token/i.test(m)) {
+    return {
+      errorType: 'EVOLUTION_AUTH_ERROR',
+      error: 'Autenticação inválida na Evolution API.',
+      hint: 'Verifique a API Key da instância em Configurações → WhatsApp. Se você recriou a instância, gere um novo token e cole-o no campo "Chave da API".',
+    };
+  }
+
+  if (status === 404 || /not\s+found|does not exist|instance.*(missing|inex)/i.test(m)) {
+    return {
+      errorType: 'EVOLUTION_INSTANCE_NOT_FOUND',
+      error: 'Instância não encontrada na Evolution API.',
+      hint: 'Confira se o nome da instância está exatamente igual ao do servidor Evolution. Se ela foi removida, clique em "Criar instância e gerar QR Code" no wizard.',
+    };
+  }
+
+  if (status === 429 || /rate\s*limit|too many requests/i.test(m)) {
+    return {
+      errorType: 'EVOLUTION_RATE_LIMIT',
+      error: 'Limite de envios atingido na Evolution API.',
+      hint: 'Aguarde 1-2 minutos antes de enviar novamente. Se acontece com frequência, reduza o volume da campanha ou aumente o intervalo entre mensagens.',
+    };
+  }
+
+  if (/connection\s+closed|not\s+connected|desconect|logged\s*out|qr/i.test(m)) {
+    return {
+      errorType: 'EVOLUTION_CONNECTION_ERROR',
+      error: 'WhatsApp desconectado na Evolution API.',
+      hint: 'Abra Configurações → WhatsApp → Conectar WhatsApp, escaneie o novo QR Code com o celular e clique em "Testar conexão" antes de tentar novamente.',
+    };
+  }
+
+  if (/exists.*whatsapp|number.*invalid|bad\s*request.*number/i.test(m)) {
+    return {
+      errorType: 'EVOLUTION_BAD_NUMBER',
+      error: 'Número do cliente inválido ou sem WhatsApp.',
+      hint: 'Confirme o DDD e os 9 dígitos do celular do cliente. Números fixos e sem WhatsApp são rejeitados pela Evolution API.',
+    };
+  }
+
+  return {
+    errorType: 'EVOLUTION_API_ERROR',
+    error: `Evolution API retornou ${status}${message ? `: ${message.slice(0, 160)}` : ''}.`,
+    hint: 'Verifique o status do servidor Evolution e o log da instância. Se o erro persistir, reinicie a instância e teste novamente.',
+  };
 }
 
 const jsonResponse = (payload: NotificationResponse | { error: string }, status = 200) => {
