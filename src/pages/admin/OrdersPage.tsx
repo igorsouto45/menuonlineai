@@ -405,7 +405,7 @@ export default function OrdersPage() {
       if (!data?.success) {
         toast({
           title: 'WhatsApp não enviado',
-          description: data?.error || 'A Evolution API não confirmou o envio. Verifique se o WhatsApp está conectado.',
+          description: formatWhatsAppError(data) || 'A Evolution API não confirmou o envio. Verifique se o WhatsApp está conectado.',
           variant: 'destructive',
         });
         return;
