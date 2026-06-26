@@ -21,48 +21,58 @@ serve(async (req) => {
     const evolutionApiKey = String(body?.evolutionApiKey || "").trim();
     const instanceName = String(body?.evolutionInstanceName || "").trim();
 
-    if (!evolutionApiUrl || !evolutionApiKey) {
+    if (!evolutionApiUrl || !evolutionApiKey || !instanceName) {
       return new Response(
-        JSON.stringify({ success: false, error: "Preencha URL e token do Evolution GO." }),
+        JSON.stringify({ success: false, error: "Preencha URL, token e nome da instância." }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
 
     const cleanUrl = normalizeEvolutionUrl(evolutionApiUrl);
     const headers = { apikey: evolutionApiKey, Accept: "application/json" };
+    const inst = encodeURIComponent(instanceName);
 
-    const endpoints = [
-      instanceName ? `${cleanUrl}/instance/logout/${encodeURIComponent(instanceName)}` : null,
-      `${cleanUrl}/instance/logout`,
-      `${cleanUrl}/instance/disconnect`,
-    ].filter(Boolean) as string[];
+    // Evolution API v2: DELETE /instance/logout/{instance}
+    const attempts: Array<{ url: string; method: string }> = [
+      { url: `${cleanUrl}/instance/logout/${inst}`, method: "DELETE" },
+      { url: `${cleanUrl}/instance/logout/${inst}`, method: "POST" },
+      { url: `${cleanUrl}/instance/disconnect/${inst}`, method: "DELETE" },
+      { url: `${cleanUrl}/instance/disconnect/${inst}`, method: "POST" },
+    ];
 
     let lastError = "";
-    for (const url of endpoints) {
+    let lastStatus = 0;
+    for (const { url, method } of attempts) {
       try {
-        console.log("Trying logout:", url);
-        const resp = await fetch(url, { method: "DELETE", headers });
-        // some implementations expect POST
-        const finalResp = resp.status === 404 || resp.status === 405
-          ? await fetch(url, { method: "POST", headers })
-          : resp;
-
-        const text = await finalResp.text();
-        if (finalResp.ok) {
+        console.log(`Trying logout ${method}:`, url);
+        const resp = await fetch(url, { method, headers });
+        const text = await resp.text();
+        if (resp.ok) {
           return new Response(
             JSON.stringify({ success: true, message: "WhatsApp desconectado." }),
             { headers: { ...corsHeaders, "Content-Type": "application/json" } },
           );
         }
-        lastError = text || `HTTP ${finalResp.status}`;
+        const lower = text.toLowerCase();
+        if (
+          resp.status === 400 &&
+          (lower.includes("not connected") || lower.includes("not logged") || lower.includes("close") || lower.includes("disconnect"))
+        ) {
+          return new Response(
+            JSON.stringify({ success: true, message: "WhatsApp já estava desconectado." }),
+            { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+          );
+        }
+        lastError = text || `HTTP ${resp.status}`;
+        lastStatus = resp.status;
       } catch (e) {
         lastError = String(e);
       }
     }
 
     return new Response(
-      JSON.stringify({ success: false, error: lastError || "Não foi possível desconectar." }),
-      { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      JSON.stringify({ success: false, error: lastError || "Não foi possível desconectar.", status: lastStatus }),
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   } catch (error) {
     console.error("disconnect error", error);
