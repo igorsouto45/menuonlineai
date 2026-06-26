@@ -1401,16 +1401,20 @@ function MenuPageContent() {
         const auto = isRestaurantOpenNow(restaurant.opening_hours);
         const closed = !restaurant.is_open || !auto.isOpen;
         if (!closed) return null;
+        const next = getNextOpeningInfo(restaurant.opening_hours);
         return (
           <div className="container px-4 pt-3 sm:pt-4">
-            <div className="rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive flex items-center gap-2">
-              <Clock className="w-4 h-4 flex-shrink-0" />
-              <span>
-                <strong>Loja fechada no momento.</strong>{' '}
-                {restaurant.opening_hours
-                  ? `Você pode navegar pelo cardápio. Horário: ${restaurant.opening_hours.replace(/\n/g, ' • ')}`
-                  : 'Você pode navegar pelo cardápio e voltar mais tarde.'}
-              </span>
+            <div className="rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive flex items-start gap-2">
+              <Clock className="w-4 h-4 flex-shrink-0 mt-0.5" />
+              <div className="space-y-1">
+                <div><strong>Loja fechada no momento.</strong> Você pode navegar pelo cardápio.</div>
+                {next && <div className="font-medium">⏰ {next}</div>}
+                {restaurant.opening_hours && (
+                  <div className="text-destructive/80 text-xs whitespace-pre-line">
+                    Horários: {restaurant.opening_hours.replace(/\n/g, ' • ')}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         );
