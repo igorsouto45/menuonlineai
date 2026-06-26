@@ -22,6 +22,40 @@ interface RequestBody {
   baseUrl?: string;
 }
 
+interface NotificationResponse {
+  success: boolean;
+  messageId?: string;
+  error?: string;
+  errorType?: 'CONFIGURATION_ERROR' | 'EVOLUTION_CONNECTION_ERROR' | 'EVOLUTION_API_ERROR' | 'INTERNAL_ERROR';
+  fallback?: boolean;
+  statusCode?: number;
+  detail?: unknown;
+}
+
+const jsonResponse = (payload: NotificationResponse | { error: string }, status = 200) => {
+  return new Response(JSON.stringify(payload), {
+    status,
+    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+  });
+};
+
+const getErrorMessage = (error: unknown): string => {
+  if (error instanceof Error) return error.message;
+  if (typeof error === 'string') return error;
+  return 'Erro desconhecido';
+};
+
+const parseEvolutionResponse = async (response: Response): Promise<unknown> => {
+  const text = await response.text();
+  if (!text) return {};
+
+  try {
+    return JSON.parse(text);
+  } catch {
+    return { raw: text };
+  }
+};
+
 const statusMessages: Record<string, string> = {
   pending: '📝 Recebemos seu pedido! Em breve confirmaremos.',
   confirmed: '✅ Seu pedido foi *confirmado*! Estamos preparando com carinho.',
@@ -48,10 +82,7 @@ serve(async (req) => {
     } = body;
 
     if (!customerPhone || !status) {
-      return new Response(
-        JSON.stringify({ error: 'Missing required fields: customerPhone, status' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return jsonResponse({ error: 'Missing required fields: customerPhone, status' }, 400);
     }
 
     // Resolve credentials. Priority: restaurant DB → body params → env vars (legacy).
@@ -95,10 +126,12 @@ serve(async (req) => {
       : null;
 
     if (!EVOLUTION_API_URL || !evolutionApiKey) {
-      return new Response(
-        JSON.stringify({ error: 'Evolution GO not configured for this restaurant.' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return jsonResponse({
+        success: false,
+        error: 'WhatsApp não configurado para este restaurante.',
+        errorType: 'CONFIGURATION_ERROR',
+        fallback: true,
+      });
     }
 
     let phone = customerPhone.replace(/\D/g, '');
@@ -134,33 +167,44 @@ serve(async (req) => {
         body: JSON.stringify({ number: phone, text: message }),
       });
     } catch (fetchErr) {
-      const msg = fetchErr instanceof Error ? fetchErr.message : String(fetchErr);
+      const msg = getErrorMessage(fetchErr);
       console.error('Evolution fetch failed:', msg);
-      return new Response(
-        JSON.stringify({ error: `Não foi possível conectar à Evolution API (${EVOLUTION_API_URL}). Verifique a URL configurada.`, detail: msg }),
-        { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return jsonResponse({
+        success: false,
+        error: 'Não foi possível conectar à Evolution API. Verifique se a instância está online e conectada ao WhatsApp.',
+        errorType: 'EVOLUTION_CONNECTION_ERROR',
+        fallback: true,
+        detail: msg,
+      });
     }
 
-    const responseData = await response.json().catch(() => ({}));
+    const responseData = await parseEvolutionResponse(response);
     if (!response.ok) {
       console.error('Evolution API error:', response.status, responseData);
-      return new Response(
-        JSON.stringify({ error: `Evolution retornou ${response.status}`, detail: responseData }),
-        { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return jsonResponse({
+        success: false,
+        error: `Evolution API retornou ${response.status}. Confira se o WhatsApp está conectado e se o nome da instância está correto.`,
+        errorType: 'EVOLUTION_API_ERROR',
+        fallback: true,
+        statusCode: response.status,
+        detail: responseData,
+      });
     }
 
+    const messageId = typeof responseData === 'object' && responseData !== null && 'key' in responseData
+      ? (responseData as { key?: { id?: string } }).key?.id
+      : undefined;
 
-    return new Response(
-      JSON.stringify({ success: true, messageId: responseData.key?.id }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    return jsonResponse({ success: true, messageId });
   } catch (error) {
-    console.error('Error sending WhatsApp notification:', error);
-    return new Response(
-      JSON.stringify({ error: 'Internal server error' }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    const msg = getErrorMessage(error);
+    console.error('Error sending WhatsApp notification:', msg);
+    return jsonResponse({
+      success: false,
+      error: 'Falha interna ao preparar a notificação do WhatsApp.',
+      errorType: 'INTERNAL_ERROR',
+      fallback: true,
+      detail: msg,
+    });
   }
 });
