@@ -304,23 +304,29 @@ serve(async (req) => {
 
     const headers = { 'Content-Type': 'application/json', 'Accept': 'application/json', 'apikey': evolutionApiKey };
 
+    // Pre-check: only BLOCK when the instance reports an explicit disconnected state.
+    // Anything ambiguous (unknown/connecting/missing field) falls through to the actual send,
+    // which is the source of truth — avoids false negatives that contradict "Testar conexão".
     try {
       const encodedInstance = encodeURIComponent(instance);
       const statusEndpoint = `${EVOLUTION_API_URL}/instance/connectionState/${encodedInstance}`;
       const statusResponse = await fetch(statusEndpoint, { method: 'GET', headers });
       const statusData = await parseEvolutionResponse(statusResponse);
 
-      if (statusResponse.ok && !isConnectedPayload(statusData)) {
-        const state = parseConnectionState(statusData) || 'desconectado';
-        return jsonResponse({
-          success: false,
-          error: `WhatsApp desconectado na Evolution API (estado: ${state}).`,
-          errorType: 'EVOLUTION_CONNECTION_ERROR',
-          hint: 'Abra Configurações → WhatsApp → Conectar WhatsApp, escaneie o QR Code novamente e clique em "Testar conexão" antes de mover pedidos.',
-          fallback: true,
-          statusCode: statusResponse.status,
-          detail: statusData,
-        });
+      if (statusResponse.ok) {
+        const state = parseConnectionState(statusData);
+        const explicitlyDisconnected = ['close', 'closed', 'disconnected', 'logout', 'logged_out'].includes(state);
+        if (explicitlyDisconnected && !isConnectedPayload(statusData)) {
+          return jsonResponse({
+            success: false,
+            error: `WhatsApp desconectado na Evolution API (estado: ${state}).`,
+            errorType: 'EVOLUTION_CONNECTION_ERROR',
+            hint: 'Abra Configurações → WhatsApp → Conectar WhatsApp, escaneie o QR Code novamente e clique em "Testar conexão" antes de mover pedidos.',
+            fallback: true,
+            statusCode: statusResponse.status,
+            detail: statusData,
+          });
+        }
       }
     } catch (statusErr) {
       console.warn('Could not pre-check Evolution connection state:', getErrorMessage(statusErr));
