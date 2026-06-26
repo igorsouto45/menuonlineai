@@ -42,6 +42,9 @@ serve(async (req) => {
     const {
       orderId, restaurantId, customerPhone, customerName, status,
       restaurantName, orderTotal, customMessage, baseUrl,
+      evolutionApiUrl: bodyApiUrl,
+      evolutionApiKey: bodyApiKey,
+      evolutionInstanceName: bodyInstance,
     } = body;
 
     if (!customerPhone || !status) {
@@ -51,8 +54,7 @@ serve(async (req) => {
       );
     }
 
-    // Always look up credentials server-side using the service role.
-    // Never trust credentials passed from the client.
+    // Resolve credentials. Priority: restaurant DB → body params → env vars (legacy).
     let rawEvolutionApiUrl: string | null = null;
     let evolutionApiKey: string | null = null;
     let evolutionInstanceName: string | null = null;
@@ -77,10 +79,16 @@ serve(async (req) => {
       }
     }
 
-    // Fallback to env vars (legacy)
+    // Fallback to body-supplied credentials (client passed them through)
+    rawEvolutionApiUrl = rawEvolutionApiUrl || bodyApiUrl || null;
+    evolutionApiKey = evolutionApiKey || bodyApiKey || null;
+    evolutionInstanceName = evolutionInstanceName || bodyInstance || null;
+
+    // Last resort: env vars (legacy / shared instance)
     rawEvolutionApiUrl = rawEvolutionApiUrl || Deno.env.get('EVOLUTION_API_URL') || null;
     evolutionApiKey = evolutionApiKey || Deno.env.get('EVOLUTION_API_KEY') || null;
     evolutionInstanceName = evolutionInstanceName || Deno.env.get('EVOLUTION_INSTANCE_NAME') || null;
+
 
     const EVOLUTION_API_URL = rawEvolutionApiUrl
       ? rawEvolutionApiUrl.replace(/\/+$/, '').replace(/\/manager$/, '')
@@ -115,20 +123,32 @@ serve(async (req) => {
     }
 
     // Evolution GO: POST {url}/send/text  (apikey header identifies the instance)
-    const response = await fetch(`${EVOLUTION_API_URL}/send/text`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'apikey': evolutionApiKey },
-      body: JSON.stringify({ number: phone, text: message }),
-    });
-
-    const responseData = await response.json();
-    if (!response.ok) {
-      console.error('Evolution API error');
+    console.log(`Sending to ${EVOLUTION_API_URL}/send/text (instance: ${evolutionInstanceName})`);
+    let response: Response;
+    try {
+      response = await fetch(`${EVOLUTION_API_URL}/send/text`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'apikey': evolutionApiKey },
+        body: JSON.stringify({ number: phone, text: message }),
+      });
+    } catch (fetchErr) {
+      const msg = fetchErr instanceof Error ? fetchErr.message : String(fetchErr);
+      console.error('Evolution fetch failed:', msg);
       return new Response(
-        JSON.stringify({ error: 'Failed to send WhatsApp message' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ error: `Não foi possível conectar à Evolution API (${EVOLUTION_API_URL}). Verifique a URL configurada.`, detail: msg }),
+        { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+
+    const responseData = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      console.error('Evolution API error:', response.status, responseData);
+      return new Response(
+        JSON.stringify({ error: `Evolution retornou ${response.status}`, detail: responseData }),
+        { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
 
     return new Response(
       JSON.stringify({ success: true, messageId: responseData.key?.id }),
