@@ -201,6 +201,7 @@ export default function AdminLayout() {
   const { toast } = useToast();
   const { planName, isSubscribed, isInTrial, trialEndsAt } = usePlanLimits();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const handleLogout = async () => {
     await signOut();
