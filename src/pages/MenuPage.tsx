@@ -1362,13 +1362,14 @@ function MenuPageContent() {
             {(() => {
               const auto = isRestaurantOpenNow(restaurant.opening_hours);
               const open = restaurant.is_open && auto.isOpen;
+              const next = !open ? getNextOpeningInfo(restaurant.opening_hours) : null;
               return open ? (
                 <Badge variant="secondary" className="bg-success/20 text-success border-success/30 text-xs">
                   ● Aberto agora
                 </Badge>
               ) : (
                 <Badge variant="secondary" className="bg-destructive/20 text-destructive border-destructive/30 text-xs">
-                  ● Loja fechada {auto.hasSchedule && !auto.isOpen ? '— fora do horário' : ''}
+                  ● Fechado{next ? ` — ${next}` : ''}
                 </Badge>
               );
             })()}
