@@ -523,7 +523,7 @@ function CartSheet({
       // - Delivery / Retirada: entra como "pendente" até o restaurante confirmar
       //   que tem o produto. A mensagem de confirmação é enviada no Kanban.
       const orderId = crypto.randomUUID();
-      const initialStatus: 'pending' | 'confirmed' = deliveryMode === 'table' ? 'confirmed' : 'pending';
+      const initialStatus: 'pending' | 'confirmed' = deliveryMode === 'dine-in' ? 'confirmed' : 'pending';
 
       const { error: orderError } = await supabase
         .from('orders')
