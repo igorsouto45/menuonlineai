@@ -135,7 +135,9 @@ serve(async (req) => {
         try { data = JSON.parse(text); } catch { /* ignore */ }
 
         if (!resp.ok) {
-          lastError = data?.error || data?.message || `HTTP ${resp.status}`;
+          const errorPayload = isRecord(data) ? data : {};
+          const errorMessage = errorPayload.error ?? errorPayload.message;
+          lastError = typeof errorMessage === "string" ? errorMessage : `HTTP ${resp.status}`;
           continue;
         }
 
