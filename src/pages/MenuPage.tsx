@@ -1018,6 +1018,14 @@ function MenuPageContent() {
     } catch {}
   }, [isDark]);
 
+  // Live tick: re-render every 30s so the open/closed status updates
+  // automatically when the clock crosses an opening/closing time.
+  const [, setNowTick] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => setNowTick(t => t + 1), 30000);
+    return () => clearInterval(id);
+  }, []);
+
   // Watchdog: if loading takes too long the bundle is likely stale (PWA cache,
   // old service worker, etc). Show a recovery UI instead of an infinite skeleton.
   useEffect(() => {
