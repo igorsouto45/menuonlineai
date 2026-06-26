@@ -509,29 +509,55 @@ export function EvolutionApiWizard({
             {currentStep === 4 && (
               <div className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="instanceName">Nome da Instância (opcional)</Label>
+                  <Label htmlFor="instanceName">Nome da Instância</Label>
                   <Input
                     id="instanceName"
-                    placeholder="minha-instancia"
+                    placeholder="meurestaurante"
                     value={formData.evolutionInstanceName}
                     onChange={(e) => setFormData({ ...formData, evolutionInstanceName: e.target.value })}
                   />
                   <p className="text-sm text-muted-foreground">
-                    Apenas para sua referência — o token já identifica a instância no Evolution GO.
+                    Use letras minúsculas, números e hífens. Ex.: <code>brasaburguer</code>.
                   </p>
                 </div>
+
+                <Card className="border-primary/30 bg-primary/5">
+                  <CardContent className="pt-6 space-y-3">
+                    <div className="flex items-start gap-3">
+                      <QrCode className="w-5 h-5 text-primary mt-0.5" />
+                      <div className="flex-1">
+                        <h4 className="font-semibold text-sm">Criar instância pelo painel</h4>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Use a <strong>API Key global</strong> (passo 3) para criar a instância no servidor Evolution.
+                          Ao criar, o token específico da instância será salvo automaticamente e o QR Code aparecerá para escanear.
+                        </p>
+                      </div>
+                    </div>
+                    <Button
+                      type="button"
+                      className="w-full"
+                      onClick={createInstance}
+                      disabled={creatingInstance || !formData.evolutionApiUrl || !formData.evolutionApiKey || !formData.evolutionInstanceName}
+                    >
+                      {creatingInstance ? (
+                        <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Criando instância...</>
+                      ) : (
+                        <><QrCode className="w-4 h-4 mr-2" /> Criar instância e gerar QR Code</>
+                      )}
+                    </Button>
+                  </CardContent>
+                </Card>
 
                 <Alert>
                   <AlertDescription>
                     <p className="mb-2">
-                      <strong>Configurar Webhook:</strong> Para receber mensagens, configure o webhook
-                      da sua instância para a URL abaixo:
+                      <strong>Webhook:</strong> configure na sua instância para a URL abaixo:
                     </p>
                     <div className="flex items-center gap-2 bg-muted p-2 rounded text-xs font-mono break-all">
                       <span className="flex-1">{webhookUrl}</span>
-                      <Button 
-                        size="icon" 
-                        variant="ghost" 
+                      <Button
+                        size="icon"
+                        variant="ghost"
                         className="shrink-0 h-6 w-6"
                         onClick={copyWebhookUrl}
                       >
@@ -542,6 +568,7 @@ export function EvolutionApiWizard({
                 </Alert>
               </div>
             )}
+
 
             {currentStep === 5 && (
               <div className="space-y-4">
