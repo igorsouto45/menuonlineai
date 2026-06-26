@@ -1568,6 +1568,8 @@ function MenuPageContent() {
         tableNumber={searchParams.get('table')}
         dineInEnabled={restaurant.dine_in_enabled ?? false}
         tableStatus={tableStatus}
+        openingHours={restaurant.opening_hours}
+        isStoreOpen={restaurant.is_open}
       />
 
       {/* QR Code Modal */}
