@@ -336,7 +336,7 @@ export default function OrdersPage() {
           restaurantId: restaurant.id,
           customerPhone: order.customer_phone,
           customerName: order.customer_name,
-          customerId: order.customer_id,
+
           status: newStatus,
           restaurantName: restaurant.name,
           orderTotal: order.total,
