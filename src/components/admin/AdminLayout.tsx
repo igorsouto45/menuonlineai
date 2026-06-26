@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useLocation, Outlet, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
@@ -202,6 +202,11 @@ export default function AdminLayout() {
   const { planName, isSubscribed, isInTrial, trialEndsAt } = usePlanLimits();
   const navigate = useNavigate();
   const location = useLocation();
+
+  // Fecha o drawer "Mais" sempre que a rota mudar
+  useEffect(() => {
+    setMobileNavOpen(false);
+  }, [location.pathname]);
 
   const handleLogout = async () => {
     await signOut();
