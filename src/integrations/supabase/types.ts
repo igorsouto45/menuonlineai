@@ -309,6 +309,7 @@ export type Database = {
           customer_name: string
           id: string
           is_approved: boolean | null
+          order_id: string | null
           product_id: string
           rating: number
           restaurant_id: string
@@ -319,6 +320,7 @@ export type Database = {
           customer_name: string
           id?: string
           is_approved?: boolean | null
+          order_id?: string | null
           product_id: string
           rating: number
           restaurant_id: string
@@ -329,11 +331,19 @@ export type Database = {
           customer_name?: string
           id?: string
           is_approved?: boolean | null
+          order_id?: string | null
           product_id?: string
           rating?: number
           restaurant_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "product_reviews_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "product_reviews_product_id_fkey"
             columns: ["product_id"]
@@ -836,6 +846,21 @@ export type Database = {
           isOneToOne: false
           isSetofReturn: true
         }
+      }
+      get_order_for_review: {
+        Args: { _order_id: string }
+        Returns: {
+          already_reviewed: boolean
+          customer_name: string
+          id: string
+          items: Json
+          restaurant_id: string
+          restaurant_logo_url: string
+          restaurant_name: string
+          restaurant_slug: string
+          status: Database["public"]["Enums"]["order_status"]
+          total: number
+        }[]
       }
       has_role: {
         Args: {
