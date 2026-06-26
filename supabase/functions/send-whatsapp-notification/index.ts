@@ -314,8 +314,9 @@ serve(async (req) => {
         const state = parseConnectionState(statusData) || 'desconectado';
         return jsonResponse({
           success: false,
-          error: `WhatsApp não está conectado na Evolution API (estado: ${state}). Escaneie o QR Code novamente antes de notificar o cliente.`,
+          error: `WhatsApp desconectado na Evolution API (estado: ${state}).`,
           errorType: 'EVOLUTION_CONNECTION_ERROR',
+          hint: 'Abra Configurações → WhatsApp → Conectar WhatsApp, escaneie o QR Code novamente e clique em "Testar conexão" antes de mover pedidos.',
           fallback: true,
           statusCode: statusResponse.status,
           detail: statusData,
