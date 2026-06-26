@@ -350,14 +350,13 @@ serve(async (req) => {
     if (!response.ok) {
       console.error('Evolution API error:', response.status, responseData);
       const evolutionMessage = extractEvolutionMessage(responseData);
-      const isConnectionClosed = /connection\s+closed|not\s+connected|desconect/i.test(evolutionMessage);
+      const classified = classifyEvolutionError(response.status, evolutionMessage);
 
       return jsonResponse({
         success: false,
-        error: isConnectionClosed
-          ? 'WhatsApp não está conectado na Evolution API. Gere um novo QR Code, escaneie no celular e depois clique em “Testar conexão”.'
-          : `Evolution API retornou ${response.status}${evolutionMessage ? `: ${evolutionMessage}` : ''}. Confira se o WhatsApp está conectado e se o nome da instância está correto.`,
-        errorType: isConnectionClosed ? 'EVOLUTION_CONNECTION_ERROR' : 'EVOLUTION_API_ERROR',
+        error: classified.error,
+        errorType: classified.errorType,
+        hint: classified.hint,
         fallback: true,
         statusCode: response.status,
         detail: responseData,
