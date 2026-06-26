@@ -420,7 +420,9 @@ function CartSheet({
   orderWelcomeMessage,
   tableNumber,
   dineInEnabled,
-  tableStatus
+  tableStatus,
+  openingHours,
+  isStoreOpen
 }: { 
   isOpen: boolean; 
   onClose: () => void;
@@ -435,6 +437,8 @@ function CartSheet({
   tableNumber?: string | null;
   dineInEnabled?: boolean;
   tableStatus?: 'free' | 'occupied' | 'reserved' | null;
+  openingHours?: string | null;
+  isStoreOpen?: boolean;
 }) {
   const { items, total, removeItem, updateQuantity, getWhatsAppMessage, clearCart, calculateDeliveryFee, getGrandTotal } = useCart();
   const { session, user, customer, loadCustomerByRestaurant } = useCustomer();
@@ -480,6 +484,27 @@ function CartSheet({
   const handleSendWhatsApp = async () => {
     if (!session?.user || !customer) {
       setShowAuthModal(true);
+      return;
+    }
+
+    // Bloqueia pedidos fora do horário de funcionamento
+    if (isStoreOpen === false) {
+      toast({
+        title: 'Loja fechada',
+        description: 'O restaurante está temporariamente fechado e não está aceitando pedidos.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    const openStatus = isRestaurantOpenNow(openingHours);
+    if (!openStatus.isOpen) {
+      toast({
+        title: 'Fora do horário de funcionamento',
+        description: openingHours
+          ? `Pedidos só são aceitos no horário: ${openingHours.replace(/\n/g, ' • ')}`
+          : 'Pedidos só são aceitos no horário de funcionamento.',
+        variant: 'destructive',
+      });
       return;
     }
 
@@ -1543,6 +1568,8 @@ function MenuPageContent() {
         tableNumber={searchParams.get('table')}
         dineInEnabled={restaurant.dine_in_enabled ?? false}
         tableStatus={tableStatus}
+        openingHours={restaurant.opening_hours}
+        isStoreOpen={restaurant.is_open}
       />
 
       {/* QR Code Modal */}
