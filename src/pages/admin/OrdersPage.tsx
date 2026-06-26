@@ -336,13 +336,20 @@ export default function OrdersPage() {
           restaurantId: restaurant.id,
           customerPhone: order.customer_phone,
           customerName: order.customer_name,
+          customerId: order.customer_id,
           status: newStatus,
+          restaurantName: restaurant.name,
           orderTotal: order.total,
           baseUrl: window.location.origin,
+          // Pass credentials as fallback in case DB lookup misses them
+          evolutionApiUrl,
+          evolutionApiKey,
+          evolutionInstanceName,
         },
       });
 
       if (error) throw error;
+
 
       toast({
         title: '📱 Cliente notificado',
