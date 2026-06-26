@@ -340,8 +340,9 @@ serve(async (req) => {
       console.error('Evolution fetch failed:', msg);
       return jsonResponse({
         success: false,
-        error: 'Não foi possível conectar à Evolution API. Verifique se a instância está online e conectada ao WhatsApp.',
+        error: 'Não foi possível alcançar o servidor da Evolution API.',
         errorType: 'EVOLUTION_CONNECTION_ERROR',
+        hint: 'Confirme se a URL da Evolution API está correta (sem /manager ou /swagger), se o servidor está online e se há rede liberada para chamá-lo.',
         fallback: true,
         detail: msg,
       });
