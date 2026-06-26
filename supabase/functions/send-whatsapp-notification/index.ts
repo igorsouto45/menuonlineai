@@ -123,20 +123,32 @@ serve(async (req) => {
     }
 
     // Evolution GO: POST {url}/send/text  (apikey header identifies the instance)
-    const response = await fetch(`${EVOLUTION_API_URL}/send/text`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'apikey': evolutionApiKey },
-      body: JSON.stringify({ number: phone, text: message }),
-    });
-
-    const responseData = await response.json();
-    if (!response.ok) {
-      console.error('Evolution API error');
+    console.log(`Sending to ${EVOLUTION_API_URL}/send/text (instance: ${evolutionInstanceName})`);
+    let response: Response;
+    try {
+      response = await fetch(`${EVOLUTION_API_URL}/send/text`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'apikey': evolutionApiKey },
+        body: JSON.stringify({ number: phone, text: message }),
+      });
+    } catch (fetchErr) {
+      const msg = fetchErr instanceof Error ? fetchErr.message : String(fetchErr);
+      console.error('Evolution fetch failed:', msg);
       return new Response(
-        JSON.stringify({ error: 'Failed to send WhatsApp message' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ error: `Não foi possível conectar à Evolution API (${EVOLUTION_API_URL}). Verifique a URL configurada.`, detail: msg }),
+        { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+
+    const responseData = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      console.error('Evolution API error:', response.status, responseData);
+      return new Response(
+        JSON.stringify({ error: `Evolution retornou ${response.status}`, detail: responseData }),
+        { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
 
     return new Response(
       JSON.stringify({ success: true, messageId: responseData.key?.id }),
