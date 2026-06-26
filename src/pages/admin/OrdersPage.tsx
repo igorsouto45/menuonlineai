@@ -52,10 +52,20 @@ interface WhatsAppNotificationResponse {
   success: boolean;
   messageId?: string;
   error?: string;
+  errorType?: string;
+  hint?: string;
   fallback?: boolean;
   statusCode?: number;
   detail?: unknown;
 }
+
+const formatWhatsAppError = (payload: { error?: string; hint?: string } | null | undefined): string => {
+  if (!payload) return 'Não foi possível enviar mensagem no WhatsApp.';
+  const parts: string[] = [];
+  if (payload.error) parts.push(payload.error);
+  if (payload.hint) parts.push(`👉 ${payload.hint}`);
+  return parts.join(' ') || 'Não foi possível enviar mensagem no WhatsApp.';
+};
 
 const getFunctionErrorDescription = async (error: unknown): Promise<string> => {
   if (error instanceof FunctionsHttpError && error.context instanceof Response) {
@@ -65,12 +75,13 @@ const getFunctionErrorDescription = async (error: unknown): Promise<string> => {
 
       if (contentType.includes('application/json')) {
         const payload = await response.json();
-        if (typeof payload?.error === 'string') return payload.error;
+        const formatted = formatWhatsAppError(payload);
+        if (formatted) return formatted;
         if (typeof payload?.message === 'string') return payload.message;
       }
 
       const text = await response.text();
-      if (text.trim()) return text.trim().slice(0, 220);
+      if (text.trim()) return text.trim().slice(0, 320);
     } catch {
       // Fall through to the default message below.
     }
