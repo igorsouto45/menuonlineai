@@ -488,7 +488,7 @@ function CartSheet({
     }
 
     // Bloqueia pedidos fora do horário de funcionamento
-    if (restaurant && restaurant.is_open === false) {
+    if (isStoreOpen === false) {
       toast({
         title: 'Loja fechada',
         description: 'O restaurante está temporariamente fechado e não está aceitando pedidos.',
@@ -496,12 +496,12 @@ function CartSheet({
       });
       return;
     }
-    const openStatus = isRestaurantOpenNow(restaurant?.opening_hours);
+    const openStatus = isRestaurantOpenNow(openingHours);
     if (!openStatus.isOpen) {
       toast({
         title: 'Fora do horário de funcionamento',
-        description: restaurant?.opening_hours
-          ? `Pedidos só são aceitos no horário: ${restaurant.opening_hours.replace(/\n/g, ' • ')}`
+        description: openingHours
+          ? `Pedidos só são aceitos no horário: ${openingHours.replace(/\n/g, ' • ')}`
           : 'Pedidos só são aceitos no horário de funcionamento.',
         variant: 'destructive',
       });
