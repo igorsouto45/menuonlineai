@@ -19,6 +19,7 @@ const AuthPage = lazy(() => import("./pages/AuthPage"));
 const OnboardingPage = lazy(() => import("./pages/OnboardingPage"));
 const PricingPage = lazy(() => import("./pages/PricingPage"));
 const OrderTrackingPage = lazy(() => import("./pages/OrderTrackingPage"));
+const OrderReviewPage = lazy(() => import("./pages/OrderReviewPage"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 // Admin chunk(s)
