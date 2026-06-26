@@ -251,7 +251,7 @@ export function EvolutionApiWizard({
         setQrBase64(data.base64 || null);
         setQrCode(data.code || null);
         if (!data.base64 && !data.code) {
-          setQrError('Resposta sem QR Code. Verifique a instância no Evolution GO.');
+          setQrError('Resposta sem QR Code. Verifique a instância na Evolution API.');
         } else {
           startQrTimers();
         }
@@ -268,7 +268,7 @@ export function EvolutionApiWizard({
         return;
       }
       const msg = err?.message || 'Erro ao obter QR Code.';
-      setQrError(`${msg} Verifique a URL, o token e se a instância existe no Evolution GO.`);
+      setQrError(`${msg} Verifique a URL, o token e se a instância existe na Evolution API.`);
       if (!opts?.silent) {
         toast({ title: 'Erro ao gerar QR Code', description: msg, variant: 'destructive' });
       }
@@ -403,7 +403,7 @@ export function EvolutionApiWizard({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 flex-wrap">
             <Smartphone className="w-5 h-5 text-primary" />
-            Configurar Evolution GO
+            Configurar Evolution API
             <WhatsAppStatusBadge
               status={
                 qrConnected || testResult === 'success'
@@ -417,7 +417,7 @@ export function EvolutionApiWizard({
             />
           </DialogTitle>
           <DialogDescription>
-            Siga os passos para conectar o WhatsApp ao seu restaurante via Evolution GO
+            Siga os passos para conectar o WhatsApp ao seu restaurante via Evolution API
           </DialogDescription>
         </DialogHeader>
 
@@ -471,11 +471,11 @@ export function EvolutionApiWizard({
               <div className="space-y-4">
                 <Card>
                   <CardHeader>
-                    <CardTitle className="text-lg">O que é o Evolution GO?</CardTitle>
+                    <CardTitle className="text-lg">O que é a Evolution API?</CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-3 text-sm text-muted-foreground">
                     <p>
-                      O Evolution GO é a nova versão (em Go/whatsmeow) da Evolution API. Permite
+                      A Evolution API é um servidor open-source para integração com o WhatsApp. Permite
                       enviar notificações automáticas pelo WhatsApp quando o status do pedido muda.
                     </p>
                     <p>
@@ -492,7 +492,7 @@ export function EvolutionApiWizard({
 
                 <Alert>
                   <AlertDescription>
-                    <strong>Pré-requisitos:</strong> Você precisa de uma instância do Evolution GO
+                    <strong>Pré-requisitos:</strong> Você precisa de uma instância da Evolution API
                     criada e conectada ao WhatsApp (QR Code escaneado).
                     <a 
                       href="https://pool-evolution-go-008.cloud.pageup.dev.br/swagger/index.html" 
@@ -510,7 +510,7 @@ export function EvolutionApiWizard({
             {currentStep === 2 && (
               <div className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="apiUrl">URL do Evolution GO</Label>
+                  <Label htmlFor="apiUrl">URL da Evolution API</Label>
                   <Input
                     id="apiUrl"
                     placeholder="https://pool-evolution-go-008.cloud.pageup.dev.br"
@@ -518,7 +518,7 @@ export function EvolutionApiWizard({
                     onChange={(e) => setFormData({ ...formData, evolutionApiUrl: e.target.value })}
                   />
                   <p className="text-sm text-muted-foreground">
-                    URL base do Evolution GO (sem /swagger ou barra final)
+                    URL base da Evolution API (sem /swagger ou barra final)
                   </p>
                 </div>
 
@@ -542,7 +542,7 @@ export function EvolutionApiWizard({
                     onChange={(e) => setFormData({ ...formData, evolutionApiKey: e.target.value })}
                   />
                   <p className="text-sm text-muted-foreground">
-                    No Evolution GO o token (apikey) identifica a instância. Use o token devolvido em <code>POST /instance/create</code>.
+                    Na Evolution API o token (apikey) identifica a instância. Use o token devolvido em <code>POST /instance/create</code>.
                   </p>
                 </div>
 
