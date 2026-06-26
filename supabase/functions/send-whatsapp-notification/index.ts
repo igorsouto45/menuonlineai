@@ -56,6 +56,79 @@ const parseEvolutionResponse = async (response: Response): Promise<unknown> => {
   }
 };
 
+const normalizeEvolutionUrl = (rawUrl: string): string => {
+  let cleanUrl = rawUrl.trim().replace(/\/+$/, '');
+  if (cleanUrl.endsWith('/manager')) cleanUrl = cleanUrl.replace('/manager', '');
+  if (cleanUrl.endsWith('/swagger/index.html')) cleanUrl = cleanUrl.replace('/swagger/index.html', '');
+  return cleanUrl;
+};
+
+const isRecord = (value: unknown): value is Record<string, unknown> => {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+};
+
+const getNestedRecord = (value: unknown, key: string): Record<string, unknown> | null => {
+  if (!isRecord(value)) return null;
+  const nested = value[key];
+  return isRecord(nested) ? nested : null;
+};
+
+const getStringValue = (value: unknown, keys: string[]): string => {
+  for (const key of keys) {
+    if (!isRecord(value)) continue;
+    const candidate = value[key];
+    if (typeof candidate === 'string') return candidate;
+  }
+  return '';
+};
+
+const getBooleanValue = (value: unknown, keys: string[]): boolean => {
+  for (const key of keys) {
+    if (!isRecord(value)) continue;
+    if (value[key] === true) return true;
+  }
+  return false;
+};
+
+const parseConnectionState = (payload: unknown): string => {
+  const data = isRecord(payload) && isRecord(payload.data) ? payload.data : payload;
+  const instance = getNestedRecord(data, 'instance');
+  return (
+    getStringValue(data, ['state', 'status', 'connectionStatus', 'State', 'Status', 'ConnectionStatus']) ||
+    getStringValue(instance, ['state', 'status', 'connectionStatus', 'State', 'Status', 'ConnectionStatus'])
+  ).toLowerCase();
+};
+
+const isConnectedPayload = (payload: unknown): boolean => {
+  const data = isRecord(payload) && isRecord(payload.data) ? payload.data : payload;
+  const instance = getNestedRecord(data, 'instance');
+  const state = parseConnectionState(payload);
+
+  return (
+    getBooleanValue(data, ['connected', 'Connected', 'loggedIn', 'LoggedIn']) ||
+    getBooleanValue(instance, ['connected', 'Connected', 'loggedIn', 'LoggedIn']) ||
+    ['open', 'connected', 'authenticated', 'loggedin', 'logged_in', 'online'].includes(state)
+  );
+};
+
+const extractEvolutionMessage = (payload: unknown): string => {
+  if (typeof payload === 'string') return payload;
+  if (!isRecord(payload)) return '';
+
+  const response = getNestedRecord(payload, 'response');
+  const responseMessage = response?.message;
+  if (Array.isArray(responseMessage)) return responseMessage.map(String).join(' ');
+  if (typeof responseMessage === 'string') return responseMessage;
+
+  const message = payload.message;
+  if (Array.isArray(message)) return message.map(String).join(' ');
+  if (typeof message === 'string') return message;
+  if (typeof payload.error === 'string') return payload.error;
+  if (typeof payload.raw === 'string') return payload.raw;
+
+  return '';
+};
+
 const statusMessages: Record<string, string> = {
   pending: '📝 Recebemos seu pedido! Em breve confirmaremos.',
   confirmed: '✅ Seu pedido foi *confirmado*! Estamos preparando com carinho.',
@@ -121,9 +194,7 @@ serve(async (req) => {
     evolutionInstanceName = evolutionInstanceName || Deno.env.get('EVOLUTION_INSTANCE_NAME') || null;
 
 
-    const EVOLUTION_API_URL = rawEvolutionApiUrl
-      ? rawEvolutionApiUrl.replace(/\/+$/, '').replace(/\/manager$/, '')
-      : null;
+    const EVOLUTION_API_URL = rawEvolutionApiUrl ? normalizeEvolutionUrl(rawEvolutionApiUrl) : null;
 
     if (!EVOLUTION_API_URL || !evolutionApiKey) {
       return jsonResponse({
@@ -155,16 +226,47 @@ serve(async (req) => {
       }
     }
 
-    // Evolution API v2: POST {url}/message/sendText/{instance}
-    const instance = evolutionInstanceName || 'default';
+    // Evolution API v2 requires the exact instance name in the route.
+    const instance = evolutionInstanceName?.trim();
+    if (!instance) {
+      return jsonResponse({
+        success: false,
+        error: 'Nome da instância da Evolution API não configurado para este restaurante.',
+        errorType: 'CONFIGURATION_ERROR',
+        fallback: true,
+      });
+    }
+
+    const headers = { 'Content-Type': 'application/json', 'Accept': 'application/json', 'apikey': evolutionApiKey };
+
+    try {
+      const statusEndpoint = `${EVOLUTION_API_URL}/instance/connectionState/${encodeURIComponent(instance)}`;
+      const statusResponse = await fetch(statusEndpoint, { method: 'GET', headers });
+      const statusData = await parseEvolutionResponse(statusResponse);
+
+      if (statusResponse.ok && !isConnectedPayload(statusData)) {
+        const state = parseConnectionState(statusData) || 'desconectado';
+        return jsonResponse({
+          success: false,
+          error: `WhatsApp não está conectado na Evolution API (estado: ${state}). Escaneie o QR Code novamente antes de notificar o cliente.`,
+          errorType: 'EVOLUTION_CONNECTION_ERROR',
+          fallback: true,
+          statusCode: statusResponse.status,
+          detail: statusData,
+        });
+      }
+    } catch (statusErr) {
+      console.warn('Could not pre-check Evolution connection state:', getErrorMessage(statusErr));
+    }
+
     const endpoint = `${EVOLUTION_API_URL}/message/sendText/${instance}`;
     console.log(`Sending to ${endpoint}`);
     let response: Response;
     try {
       response = await fetch(endpoint, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'apikey': evolutionApiKey },
-        body: JSON.stringify({ number: phone, text: message }),
+        headers,
+        body: JSON.stringify({ number: phone, text: message, delay: 1200, linkPreview: false }),
       });
     } catch (fetchErr) {
       const msg = getErrorMessage(fetchErr);
@@ -181,10 +283,15 @@ serve(async (req) => {
     const responseData = await parseEvolutionResponse(response);
     if (!response.ok) {
       console.error('Evolution API error:', response.status, responseData);
+      const evolutionMessage = extractEvolutionMessage(responseData);
+      const isConnectionClosed = /connection\s+closed|not\s+connected|desconect/i.test(evolutionMessage);
+
       return jsonResponse({
         success: false,
-        error: `Evolution API retornou ${response.status}. Confira se o WhatsApp está conectado e se o nome da instância está correto.`,
-        errorType: 'EVOLUTION_API_ERROR',
+        error: isConnectionClosed
+          ? 'WhatsApp não está conectado na Evolution API. Gere um novo QR Code, escaneie no celular e depois clique em “Testar conexão”.'
+          : `Evolution API retornou ${response.status}${evolutionMessage ? `: ${evolutionMessage}` : ''}. Confira se o WhatsApp está conectado e se o nome da instância está correto.`,
+        errorType: isConnectionClosed ? 'EVOLUTION_CONNECTION_ERROR' : 'EVOLUTION_API_ERROR',
         fallback: true,
         statusCode: response.status,
         detail: responseData,
