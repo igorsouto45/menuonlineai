@@ -351,7 +351,7 @@ REGRAS DE SEGURANÇA (NÃO QUEBRE NUNCA):
     if (restaurant.evolution_api_url && restaurant.evolution_api_key) {
       const evoBase = String(restaurant.evolution_api_url).replace(/\/+$/, '').replace(/\/manager$/, '');
       const sendResponse = await fetch(
-        `${evoBase}/send/text`,
+        `${evoBase}/message/sendText/${restaurant.evolution_instance_name || 'default'}`,
         {
           method: 'POST',
           headers: {
