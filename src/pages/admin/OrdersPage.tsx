@@ -47,6 +47,14 @@ import type { Database } from '@/integrations/supabase/types';
 type Order = Database['public']['Tables']['orders']['Row'];
 type OrderStatus = Database['public']['Enums']['order_status'];
 
+interface WhatsAppNotificationResponse {
+  success: boolean;
+  messageId?: string;
+  error?: string;
+  fallback?: boolean;
+  statusCode?: number;
+}
+
 const statusConfig: Record<OrderStatus, { label: string; icon: React.ElementType; color: string }> = {
   pending: { label: 'Pendente', icon: Clock, color: 'bg-warning/20 text-warning' },
   confirmed: { label: 'Confirmado', icon: CheckCircle2, color: 'bg-primary/20 text-primary' },
@@ -316,9 +324,9 @@ export default function OrdersPage() {
   const sendWhatsAppNotification = async (order: Order, newStatus: OrderStatus) => {
     if (!order.customer_phone || !restaurant?.id) return;
 
-    const evolutionApiUrl = (restaurant as any)?.evolution_api_url;
-    const evolutionApiKey = (restaurant as any)?.evolution_api_key;
-    const evolutionInstanceName = (restaurant as any)?.evolution_instance_name;
+    const evolutionApiUrl = restaurant.evolution_api_url;
+    const evolutionApiKey = restaurant.evolution_api_key;
+    const evolutionInstanceName = restaurant.evolution_instance_name;
 
     if (!evolutionApiUrl || !evolutionApiKey || !evolutionInstanceName) {
       toast({
@@ -330,7 +338,7 @@ export default function OrdersPage() {
     }
 
     try {
-      const { error } = await supabase.functions.invoke('send-whatsapp-notification', {
+      const { data, error } = await supabase.functions.invoke<WhatsAppNotificationResponse>('send-whatsapp-notification', {
         body: {
           orderId: order.id,
           restaurantId: restaurant.id,
@@ -349,6 +357,15 @@ export default function OrdersPage() {
       });
 
       if (error) throw error;
+
+      if (!data?.success) {
+        toast({
+          title: 'WhatsApp não enviado',
+          description: data?.error || 'A Evolution API não confirmou o envio. Verifique se o WhatsApp está conectado.',
+          variant: 'destructive',
+        });
+        return;
+      }
 
 
       toast({
