@@ -925,17 +925,41 @@ function CartSheet({
                     </div>
                   )}
 
-                {user ? (
-                  <Button variant="whatsapp" size="xl" className="w-full" onClick={handleSendWhatsApp}>
-                    <MessageCircle className="w-5 h-5" />
-                    Enviar pedido via WhatsApp
-                  </Button>
-                ) : (
-                  <Button variant="hero" size="xl" className="w-full" onClick={() => setShowAuthModal(true)}>
-                    <LogIn className="w-5 h-5" />
-                    Entrar para fazer pedido
-                  </Button>
-                )}
+                {(() => {
+                  const autoOpen = isRestaurantOpenNow(openingHours).isOpen;
+                  const storeClosed = isStoreOpen === false || !autoOpen;
+                  if (!user) {
+                    return (
+                      <Button variant="hero" size="xl" className="w-full" onClick={() => setShowAuthModal(true)}>
+                        <LogIn className="w-5 h-5" />
+                        Entrar para fazer pedido
+                      </Button>
+                    );
+                  }
+                  return (
+                    <>
+                      {storeClosed && (
+                        <div className="bg-destructive/10 border border-destructive/20 p-3 rounded-xl mb-3 text-center">
+                          <p className="text-sm text-destructive font-medium">
+                            Loja fechada — pedidos só são aceitos no horário de funcionamento
+                            {openingHours ? `: ${openingHours.replace(/\n/g, ' • ')}` : '.'}
+                          </p>
+                        </div>
+                      )}
+                      <Button
+                        variant="whatsapp"
+                        size="xl"
+                        className="w-full"
+                        onClick={handleSendWhatsApp}
+                        disabled={storeClosed}
+                        aria-disabled={storeClosed}
+                      >
+                        <MessageCircle className="w-5 h-5" />
+                        {storeClosed ? 'Loja fechada' : 'Enviar pedido via WhatsApp'}
+                      </Button>
+                    </>
+                  );
+                })()}
               </div>
             )}
           </motion.div>
