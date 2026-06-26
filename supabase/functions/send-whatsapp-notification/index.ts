@@ -354,7 +354,40 @@ serve(async (req) => {
       });
     }
 
-    const responseData = await parseEvolutionResponse(response);
+    let responseData = await parseEvolutionResponse(response);
+
+    // Auto-recover from "Connection Closed": call /instance/connect and retry once.
+    if (!response.ok) {
+      const evolutionMessage = extractEvolutionMessage(responseData);
+      const isConnClosed = /connection\s+closed|not\s+connected/i.test(evolutionMessage);
+      if (isConnClosed) {
+        console.warn('Connection Closed detected, attempting auto-reconnect...');
+        try {
+          await fetch(`${EVOLUTION_API_URL}/instance/connect/${encodeURIComponent(instance)}`, {
+            method: 'GET',
+            headers,
+          });
+          await new Promise((r) => setTimeout(r, 2500));
+          const retry = await fetch(endpoint, {
+            method: 'POST',
+            headers,
+            body: JSON.stringify({ number: phone, text: message, delay: 1200, linkPreview: false }),
+          });
+          const retryData = await parseEvolutionResponse(retry);
+          if (retry.ok) {
+            console.log('Auto-reconnect retry succeeded');
+            response = retry;
+            responseData = retryData;
+          } else {
+            console.error('Retry after auto-reconnect failed:', retry.status, retryData);
+            responseData = retryData;
+          }
+        } catch (reErr) {
+          console.error('Auto-reconnect attempt failed:', getErrorMessage(reErr));
+        }
+      }
+    }
+
     if (!response.ok) {
       console.error('Evolution API error:', response.status, responseData);
       const evolutionMessage = extractEvolutionMessage(responseData);
