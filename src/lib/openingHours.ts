@@ -59,3 +59,66 @@ export function isRestaurantOpenNow(openingHours: string | null | undefined): {
   // false negatives.
   return { isOpen: !matched, hasSchedule: true };
 }
+
+// Returns a human-friendly hint about the next opening window, e.g.
+// "Abre hoje às 18:00" or "Abre amanhã às 11:00". Returns null when
+// no schedule is provided or we can't parse anything useful.
+export function getNextOpeningInfo(
+  openingHours: string | null | undefined
+): string | null {
+  if (!openingHours || !openingHours.trim()) return null;
+
+  const now = new Date();
+  const brazil = new Date(
+    now.toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' })
+  );
+  const day = brazil.getDay();
+  const minutesNow = brazil.getHours() * 60 + brazil.getMinutes();
+  const isWeekend = day === 0 || day === 6;
+
+  const lines = openingHours.split(/\n|;/).map(l => l.trim()).filter(Boolean);
+  const candidates: { applies: 'today' | 'weekday' | 'weekend' | 'any'; openMin: number; raw: string }[] = [];
+
+  for (const line of lines) {
+    const m = line.match(
+      /(\d{1,2})(?:[:h](\d{2}))?\s*(?:às|as|a|-|até|ate)\s*(\d{1,2})(?:[:h](\d{2}))?/i
+    );
+    if (!m) continue;
+    const openMin = parseInt(m[1]) * 60 + (m[2] ? parseInt(m[2]) : 0);
+    const mentionsWeekend = /s[áa]b|dom|fim\s*de\s*semana/i.test(line);
+    const mentionsWeekday = /seg|ter|qua|qui|sex|semana/i.test(line);
+    const applies: 'weekday' | 'weekend' | 'any' = mentionsWeekend
+      ? 'weekend'
+      : mentionsWeekday
+        ? 'weekday'
+        : 'any';
+    candidates.push({ applies, openMin, raw: line });
+  }
+
+  if (candidates.length === 0) return null;
+
+  const fmt = (m: number) => {
+    const h = Math.floor(m / 60).toString().padStart(2, '0');
+    const mm = (m % 60).toString().padStart(2, '0');
+    return `${h}:${mm}`;
+  };
+
+  // Today's applicable openings still in the future
+  const todayApplicable = candidates.filter(
+    c => c.applies === 'any' || (isWeekend ? c.applies === 'weekend' : c.applies === 'weekday')
+  );
+  const upcomingToday = todayApplicable
+    .filter(c => c.openMin > minutesNow)
+    .sort((a, b) => a.openMin - b.openMin)[0];
+  if (upcomingToday) return `Abre hoje às ${fmt(upcomingToday.openMin)}`;
+
+  // Tomorrow
+  const tomorrowIsWeekend = (day + 1) % 7 === 0 || (day + 1) % 7 === 6;
+  const tomorrowApplicable = candidates.filter(
+    c => c.applies === 'any' || (tomorrowIsWeekend ? c.applies === 'weekend' : c.applies === 'weekday')
+  );
+  const firstTomorrow = tomorrowApplicable.sort((a, b) => a.openMin - b.openMin)[0];
+  if (firstTomorrow) return `Abre amanhã às ${fmt(firstTomorrow.openMin)}`;
+
+  return null;
+}

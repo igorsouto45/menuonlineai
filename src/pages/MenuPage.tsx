@@ -40,7 +40,7 @@ import {
   QrCode
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { isRestaurantOpenNow } from '@/lib/openingHours';
+import { isRestaurantOpenNow, getNextOpeningInfo } from '@/lib/openingHours';
 
 interface DeliveryArea {
   id: string;
@@ -1018,6 +1018,14 @@ function MenuPageContent() {
     } catch {}
   }, [isDark]);
 
+  // Live tick: re-render every 30s so the open/closed status updates
+  // automatically when the clock crosses an opening/closing time.
+  const [, setNowTick] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => setNowTick(t => t + 1), 30000);
+    return () => clearInterval(id);
+  }, []);
+
   // Watchdog: if loading takes too long the bundle is likely stale (PWA cache,
   // old service worker, etc). Show a recovery UI instead of an infinite skeleton.
   useEffect(() => {
@@ -1354,13 +1362,14 @@ function MenuPageContent() {
             {(() => {
               const auto = isRestaurantOpenNow(restaurant.opening_hours);
               const open = restaurant.is_open && auto.isOpen;
+              const next = !open ? getNextOpeningInfo(restaurant.opening_hours) : null;
               return open ? (
                 <Badge variant="secondary" className="bg-success/20 text-success border-success/30 text-xs">
                   ● Aberto agora
                 </Badge>
               ) : (
                 <Badge variant="secondary" className="bg-destructive/20 text-destructive border-destructive/30 text-xs">
-                  ● Loja fechada {auto.hasSchedule && !auto.isOpen ? '— fora do horário' : ''}
+                  ● Fechado{next ? ` — ${next}` : ''}
                 </Badge>
               );
             })()}
@@ -1392,16 +1401,20 @@ function MenuPageContent() {
         const auto = isRestaurantOpenNow(restaurant.opening_hours);
         const closed = !restaurant.is_open || !auto.isOpen;
         if (!closed) return null;
+        const next = getNextOpeningInfo(restaurant.opening_hours);
         return (
           <div className="container px-4 pt-3 sm:pt-4">
-            <div className="rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive flex items-center gap-2">
-              <Clock className="w-4 h-4 flex-shrink-0" />
-              <span>
-                <strong>Loja fechada no momento.</strong>{' '}
-                {restaurant.opening_hours
-                  ? `Você pode navegar pelo cardápio. Horário: ${restaurant.opening_hours.replace(/\n/g, ' • ')}`
-                  : 'Você pode navegar pelo cardápio e voltar mais tarde.'}
-              </span>
+            <div className="rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive flex items-start gap-2">
+              <Clock className="w-4 h-4 flex-shrink-0 mt-0.5" />
+              <div className="space-y-1">
+                <div><strong>Loja fechada no momento.</strong> Você pode navegar pelo cardápio.</div>
+                {next && <div className="font-medium">⏰ {next}</div>}
+                {restaurant.opening_hours && (
+                  <div className="text-destructive/80 text-xs whitespace-pre-line">
+                    Horários: {restaurant.opening_hours.replace(/\n/g, ' • ')}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         );
