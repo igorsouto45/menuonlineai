@@ -156,7 +156,7 @@ serve(async (req) => {
 
           // Send via Evolution GO
           const response = await fetch(
-            `${evolutionBaseUrl}/send/text`,
+            `${evolutionBaseUrl}/message/sendText/${restaurant.evolution_instance_name || 'default'}`,
             {
               method: 'POST',
               headers: {
