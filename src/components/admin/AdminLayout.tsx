@@ -23,8 +23,16 @@ import {
   Megaphone,
   CreditCard,
   Crown,
-  Table as TableIcon
+  Table as TableIcon,
+  MoreHorizontal
 } from 'lucide-react';
+
+const bottomNavItems = [
+  { icon: LayoutDashboard, label: 'Início', path: '/admin' },
+  { icon: ClipboardList, label: 'Pedidos', path: '/admin/orders' },
+  { icon: ShoppingBag, label: 'Produtos', path: '/admin/products' },
+  { icon: TableIcon, label: 'Mesas', path: '/admin/tables-history' },
+];
 
 const navItems = [
   { icon: LayoutDashboard, label: 'Dashboard', path: '/admin' },
