@@ -518,10 +518,12 @@ function CartSheet({
         paymentNote += ` - Troco para R$ ${changeAmount.toFixed(2)}`;
       }
 
-      // Create order in database - directly as confirmed since payment is on delivery
-      // IMPORTANT: don't request the inserted row back (SELECT) because customers may be unauthenticated
-      // and orders are not publicly readable due to sensitive data.
+      // Status policy:
+      // - Dine-in (mesa): cliente já está no local, vai direto para "confirmado"
+      // - Delivery / Retirada: entra como "pendente" até o restaurante confirmar
+      //   que tem o produto. A mensagem de confirmação é enviada no Kanban.
       const orderId = crypto.randomUUID();
+      const initialStatus: 'pending' | 'confirmed' = deliveryMode === 'dine-in' ? 'confirmed' : 'pending';
 
       const { error: orderError } = await supabase
         .from('orders')
@@ -533,7 +535,7 @@ function CartSheet({
           customer_address: deliveryMode === 'delivery' ? address : (deliveryMode === 'pickup' ? 'Retirada no local' : `Mesa ${tableNumber}`),
           items: orderItems,
           total: grandTotal,
-          status: 'confirmed',
+          status: initialStatus,
           notes: paymentNote,
           delivery_mode: deliveryMode,
           table_number: tableNumber,
@@ -541,7 +543,7 @@ function CartSheet({
 
       if (orderError) throw orderError;
 
-      // Send welcome message via Evolution API (credentials looked up server-side)
+      // Send WhatsApp notification matching the initial status
       try {
         await supabase.functions.invoke('send-whatsapp-notification', {
           body: {
@@ -549,10 +551,10 @@ function CartSheet({
             restaurantId,
             customerPhone: customer.whatsapp,
             customerName: customer.name,
-            status: 'confirmed',
+            status: initialStatus,
             restaurantName,
             orderTotal: grandTotal,
-            customMessage: orderWelcomeMessage || undefined,
+            customMessage: initialStatus === 'confirmed' ? (orderWelcomeMessage || undefined) : undefined,
             baseUrl: window.location.origin,
           },
         });
