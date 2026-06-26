@@ -18,23 +18,50 @@ function normalizeEvolutionUrl(rawUrl: string) {
   return cleanUrl;
 }
 
-function parseState(data: any): string {
-  const d = data?.data ?? data;
+type JsonRecord = Record<string, unknown>;
+
+function isRecord(value: unknown): value is JsonRecord {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function getNestedRecord(value: unknown, key: string): JsonRecord | null {
+  if (!isRecord(value)) return null;
+  const nested = value[key];
+  return isRecord(nested) ? nested : null;
+}
+
+function getString(value: unknown, keys: string[]): string {
+  for (const key of keys) {
+    if (!isRecord(value)) continue;
+    const candidate = value[key];
+    if (typeof candidate === "string") return candidate;
+  }
+  return "";
+}
+
+function getBoolean(value: unknown, keys: string[]): boolean {
+  for (const key of keys) {
+    if (!isRecord(value)) continue;
+    if (value[key] === true) return true;
+  }
+  return false;
+}
+
+function parseState(data: unknown): string {
+  const d = isRecord(data) && isRecord(data.data) ? data.data : data;
+  const instance = getNestedRecord(d, "instance");
   return String(
-    d?.state ??
-      d?.status ??
-      d?.connectionStatus ??
-      d?.instance?.state ??
-      d?.instance?.status ??
-      d?.instance?.connectionStatus ??
+    getString(d, ["state", "status", "connectionStatus", "State", "Status", "ConnectionStatus"]) ||
+      getString(instance, ["state", "status", "connectionStatus", "State", "Status", "ConnectionStatus"]) ||
       "",
   ).toLowerCase();
 }
 
-function isConnectedState(state: string, data: any): boolean {
-  const d = data?.data ?? data;
-  if (d?.connected === true || d?.Connected === true) return true;
-  if (d?.loggedIn === true || d?.LoggedIn === true) return true;
+function isConnectedState(state: string, data: unknown): boolean {
+  const d = isRecord(data) && isRecord(data.data) ? data.data : data;
+  const instance = getNestedRecord(d, "instance");
+  if (getBoolean(d, ["connected", "Connected", "loggedIn", "LoggedIn"])) return true;
+  if (getBoolean(instance, ["connected", "Connected", "loggedIn", "LoggedIn"])) return true;
   return [
     "open",
     "connected",
@@ -43,6 +70,15 @@ function isConnectedState(state: string, data: any): boolean {
     "logged_in",
     "online",
   ].includes(state);
+}
+
+function getInstanceName(data: unknown): string {
+  const d = isRecord(data) && isRecord(data.data) ? data.data : data;
+  const instance = getNestedRecord(d, "instance");
+  return (
+    getString(instance, ["instanceName", "name", "instance", "id"]) ||
+    getString(d, ["instanceName", "name", "instance", "id"])
+  ).trim();
 }
 
 serve(async (req) => {
@@ -95,22 +131,28 @@ serve(async (req) => {
           continue;
         }
 
-        let data: any = null;
+        let data: unknown = null;
         try { data = JSON.parse(text); } catch { /* ignore */ }
 
         if (!resp.ok) {
-          lastError = data?.error || data?.message || `HTTP ${resp.status}`;
+          const errorPayload = isRecord(data) ? data : {};
+          const errorMessage = errorPayload.error ?? errorPayload.message;
+          lastError = typeof errorMessage === "string" ? errorMessage : `HTTP ${resp.status}`;
           continue;
         }
 
         // fetchInstances returns an array — find the right one
-        let target = data;
+        let target: unknown = data;
         if (Array.isArray(data)) {
-          target = instanceName
-            ? data.find((d: any) =>
-                (d?.instance?.instanceName || d?.instanceName || d?.name) === instanceName,
-              ) ?? data[0]
-            : data[0];
+          if (instanceName) {
+            target = data.find((candidate: unknown) => getInstanceName(candidate) === instanceName) ?? null;
+            if (!target) {
+              lastError = `Instância "${instanceName}" não encontrada na Evolution API.`;
+              continue;
+            }
+          } else {
+            target = data[0];
+          }
         }
 
         const state = parseState(target) || parseState(data);
