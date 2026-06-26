@@ -42,6 +42,9 @@ serve(async (req) => {
     const {
       orderId, restaurantId, customerPhone, customerName, status,
       restaurantName, orderTotal, customMessage, baseUrl,
+      evolutionApiUrl: bodyApiUrl,
+      evolutionApiKey: bodyApiKey,
+      evolutionInstanceName: bodyInstance,
     } = body;
 
     if (!customerPhone || !status) {
@@ -51,8 +54,7 @@ serve(async (req) => {
       );
     }
 
-    // Always look up credentials server-side using the service role.
-    // Never trust credentials passed from the client.
+    // Resolve credentials. Priority: restaurant DB → body params → env vars (legacy).
     let rawEvolutionApiUrl: string | null = null;
     let evolutionApiKey: string | null = null;
     let evolutionInstanceName: string | null = null;
@@ -77,10 +79,16 @@ serve(async (req) => {
       }
     }
 
-    // Fallback to env vars (legacy)
+    // Fallback to body-supplied credentials (client passed them through)
+    rawEvolutionApiUrl = rawEvolutionApiUrl || bodyApiUrl || null;
+    evolutionApiKey = evolutionApiKey || bodyApiKey || null;
+    evolutionInstanceName = evolutionInstanceName || bodyInstance || null;
+
+    // Last resort: env vars (legacy / shared instance)
     rawEvolutionApiUrl = rawEvolutionApiUrl || Deno.env.get('EVOLUTION_API_URL') || null;
     evolutionApiKey = evolutionApiKey || Deno.env.get('EVOLUTION_API_KEY') || null;
     evolutionInstanceName = evolutionInstanceName || Deno.env.get('EVOLUTION_INSTANCE_NAME') || null;
+
 
     const EVOLUTION_API_URL = rawEvolutionApiUrl
       ? rawEvolutionApiUrl.replace(/\/+$/, '').replace(/\/manager$/, '')
