@@ -37,6 +37,7 @@ import {
   useDraggable,
 } from '@dnd-kit/core';
 import { supabase } from '@/integrations/supabase/client';
+import { FunctionsHttpError } from '@supabase/supabase-js';
 import { useRestaurant } from '@/hooks/useRestaurant';
 import { useToast } from '@/hooks/use-toast';
 import { useNotificationSound } from '@/hooks/useNotificationSound';
@@ -53,7 +54,31 @@ interface WhatsAppNotificationResponse {
   error?: string;
   fallback?: boolean;
   statusCode?: number;
+  detail?: unknown;
 }
+
+const getFunctionErrorDescription = async (error: unknown): Promise<string> => {
+  if (error instanceof FunctionsHttpError && error.context instanceof Response) {
+    try {
+      const response = error.context.clone();
+      const contentType = response.headers.get('content-type') || '';
+
+      if (contentType.includes('application/json')) {
+        const payload = await response.json();
+        if (typeof payload?.error === 'string') return payload.error;
+        if (typeof payload?.message === 'string') return payload.message;
+      }
+
+      const text = await response.text();
+      if (text.trim()) return text.trim().slice(0, 220);
+    } catch {
+      // Fall through to the default message below.
+    }
+  }
+
+  if (error instanceof Error && error.message) return error.message;
+  return 'Não foi possível enviar mensagem no WhatsApp. Verifique a conexão da Evolution API.';
+};
 
 const statusConfig: Record<OrderStatus, { label: string; icon: React.ElementType; color: string }> = {
   pending: { label: 'Pendente', icon: Clock, color: 'bg-warning/20 text-warning' },
@@ -356,7 +381,15 @@ export default function OrdersPage() {
         },
       });
 
-      if (error) throw error;
+      if (error) {
+        const description = await getFunctionErrorDescription(error);
+        toast({
+          title: 'Falha ao notificar cliente',
+          description,
+          variant: 'destructive',
+        });
+        return;
+      }
 
       if (!data?.success) {
         toast({
@@ -374,9 +407,10 @@ export default function OrdersPage() {
       });
     } catch (error) {
       console.error('Failed to send WhatsApp notification:', error);
+      const description = await getFunctionErrorDescription(error);
       toast({
         title: 'Falha ao notificar cliente',
-        description: 'Não foi possível enviar mensagem no WhatsApp. Verifique a conexão da Evolution API.',
+        description,
         variant: 'destructive',
       });
     }
