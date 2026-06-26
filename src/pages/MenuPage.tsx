@@ -483,6 +483,27 @@ function CartSheet({
       return;
     }
 
+    // Bloqueia pedidos fora do horário de funcionamento
+    if (restaurant && restaurant.is_open === false) {
+      toast({
+        title: 'Loja fechada',
+        description: 'O restaurante está temporariamente fechado e não está aceitando pedidos.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    const openStatus = isRestaurantOpenNow(restaurant?.opening_hours);
+    if (!openStatus.isOpen) {
+      toast({
+        title: 'Fora do horário de funcionamento',
+        description: restaurant?.opening_hours
+          ? `Pedidos só são aceitos no horário: ${restaurant.opening_hours.replace(/\n/g, ' • ')}`
+          : 'Pedidos só são aceitos no horário de funcionamento.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     if (deliveryMode === 'delivery' && !address.trim()) {
       toast({
         title: 'Endereço obrigatório',
