@@ -20,6 +20,7 @@ const OnboardingPage = lazy(() => import("./pages/OnboardingPage"));
 const PricingPage = lazy(() => import("./pages/PricingPage"));
 const OrderTrackingPage = lazy(() => import("./pages/OrderTrackingPage"));
 const OrderReviewPage = lazy(() => import("./pages/OrderReviewPage"));
+const DeliveryConfirmPage = lazy(() => import("./pages/DeliveryConfirmPage"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 // Admin chunk(s)
@@ -100,6 +101,8 @@ const App = () => (
                   <Route path="/rastrear" element={<OrderTrackingPage />} />
                   <Route path="/rastrear/:orderId" element={<OrderTrackingPage />} />
                   <Route path="/avaliar/:orderId" element={<OrderReviewPage />} />
+                  <Route path="/entrega" element={<DeliveryConfirmPage />} />
+                  <Route path="/entregador" element={<Navigate to="/entrega" replace />} />
                   <Route path="/demo" element={<Navigate to="/burger-demo" replace />} />
                   <Route path="/r/:slug" element={<MenuPage />} />
                   <Route path="/:slug" element={<MenuPage />} />
