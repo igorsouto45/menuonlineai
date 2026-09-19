@@ -418,6 +418,39 @@ export default function OrderTrackingPage() {
                 </CardContent>
               </Card>
 
+              {/* Delivery code + customer confirmation */}
+              {!order.table_number && order.delivery_code && order.status !== 'delivered' && order.status !== 'cancelled' && (
+                <Card className="mb-6 border-primary/30 bg-primary/5">
+                  <CardContent className="pt-6 space-y-4 text-center">
+                    <div>
+                      <p className="text-sm text-muted-foreground">Código de entrega</p>
+                      <p className="text-3xl font-bold tracking-[0.4em] text-primary">
+                        {order.delivery_code}
+                      </p>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        Informe este código ao entregador ao receber o pedido.
+                      </p>
+                    </div>
+
+                    {(order.status === 'out_for_delivery' || order.status === 'ready') && (
+                      <Button
+                        onClick={handleCustomerConfirm}
+                        disabled={confirmingDelivery}
+                        className="w-full gap-2"
+                        size="lg"
+                      >
+                        {confirmingDelivery ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <CheckCircle className="w-4 h-4" />
+                        )}
+                        Já recebi meu pedido
+                      </Button>
+                    )}
+                  </CardContent>
+                </Card>
+              )}
+
               {/* Back Link */}
               {restaurant && (
                 <div className="text-center">
