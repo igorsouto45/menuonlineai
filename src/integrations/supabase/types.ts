@@ -152,6 +152,9 @@ export type Database = {
           customer_address: string | null
           customer_name: string | null
           customer_phone: string | null
+          delivered_at: string | null
+          delivery_code: string | null
+          delivery_confirmed_by: string | null
           delivery_mode: string | null
           id: string
           items: Json
@@ -167,6 +170,9 @@ export type Database = {
           customer_address?: string | null
           customer_name?: string | null
           customer_phone?: string | null
+          delivered_at?: string | null
+          delivery_code?: string | null
+          delivery_confirmed_by?: string | null
           delivery_mode?: string | null
           id?: string
           items: Json
@@ -182,6 +188,9 @@ export type Database = {
           customer_address?: string | null
           customer_name?: string | null
           customer_phone?: string | null
+          delivered_at?: string | null
+          delivery_code?: string | null
+          delivery_confirmed_by?: string | null
           delivery_mode?: string | null
           id?: string
           items?: Json
@@ -785,6 +794,21 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      confirm_delivery_by_code: {
+        Args: { _code: string }
+        Returns: {
+          message: string
+          order_id: string
+          success: boolean
+        }[]
+      }
+      confirm_delivery_by_customer: {
+        Args: { _order_id: string }
+        Returns: {
+          message: string
+          success: boolean
+        }[]
+      }
       get_my_products: {
         Args: { p_restaurant_id: string }
         Returns: {
@@ -846,6 +870,19 @@ export type Database = {
           isOneToOne: false
           isSetofReturn: true
         }
+      }
+      get_order_by_delivery_code: {
+        Args: { _code: string }
+        Returns: {
+          created_at: string
+          customer_address: string
+          customer_name: string
+          id: string
+          restaurant_id: string
+          restaurant_name: string
+          status: Database["public"]["Enums"]["order_status"]
+          total: number
+        }[]
       }
       get_order_for_review: {
         Args: { _order_id: string }
