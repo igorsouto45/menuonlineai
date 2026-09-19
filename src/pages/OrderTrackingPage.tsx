@@ -18,6 +18,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { toast } from 'sonner';
 import type { Database } from '@/integrations/supabase/types';
 
 type OrderStatus = Database['public']['Enums']['order_status'];
@@ -100,6 +101,31 @@ export default function OrderTrackingPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [searched, setSearched] = useState(false);
+  const [confirmingDelivery, setConfirmingDelivery] = useState(false);
+
+  const handleCustomerConfirm = async () => {
+    if (!order) return;
+    setConfirmingDelivery(true);
+    try {
+      const { data, error: rpcError } = await supabase.rpc('confirm_delivery_by_customer', {
+        _order_id: order.id,
+      });
+      if (rpcError) throw rpcError;
+
+      const result = Array.isArray(data) ? data[0] : data;
+      if (result?.success) {
+        toast.success(result.message || 'Entrega confirmada. Obrigado!');
+        setOrder({ ...order, status: 'delivered' });
+      } else {
+        toast.error(result?.message || 'Não foi possível confirmar a entrega.');
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error('Erro ao confirmar. Tente novamente.');
+    } finally {
+      setConfirmingDelivery(false);
+    }
+  };
 
   // Auto-search if order ID is in URL
   useEffect(() => {
