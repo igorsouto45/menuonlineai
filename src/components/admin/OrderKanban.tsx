@@ -67,6 +67,11 @@ function OrderCard({ order, isDragging, restaurantName }: { order: Order; isDrag
               Mesa {order.table_number}
             </Badge>
           )}
+          {order.delivery_code && !order.table_number && (
+            <Badge variant="outline" className="text-[10px] h-5 px-1.5 font-mono font-bold tracking-widest">
+              {order.delivery_code}
+            </Badge>
+          )}
         </div>
         <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={handlePrint}>
           <Printer className="w-3 h-3" />
