@@ -24,7 +24,8 @@ import {
   CreditCard,
   Crown,
   Table as TableIcon,
-  MoreHorizontal
+  MoreHorizontal,
+  Bike
 } from 'lucide-react';
 
 const bottomNavItems = [
@@ -39,6 +40,7 @@ const navItems = [
   { icon: FolderOpen, label: 'Categorias', path: '/admin/categories' },
   { icon: ShoppingBag, label: 'Produtos', path: '/admin/products' },
   { icon: ClipboardList, label: 'Pedidos', path: '/admin/orders' },
+  { icon: Bike, label: 'Entregas', path: '/admin/deliveries' },
   { icon: TableIcon, label: 'Mesas', path: '/admin/tables-history' },
   { icon: Star, label: 'Avaliações', path: '/admin/reviews' },
   { icon: Users, label: 'Leads', path: '/admin/leads' },
