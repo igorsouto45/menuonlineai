@@ -15,6 +15,7 @@ interface RequestBody {
   restaurantName?: string;
   orderTotal?: number;
   customMessage?: string;
+  deliveryCode?: string | null;
   // Legacy: still accepted but ignored if restaurantId is provided
   evolutionApiUrl?: string;
   evolutionApiKey?: string;
@@ -286,6 +287,12 @@ serve(async (req) => {
       if (orderTotal) message += `Total: *R$ ${orderTotal.toFixed(2)}*\n`;
       message += `\n${statusMessage}`;
       if (status === 'confirmed' && customMessage) message += `\n\n📢 ${customMessage}`;
+      if (status === 'out_for_delivery' && deliveryCode) {
+        message += `\n\n🔐 *Código de entrega: ${deliveryCode}*\nInforme este código ao entregador ao receber o pedido.`;
+        if (orderId && baseUrl) {
+          message += `\n\n✅ Já recebeu? Confirme aqui:\n${baseUrl}/rastrear/${orderId}`;
+        }
+      }
       if (status === 'delivered' && orderId && baseUrl) {
         message += `\n\n⭐ *Avalie seu pedido:*\n${baseUrl}/avaliar/${orderId}`;
       }
