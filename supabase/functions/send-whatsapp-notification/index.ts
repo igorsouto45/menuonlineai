@@ -214,7 +214,7 @@ serve(async (req) => {
     const body: RequestBody = await req.json();
     const {
       orderId, restaurantId, customerPhone, customerName, status,
-      restaurantName, orderTotal, customMessage, baseUrl,
+      restaurantName, orderTotal, customMessage, baseUrl, deliveryCode,
       evolutionApiUrl: bodyApiUrl,
       evolutionApiKey: bodyApiKey,
       evolutionInstanceName: bodyInstance,
