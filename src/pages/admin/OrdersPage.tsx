@@ -385,6 +385,7 @@ export default function OrdersPage() {
           restaurantName: restaurant.name,
           orderTotal: order.total,
           baseUrl: window.location.origin,
+          deliveryCode: order.delivery_code,
           // Pass credentials as fallback in case DB lookup misses them
           evolutionApiUrl,
           evolutionApiKey,
