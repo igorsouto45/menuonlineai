@@ -146,6 +146,72 @@ export type Database = {
           },
         ]
       }
+      delivery_sessions: {
+        Row: {
+          accuracy_m: number | null
+          created_at: string
+          dest_lat: number | null
+          dest_lng: number | null
+          eta_distance_m: number | null
+          eta_seconds: number | null
+          eta_updated_at: string | null
+          expires_at: string
+          lat: number | null
+          lng: number | null
+          location_updated_at: string | null
+          order_id: string
+          restaurant_id: string
+          session_token: string
+        }
+        Insert: {
+          accuracy_m?: number | null
+          created_at?: string
+          dest_lat?: number | null
+          dest_lng?: number | null
+          eta_distance_m?: number | null
+          eta_seconds?: number | null
+          eta_updated_at?: string | null
+          expires_at?: string
+          lat?: number | null
+          lng?: number | null
+          location_updated_at?: string | null
+          order_id: string
+          restaurant_id: string
+          session_token?: string
+        }
+        Update: {
+          accuracy_m?: number | null
+          created_at?: string
+          dest_lat?: number | null
+          dest_lng?: number | null
+          eta_distance_m?: number | null
+          eta_seconds?: number | null
+          eta_updated_at?: string | null
+          expires_at?: string
+          lat?: number | null
+          lng?: number | null
+          location_updated_at?: string | null
+          order_id?: string
+          restaurant_id?: string
+          session_token?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "delivery_sessions_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: true
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "delivery_sessions_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       orders: {
         Row: {
           created_at: string
@@ -156,9 +222,12 @@ export type Database = {
           delivery_code: string | null
           delivery_confirmed_by: string | null
           delivery_mode: string | null
+          estimated_delivery_at: string | null
           id: string
           items: Json
           notes: string | null
+          out_for_delivery_at: string | null
+          ready_at: string | null
           restaurant_id: string
           status: Database["public"]["Enums"]["order_status"] | null
           table_number: string | null
@@ -174,9 +243,12 @@ export type Database = {
           delivery_code?: string | null
           delivery_confirmed_by?: string | null
           delivery_mode?: string | null
+          estimated_delivery_at?: string | null
           id?: string
           items: Json
           notes?: string | null
+          out_for_delivery_at?: string | null
+          ready_at?: string | null
           restaurant_id: string
           status?: Database["public"]["Enums"]["order_status"] | null
           table_number?: string | null
@@ -192,9 +264,12 @@ export type Database = {
           delivery_code?: string | null
           delivery_confirmed_by?: string | null
           delivery_mode?: string | null
+          estimated_delivery_at?: string | null
           id?: string
           items?: Json
           notes?: string | null
+          out_for_delivery_at?: string | null
+          ready_at?: string | null
           restaurant_id?: string
           status?: Database["public"]["Enums"]["order_status"] | null
           table_number?: string | null
@@ -809,6 +884,21 @@ export type Database = {
           success: boolean
         }[]
       }
+      get_delivery_tracking: {
+        Args: { _order_id: string }
+        Returns: {
+          dest_lat: number
+          dest_lng: number
+          estimated_delivery_at: string
+          eta_distance_m: number
+          eta_seconds: number
+          eta_updated_at: string
+          lat: number
+          lng: number
+          location_updated_at: string
+          status: Database["public"]["Enums"]["order_status"]
+        }[]
+      }
       get_my_products: {
         Args: { p_restaurant_id: string }
         Returns: {
@@ -910,9 +1000,39 @@ export type Database = {
         Args: { _restaurant_id: string; _user_id: string }
         Returns: boolean
       }
+      mark_order_delivered: {
+        Args: { _order_id: string }
+        Returns: {
+          message: string
+          success: boolean
+        }[]
+      }
       promote_user_to_admin: {
         Args: { user_email: string }
         Returns: undefined
+      }
+      start_delivery_session: {
+        Args: { _code: string }
+        Returns: {
+          customer_address: string
+          customer_name: string
+          message: string
+          order_id: string
+          restaurant_name: string
+          session_token: string
+          success: boolean
+          total: number
+        }[]
+      }
+      update_delivery_location: {
+        Args: {
+          _accuracy?: number
+          _lat: number
+          _lng: number
+          _order_id: string
+          _token: string
+        }
+        Returns: boolean
       }
     }
     Enums: {
